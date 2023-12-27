@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "type": "RuntimeException",
+      "code": "unknown_error",
+      "message": "error",
+      "parameters": [
+        {
+          "key": "cause",
+          "value": "Invalid argument"
+        }
+      ]
+    }
+  ],
+  "total_records": 1
+}

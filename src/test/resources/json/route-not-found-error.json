@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "NotFoundException",
+      "code": "route_not_found_error",
+      "message": "Route is not found: /foo/entities"
+    }
+  ],
+  "total_records": 1
+}

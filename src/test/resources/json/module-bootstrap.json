@@ -1,0 +1,163 @@
+{
+  "module": {
+    "moduleId": "mod-foo-0.2.1",
+    "applicationId": "application-0.0.1",
+    "location": "http://sc-foo:8081",
+    "interfaces": [
+      {
+        "id": "foo",
+        "version": "0.1",
+        "endpoints": [
+          {
+            "methods": [ "GET", "POST" ],
+            "pathPattern": "/foo/entities"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "/foo/entities/{id}"
+          },
+          {
+            "methods": [ "PUT" ],
+            "pathPattern": "/foo/entities/{id}"
+          },
+          {
+            "methods": [ "DELETE" ],
+            "pathPattern": "/foo/entities/{id}"
+          },
+          {
+            "methods": [ "POST" ],
+            "pathPattern": "/foo/entities"
+          },
+          {
+            "methods": [ "POST" ],
+            "pathPattern": "/foo/{fooId}/sub-entities"
+          },
+          {
+            "methods": [ "GET", "PUT" ],
+            "pathPattern": "/foo/{fooId}/sub-entities/{subEntityId}"
+          },
+          {
+            "methods": [ "PATCH" ],
+            "pathPattern": "/foo/{foo-id}/sub-entities-2/{sub-entity-id}"
+          },
+          {
+            "methods": [ "PUT", "PATCH" ],
+            "pathPattern": "/foo/{id}/entities"
+          }
+        ]
+      },
+      {
+        "id": "foo2",
+        "version": "0.3",
+        "endpoints": [
+          {
+            "methods": [ "*" ],
+            "pathPattern": "/foo2*"
+          }
+        ]
+      },
+      {
+        "id": "foo3",
+        "version": "0.1",
+        "endpoints": [
+          {
+            "methods": [ "GET" ],
+            "path": "/foo3/values"
+          },
+          {
+            "path": "/foo3/samples"
+          }
+        ]
+      },
+      {
+        "id": "_timer",
+        "version": "1.0",
+        "interfaceType": "system",
+        "endpoints": [
+          {
+            "methods": [ "POST" ],
+            "pathPattern": "/foo/expire/timer",
+            "unit": "minute",
+            "delay": "1"
+          }
+        ]
+      },
+      {
+        "id": "_tenant",
+        "version": "1.0",
+        "interfaceType": "system",
+        "endpoints": [
+          {
+            "methods": [ "POST" ],
+            "pathPattern": "/_/tenant"
+          },
+          {
+            "methods": [ "GET", "DELETE" ],
+            "pathPattern": "/_/tenant/{id}"
+          }
+        ]
+      },
+      {
+        "id": "other-legacy",
+        "version": "1.0",
+        "endpoints": [
+          {
+            "methods": [ "OPTIONS" ]
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "{/"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "{"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "{}"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "{}/"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "{id}/"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "/{id}"
+          },
+          {
+            "methods": [ "GET" ],
+            "pathPattern": "/{id1}/*/{id2}"
+          }
+        ]
+      }
+    ]
+  },
+  "requiredModules": [
+    {
+      "moduleId": "mod-bar-0.5.1",
+      "applicationId": "application-0.0.1",
+      "location": "http://mod-bar:8081",
+      "interfaces": [
+        {
+          "id": "bar",
+          "version": "0.1",
+          "endpoints": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "pathPattern": "/bar/entities",
+              "permissionsRequired": [
+                "item.post"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

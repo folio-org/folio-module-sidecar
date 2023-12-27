@@ -1,0 +1,20 @@
+@startuml
+
+skinparam responseMessageBelowArrow true
+
+participant "Sidecar"       as sidecar
+participant "Okapi-Module"  as module
+participant okapi           as okapi
+queue       Kafka           as kafka
+
+sidecar -> okapi: GET: module descriptor by id
+okapi -> sidecar: module descriptor
+
+sidecar -> sidecar: Build and cache known routes
+
+== To be implemented ==
+sidecar -> kafka: get sidecar locations
+kafka -> sidecar: list of sidecar configurations
+sidecar -> sidecar: cache the latest sidecar locations
+
+@enduml

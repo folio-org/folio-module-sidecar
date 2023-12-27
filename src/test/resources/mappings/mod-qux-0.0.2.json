@@ -1,0 +1,43 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/entities",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/entities"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "totalRecords": 2,
+          "entities": [
+            {
+              "id": "d22c8c0c-d387-4bd5-9ad6-c02b41abe4ec",
+              "name": "Test entity 1",
+              "description": "A Test entity 1 description"
+            },
+            {
+              "id": "d23c8c0c-d387-4bd5-9ad6-c02b41abe4ec",
+              "name": "Test entity 2",
+              "description": "A Test entity 2 description"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

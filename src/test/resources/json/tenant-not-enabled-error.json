@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "TenantNotEnabledException",
+      "code": "tenant_not_enabled",
+      "message": "Application is not enabled for tenant: test-tenant"
+    }
+  ],
+  "total_records": 1
+}

@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "ForbiddenException",
+      "code": "authorization_error",
+      "message": "Access Denied"
+    }
+  ],
+  "total_records": 1
+}

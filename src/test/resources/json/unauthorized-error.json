@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "UnauthorizedException",
+      "code": "authorization_error",
+      "message": "Unauthorized"
+    }
+  ],
+  "total_records": 1
+}

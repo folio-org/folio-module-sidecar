@@ -1,0 +1,37 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/entitlements/modules/mod-foo-0.2.1",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "queryParameters": {
+      "limit": {
+        "equalTo": "500"
+      },
+      "offset": {
+        "equalTo": "0"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "totalRecords": 1,
+      "entitlements": [
+        {
+          "applicationId": "application-0.0.1",
+          "tenantId": "90b113f0-4e98-45f7-bccc-cf318e13a9bc"
+        }
+      ]
+    }
+  }
+}

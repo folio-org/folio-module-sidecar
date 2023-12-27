@@ -1,0 +1,129 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/modules/mod-foo-0.2.1",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "module": {
+        "moduleId": "mod-foo-0.2.1",
+        "applicationId": "application-0.0.1",
+        "location": "http://sc-foo:8081",
+        "interfaces": [
+          {
+            "id": "foo",
+            "version": "0.1",
+            "endpoints": [
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/entities/{id}",
+                "permissionsRequired": [ "foo.entities.item.get" ]
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/entities",
+                "permissionsRequired": [ "foo.entities.collection.get" ]
+              }
+            ]
+          },
+          {
+            "id": "_tenant",
+            "version": "2.0",
+            "endpoints": [
+              {
+                "methods": [ "POST" ],
+                "pathPattern": "/_/tenant"
+              },
+              {
+                "methods": [ "GET", "DELETE" ],
+                "pathPattern": "/_/tenant/{id}"
+              }
+            ]
+          }
+        ]
+      },
+      "requiredModules": [
+        {
+          "moduleId": "mod-bar-0.5.1",
+          "applicationId": "application-0.0.1",
+          "location": "{{request.baseUrl}}",
+          "interfaces": [
+            {
+              "id": "bar",
+              "version": "0.1",
+              "endpoints": [
+                {
+                  "methods": [
+                    "POST"
+                  ],
+                  "pathPattern": "/bar/entities",
+                  "permissionsRequired": [
+                    "item.post"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "moduleId": "mod-baz-0.0.1",
+          "applicationId": "application-0.0.1",
+          "location": "{{request.baseUrl}}",
+          "interfaces": [
+            {
+              "id": "bazqux",
+              "version": "0.1",
+              "interfaceType": "multiple",
+              "endpoints": [
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "pathPattern": "/entities",
+                  "permissionsRequired": [
+                    "item.get"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "moduleId": "mod-qux-0.0.2",
+          "applicationId": "application-0.0.1",
+          "location": "{{request.baseUrl}}",
+          "interfaces": [
+            {
+              "id": "bazqux",
+              "version": "0.1",
+              "interfaceType": "multiple",
+              "endpoints": [
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "pathPattern": "/entities",
+                  "permissionsRequired": [
+                    "item.get"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

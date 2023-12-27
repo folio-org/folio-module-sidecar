@@ -1,0 +1,73 @@
+package org.folio.sidecar.utils;
+
+import static java.util.Arrays.asList;
+import static java.util.Comparator.comparingInt;
+
+import jakarta.enterprise.inject.Instance;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.folio.sidecar.support.Ordered;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public class CollectionUtils {
+
+  /**
+   * Checks if given collection is null or empty.
+   *
+   * @param collection - {@link Collection} to check
+   * @return true if collection is null or empty, false - otherwise
+   */
+  public static boolean isEmpty(Collection<?> collection) {
+    return collection == null || collection.isEmpty();
+  }
+
+  /**
+   * Checks if given {@link Map} is null or empty.
+   *
+   * @param map - {@link Map} to check
+   * @return true if {@link Map} is null or empty, false - otherwise
+   */
+  public static boolean isEmpty(Map<?, ?> map) {
+    return map == null || map.isEmpty();
+  }
+
+  /**
+   * Checks if given collection is not null or empty.
+   *
+   * @param collection - {@link Collection} to check
+   * @return true if {@link Collection} is not null or empty, false - otherwise
+   */
+  public static boolean isNotEmpty(Collection<?> collection) {
+    return collection != null && !collection.isEmpty();
+  }
+
+  /**
+   * Converts array to immutable list.
+   *
+   * @param array - array of {@link T} objects
+   * @param <T> - generic type for list elements
+   * @return given array as list, {@link Collections#emptyList()} - otherwise.
+   */
+  public static <T> List<T> toList(T[] array) {
+    return array == null ? Collections.emptyList() : asList(array);
+  }
+
+  public static <T> List<T> safeList(List<T> list) {
+    return list != null ? list : Collections.emptyList();
+  }
+
+  /**
+   * Sorts {@link Instance} of {@link Ordered} objects by its order.
+   *
+   * @param values - {@link Instance} of {@link Ordered} objects
+   * @param <T> - generic type for {@link Instance} elements
+   * @return sorted by order {@link List} of {@link Ordered} objects
+   */
+  public static <T extends Ordered> List<T> sortByOrder(Instance<T> values) {
+    return values.stream().sorted(comparingInt(Ordered::getOrder)).toList();
+  }
+}

@@ -1,0 +1,286 @@
+# folio-module-sidecar
+
+Copyright (C) 2023-2024 The Open Library Foundation
+
+This software is distributed under the terms of the Apache License,
+Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
+
+## Table of contents
+
+* [Introduction](#introduction)
+* [Compiling](#compiling)
+    * [Creating a native executable](#creating-a-native-executable)
+* [Running It](#running-it)
+* [Environment Variables](#environment-variables)
+
+## Introduction
+
+`folio-module-sidecar` provides following functionality:
+
+* This project uses [Quarkus](https://quarkus.io/)
+* module independent, uses Okapi Module Descriptors for self-configuration
+* Ingress request routing for underlying module (specified using environment variables)
+* Egress request routing for module-to-module communication
+
+## Compiling
+
+The application can be compiled using:
+
+```shell script
+mvn clean install
+```
+
+See that it says `BUILD SUCCESS` near the end.
+
+If you want to skip tests:
+
+```shell
+mvn clean install -DskipTests
+```
+
+The application is packaged as an _uber-jar,_ and it is now runnable using `java -jar target/*-runner.jar`.
+
+### Creating a native executable
+
+You can create a native executable using:
+
+```shell script
+mvn package -Pnative
+```
+
+Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+
+```shell script
+mvn package -Pnative -Dquarkus.native.container-build=true
+```
+
+You can then execute your native executable with: `./target/folio-module-sidecar-0.0.1-SNAPSHOT.jar`
+If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
+
+## Running It
+
+Quarkus sidecar application can be run in development mode.
+
+You can run your application in dev mode that enables live coding using (example for `mod-users-18.2.0`
+from `folio-platform-minimal`):
+
+```shell script
+mvn clean quarkus:dev \
+  -Dquarkus.http.port=19002 \
+  -DSIDECAR_URL="http://localhost:19002" \
+  -DMODULE_ID="mod-users-18.2.0" \
+  -DMODULE_NAME="mod-users" \
+  -DMODULE_URL="http://localhost:9002" \
+  -DAM_CLIENT_URL="http://mgr-applications:8081" \
+  -DTE_CLIENT_URL="http://mgr-tenant-entitlements:8081" \
+  -DTM_CLIENT_URL="http://mgr-tenants:8081" \
+  -Dquarkus.live-reload.instrumentation=true \
+  -Ddebug=11002
+```
+
+> **_NOTE:_**
+>
+> * $OKAPI_TOKEN is optional, it can be set using command: `export OKAPI_TOKEN="$token_value"`
+> * Remote JVM debugger can be attached using port = `11002`.
+> * Quarkus now ships with a Dev UI, which is available in dev mode only at http://localhost:19002/q/dev/.
+
+### Building And Running JVM Based docker container
+
+This Dockerfile is used in order to build a container that runs the Quarkus application in JVM mode
+Before building the container image jar file must be compiled (see [Compiling](#compiling) section).
+Then, build the image with:
+
+```shell
+docker build -t folio-module-sidecar .
+```
+
+Then run the container using:
+
+```shell
+docker run -i --rm -p 8081:8081 folio-module-sidecar
+```
+
+### Building and Running Native docker container
+
+This [Dockerfile](docker/Dockerfile.native) is used in order to build a container that runs the Quarkus application in
+native (no JVM) mode. Before building the container image run:
+
+```shell
+./mvnw package -Pnative
+```
+
+Then, build the image with:
+
+```shell
+docker build -f docker/Dockerfile.native -t quarkus/sidecar .
+```
+
+Then run the container using:
+
+```shell
+docker run -i --rm -p 8080:8080 quarkus/sidecar
+```
+
+### Difference between building native executables using a docker-approach and a Graalvm-approach
+
+#### Using Docker
+
+To build a native executable in a container using a Linux image
+(e.g. quay.io/quarkus/ubi-quarkus-native-image:22.2-java17 with size 1.29Gb) with the required build tools,
+use the following command:
+
+```
+mvn package -Pnative -Dquarkus.native.container-build=true
+```
+
+When you use this command, Maven will build a container and run the native-image command inside that container.
+This means you don't need to install GraalVM and the necessary build tools on your host machine.
+It requires container runtime (Docker, podman) environment.
+However, this method may be slower than building natively on your machine,
+and it takes approximately 40-50 seconds longer than building it on GraalVM.
+The resulting native executable's size is 63731kb, its Docker image size is 167.82 Mb,
+and micro docker image size 94.65 Mb
+
+#### Using GraalVM
+
+To build a native executable of your Quarkus application using GraalVM, use the following command:
+
+```
+mvn package -Pnative
+```
+
+If you use this command, you must have GraalVM and the necessary build tools installed on your machine.
+Including, Visual Studio C++ build tools, If you use windows. Then, _x64 Native Tools Command Prompt_ should
+be opened to run previous command to build a native binary.
+Otherwise, you may encounter errors during the build process.
+The resulting native binaries size is 64964kb, its docker image's size is 102.56 MB,
+and micro docker image size 95.91 MB,
+aslo this appraoch _has some drawbacks executing in a docker container._
+
+Both approaches requires to add
+`--initialize-at-run-time=io.smallrye.faulttolerance.standalone.StandaloneFaultToleranceSpi\$LazyDependenciesHolder`
+argument in either `application.properties` file or `pom.xml` or as `command-line argument`,
+because this library is being initialized during image built-up time, which leads to failed generation of a native
+binary.
+
+In general, if you are developing on a machine that has _GraalVM and the necessary build tools installed,
+it is faster to use GraalVM approach_.
+However, if you don't have GraalVM and the necessary build tools installed,
+or if you want to build the native executable in a more isolated environment,
+to get consistent result on different environments
+you should use container approach.
+for more details please visit https://quarkus.io/guides/building-native-image
+
+> **_NOTE:_** Native micro-image can be generated using [Dockerfile](docker/Dockerfile.native-micro)
+>
+> A native micro base image is tuned for Quarkus native executables. It reduces the size of the resulting container
+> image. Check https://quarkus.io/guides/quarkus-runtime-base-image for further information about this image.
+
+## Environment Variables
+
+| Name                                         | Default value                       | Required | Description                                                                                                                                                   |
+|:---------------------------------------------|:------------------------------------|:--------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| AM_CLIENT_URL                                | http://mgr-applications:8081        |  false   | Manager applications URL.                                                                                                                                     |
+| TE_CLIENT_URL                                | http://mgr-tenant-entitlements:8081 |  false   | Manager tenant entitlements URL.                                                                                                                              |
+| TM_CLIENT_URL                                | http://mgr-tenants:8081             |  false   | Manager tenants URL.                                                                                                                                          |
+| TM_BATCH_SIZE                                | 50                                  |  false   | Batch size to retrieve tenants from mgr-tenants                                                                                                               |
+| MODULE_NAME                                  |                                     |  false   | Underlying module name. If `MODULE_ID` is not specified, required                                                                                             |
+| MODULE_VERSION                               |                                     |  false   | Underlying module version. If `MODULE_ID` is not specified, required                                                                                          |
+| MODULE_URL                                   |                                     |   true   | Underlying module URL.                                                                                                                                        |
+| MODULE_HEALTH_PATH                           | /admin/health                       |  false   | Underlying module health check path.                                                                                                                          |
+| SIDECAR_URL                                  |                                     |   true   | Self URL for module-to-module communication.                                                                                                                  |
+| SIDECAR_MODULE_PATH_PREFIX_ENABLED           | false                               |  false   | Defines if module path prefix is enabled for routing or not. It enables the ability to route properly requests starting with `/$moduleName/...`               |
+| KEYCLOAK_URL                                 | http://keycloak:8080                |  false   | Keycloak URL.                                                                                                                                                 |
+| KC_LOGIN_CLIENT_SUFFIX                       | -login-application                  |  false   | Suffix of a Keycloak client who owns the authorization resources. It is used as `audience` for keycloak when evaluating permissions.                          |
+| KC_SERVICE_CLIENT_ID                         | sidecar-module-access-client        |  false   | Tenant specific client id for authenticating egress requests.                                                                                                 |
+| KC_SERVICE_CLIENT_SECRET                     | -                                   |   true   | Tenant specific client secret for authenticating egress requests.                                                                                             |
+| KC_ADMIN_CLIENT_ID                           | folio-backend-admin-client          |  false   | Master realm specific client id for authenticating requests to manager components.                                                                            |
+| KC_ADMIN_CLIENT_SECRET                       | -                                   |   true   | Master realm specific client secret for authenticating requests to manager components.                                                                        |
+| KC_AUTHORIZATION_CACHE_MAX_SIZE              | 50                                  |  false   | Maximum amount of entries for keycloak authorization cache.                                                                                                   |
+| KC_AUTHORIZATION_CACHE_TTL_OFFSET            | 5000                                |  false   | TTL Offset for cached authorization information, positive, in millis.                                                                                         |
+| RETRY_ATTEMPTS                               | 10                                  |  false   | Sets the maximum number of retries, must be >= -1 (-1 = unlimited).                                                                                           |
+| RETRY_BACKOFF_FACTOR                         | 2                                   |  false   | Sets the multiplicative factor used to determine delay between retries, must be >= 1.                                                                         |
+| RETRY_MIN_DELAY                              | 5s                                  |  false   | Sets the min delay between retries, must be >= 0.                                                                                                             |
+| RETRY_MAX_DELAY                              | 2m                                  |  false   | Sets the maximum delay between retries, must be >= 0.                                                                                                         |
+| SECRET_STORE_TYPE                            | -                                   |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`                                                                                        |
+| SIDECAR_FORWARD_UNKNOWN_REQUESTS             | false                               |  false   | Set behavior for EGRESS request. If there are no information about discovery, request will be forwarded to the `SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION` |
+| SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION | http://api-gateway:8000             |  false   | URL of gateway for routing unknown EGRESS requests. This URL will be used if `SIDECAR_FORWARD_UNKNOWN_REQUESTS` will be `true`                                |
+| TOKEN_CACHE_INITIAL_CAPACITY                 | 10                                  |  false   | Token cache initial capacity.                                                                                                                                 |
+| TOKEN_CACHE_MAX_CAPACITY                     | 50                                  |  false   | Token cache max capacity.                                                                                                                                     |
+| TOKEN_CACHE_REFRESH_PRIOR_EXPIRATION         | 25                                  |  false   | Specifies the amount of seconds for a cache entry invalidation prior to the token expiration.                                                                 |
+| ALLOW_CROSS_TENANT_REQUESTS                  | false                               |  false   | Enable                                                                                                                                                        |
+| SIDECAR_IMPERSONATION_CLIENT_NAME            | impersonation-client                |  false   | Client name for impersonating users.                                                                                                                          |
+| MOD_USERS_URL                                | http://mod-users:8081               |  false   | Mod-users module url.                                                                                                                                         |
+| MOD_USERS_CACHE_EXPIRATION_SECONDS           | 300                                 |  false   | Users cache ttl.                                                                                                                                              |
+| MOD_USERS_CACHE_INITIAL_CAPACITY             | 50                                  |  false   | Initial users cache size.                                                                                                                                     |
+| MOD_USERS_CACHE_MAX_CAPACITY                 | 1000                                |  false   | Max user cache size.                                                                                                                                          |
+
+### Secure storage environment variables
+
+#### AWS-SSM
+
+Required when `SECRET_STORE_TYPE=AWS_SSM`
+
+| Name                                          | Default value | Description                                                                                                                                                    |
+|:----------------------------------------------|:--------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SECRET_STORE_AWS_SSM_REGION                   | -             | The AWS region to pass to the AWS SSM Client Builder. If not set, the AWS Default Region Provider Chain is used to determine which region to use.              |
+| SECRET_STORE_AWS_SSM_USE_IAM                  | true          | If true, will rely on the current IAM role for authorization instead of explicitly providing AWS credentials (access_key/secret_key)                           |
+| SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_ENDPOINT | -             | The HTTP endpoint to use for retrieving AWS credentials. This is ignored if useIAM is true                                                                     |
+| SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_PATH     | -             | The path component of the credentials endpoint URI. This value is appended to the credentials endpoint to form the URI from which credentials can be obtained. |
+
+#### Vault
+
+Required when `SECRET_STORE_TYPE=VAULT`
+
+| Name                                    | Default value | Description                                                                         |
+|:----------------------------------------|:--------------|:------------------------------------------------------------------------------------|
+| SECRET_STORE_VAULT_TOKEN                | -             | token for accessing vault, may be a root token                                      |
+| SECRET_STORE_VAULT_ADDRESS              | -             | the address of your vault                                                           |
+| SECRET_STORE_VAULT_ENABLE_SSL           | false         | whether or not to use SSL                                                           |
+| SECRET_STORE_VAULT_PEM_FILE_PATH        | -             | the path to an X.509 certificate in unencrypted PEM format, using UTF-8 encoding    |
+| SECRET_STORE_VAULT_KEYSTORE_PASSWORD    | -             | the password used to access the JKS keystore (optional)                             |
+| SECRET_STORE_VAULT_KEYSTORE_FILE_PATH   | -             | the path to a JKS keystore file containing a client cert and private key            |
+| SECRET_STORE_VAULT_TRUSTSTORE_FILE_PATH | -             | the path to a JKS truststore file containing Vault server certs that can be trusted |
+
+## Security
+
+### Authorizing user in the sidecar
+
+![Authorizing user in the sidecar](doc/sidecar-auth.png)
+
+### Ingress
+
+* Check the signature and hash validity for the JWT (done automatically by the JWT parser).
+    * This request is used to retrieve JWK certificates from Keycloak:
+  ```shell
+  curl --location --request POST '<keycloak>/realms/<tenantName>/protocol/openid-connect/certs
+  ```
+* Check the corresponding issuer
+* Validate that token is not expired (done automatically by the JWT parser)
+* Extract tenant from token and compare it with `x-okapi-tenant`
+* Extract `user_id` JWT claim from token and put it as `x-okapi-user-id` header if not set (the JWT claim is mapped from
+  corresponding keycloak user attribute).
+* Send authorization request to Keycloak for exchanging access token for RPT. If RPT response is ok, then access is
+  granted and the token is cached until expired.
+    * RPT request example:
+  ```shell
+  curl --location --request POST '<keycloak>/realms/diku/protocol/openid-connect/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --header 'Authorization: Bearer <okapiToken>' \
+  --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:uma-ticket' \
+  --data-urlencode 'audience=diku-login-application' \
+  --data-urlencode 'permission=/users#GET'
+  ```
+
+### Egress
+
+* Retrieve tenant specific client credentials from `KC_SERVICE_CLIENT_ID` and `KC_SERVICE_CLIENT_SECRET` env variables.
+* Send authorization request to Keycloak for obtaining a token for service account user.
+    * Authorization request example:
+  ```shell
+  curl --location --request POST '<keycloak>/realms/diku/protocol/openid-connect/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'client_id=sidecar-module-access-client' \
+  --data-urlencode 'client_secret=supersecret'
+  ```

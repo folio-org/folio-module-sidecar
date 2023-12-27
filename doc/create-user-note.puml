@@ -1,0 +1,120 @@
+@startuml
+
+title "Create a note (positive flow)"
+
+autonumber
+skinparam responseMessageBelowArrow true
+
+participant "Sidecar (mod-notes)" as scNotes #5CCCCC
+participant "Sidecar (mod-users)" as scUsers #5CCCCC
+participant okapi                 as okapi #FFD073
+participant Keycloak              as keycloak #FFD073
+participant "mod-permissions"     as modPerms #876ED7
+participant "mod-users"           as modUsers #876ED7
+database    "mod-users-db"        as usersDb #006363
+
+participant "mod-notes"           as modNotes #876ED7
+database    "mod-notes-db"        as notesDb #006363
+
+
+
+[-> scNotes: Create a note\n//POST: /notes//
+
+activate scNotes #5CCCCC
+scNotes -> scNotes: Verify that route is specified as internal call
+note left: If route is not found in internal routes cache -\nit will be considered as outgoing call
+
+scNotes -> scNotes: Create JWTParser for jwt issuer\n(tenant specific)
+note left: This is requirement for library,\nbecause it's not allowed to change\nJWT issuer for JWTParser in runtime
+
+scNotes -> keycloak: get jwk certificates\n//GET: /realms/{tenantId}/protocol/openid-connect/certs//
+activate keycloak #FFD073
+note left: Certificates will be cached by\nio.smallrye.jwt.auth.principal.JWTParser
+keycloak --> scNotes: return jwk certificates
+deactivate keycloak
+
+scNotes -> scNotes: validate JWT issuer base URI
+note left: It's required to be sure that other issuers\nare not allowed to access to the system
+
+scNotes -> scNotes: validate JWT token (valid signature, not expired)
+scNotes -> scNotes: validate X-Okapi-Tenant header
+scNotes -> scNotes: Resolve incoming request as user request
+scNotes -> modPerms: get user permissions\n//GET: /perms/users/{userId}/permissions?indexField=userId&expanded=true//
+activate modPerms #876ED7
+modPerms --> scNotes: return user permissions
+deactivate modPerms
+scNotes -> scNotes: validate that user has all required\npermissions, specified in routing entry
+note left: Only required permissions are cached per token.\nCache key: {method}#{path}#{token:jti}
+scNotes -> scNotes: set following headers:\n X-Okapi-Permissions-Required:SYS#mod-notes-3.0.4#/users/{id}#[GET]\n X-Okapi-User: {userId}\n X-Okapi-Module-Id: mod-notes-3.0.4\n X-Okapi-Request-Id: {generatedRequestId}\n X-Okapi-Url: {resolvedSidecarUrl}
+
+|||
+scNotes -> modNotes: Forward POST request
+activate modNotes #876ED7
+|||
+modNotes -> scNotes: Get user by id\n//GET: /users/{id}//
+activate scNotes #876ED7
+scNotes -> okapi: get required module descriptors\n//GET: /_/proxy/tenants/{tenantId}/modules?full=true&provide=users,configuration//
+activate okapi #FFD073
+note left: All required interfaces will be cached internally\nand they will be used to define if request is\noutgoing or unknown
+okapi --> scNotes: return module descriptors
+deactivate okapi
+
+scNotes -> scNotes: Resolve incoming request\nas outgoing (module-2-module)
+scNotes -> scNotes: Resolve sidecar location by module id
+note left: It's implemented using environment\nvariable config (JSON object value)
+
+scNotes -> keycloak: Get service account token\n//POST: /realms/{{tenant}}/protocol/openid-connect/token//
+activate keycloak #FFD073
+note left: Request body parameters:\nclient_id: {client_id}\nclient_secret: {client_secret}\ngrant_type: client_credentials
+keycloak --> scNotes: return service account JWT
+deactivate keycloak
+
+scNotes -> scUsers: Get user by id\n//GET: /users/{id}//
+activate scUsers #5CCCCC
+scUsers -> scUsers: Verify that route is specified as internal call
+scUsers -> scUsers:  Create JWTParser for jwt issuer\n(tenant specific)
+scUsers -> keycloak: get jwk certificates\n///realms/{tenantId}/protocol/openid-connect/certs//
+activate keycloak #FFD073
+note left: Cached by JWTParser
+keycloak --> scUsers: return jwk certificates
+deactivate keycloak
+scUsers -> scUsers: validate JWT issuer base URI
+
+scUsers -> scUsers: validate JWT token (valid signature, not expired)
+scUsers -> scUsers: validate X-Okapi-Tenant header
+scUsers -> scUsers: Resolve incoming request as module-2-module request
+scUsers -> modPerms: Get system permissions\n//GET: /perms/permissions?query=permissionName=="SYS#mod-notes-3.0.4#/notes#[POST]"//
+activate modPerms #876ED7
+modPerms --> scUsers: Return system permission JSON
+deactivate modPerms
+
+scUsers -> scUsers: Verify that system permission \ncontains required perms in subPermissions
+
+scUsers -> scUsers: set following headers:\n X-Okapi-Permissions-Required:SYS#mod-notes-3.0.4#/users/{id}#[GET]\n X-Okapi-User: {serviceUserId}\n X-Okapi-Module-Id: mod-notes-3.0.4\n X-Okapi-Request-Id: {generatedRequestId}\n X-Okapi-Url: {resolvedSidecarUrl}
+
+scUsers -> modUsers: Forward GET request
+activate modUsers #876ED7
+modUsers -> usersDb: Find user by id
+activate usersDb #006363
+usersDb --> modUsers: Return saved entity
+deactivate usersDb
+modUsers --> scUsers: Return user by id
+deactivate modUsers
+scUsers --> scNotes: Return user by id
+deactivate scUsers #5CCCCC
+
+|||
+scNotes --> modNotes: Return user by id
+deactivate scNotes
+modNotes -> notesDb: Save a note entity
+activate notesDb #006363
+notesDb --> modNotes: Return saved entity
+deactivate notesDb
+
+modNotes --> scNotes: Return created note
+deactivate modNotes
+
+scNotes -->[: Return created note
+deactivate scNotes
+
+@enduml

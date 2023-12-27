@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "BadRequestException",
+      "code": "service_error",
+      "message": "Module location is not found for moduleId: mod-foo-0.2.1"
+    }
+  ],
+  "total_records": 1
+}

@@ -1,0 +1,44 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/users/00000000-0000-0000-0000-000000000000",
+        "headers": {
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "id": "00000000-0000-0000-0000-000000000000",
+          "username": "username-shadow"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/users/12300000-0000-0000-0000-000000000123",
+        "headers": {
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        }
+      }
+    }
+  ]
+}
