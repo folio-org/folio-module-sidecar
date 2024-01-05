@@ -21,11 +21,10 @@
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.package.type>uber-jar</quarkus.package.type>
     <quarkus.package.add-runner-suffix>false</quarkus.package.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.6.1</quarkus.platform.version>
+    <quarkus.platform.version>3.6.4</quarkus.platform.version>
     <applications-poc-tools.version>1.0.0-SNAPSHOT</applications-poc-tools.version>
 
     <lombok.version>1.18.30</lombok.version>
@@ -120,6 +119,17 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bc-fips</artifactId>
+      <version>1.0.2.4</version>
     </dependency>
 
     <dependency>
