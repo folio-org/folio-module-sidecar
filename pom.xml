@@ -379,7 +379,10 @@
         <skipITs>false</skipITs>
         <quarkus.package.type>native</quarkus.package.type>
         <quarkus.native.additional-build-args>
-          --initialize-at-run-time=io.smallrye.faulttolerance.standalone.StandaloneFaultToleranceSpi\$LazyDependenciesHolder
+          -march=native,\
+          --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
+          --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
+          -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
       </properties>
     </profile>

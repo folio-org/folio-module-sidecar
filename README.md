@@ -51,7 +51,9 @@ mvn package -Pnative
 Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
 
 ```shell script
-mvn package -Pnative -Dquarkus.native.container-build=true
+mvn install -Pnative -DskipTests \
+  -Dquarkus.native.container-build=true \
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-17
 ```
 
 You can then execute your native executable with: `./target/folio-module-sidecar-0.0.1-SNAPSHOT.jar`
@@ -106,13 +108,15 @@ This [Dockerfile](docker/Dockerfile.native) is used in order to build a containe
 native (no JVM) mode. Before building the container image run:
 
 ```shell
-./mvnw package -Pnative
+mvn install -Pnative -DskipTests \
+  -Dquarkus.native.container-build=true \
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-17
 ```
 
 Then, build the image with:
 
 ```shell
-docker build -f docker/Dockerfile.native -t quarkus/sidecar .
+docker build -f docker/Dockerfile.native-micro -t folio-module-sidecar-native .
 ```
 
 Then run the container using:
@@ -146,7 +150,7 @@ and micro docker image size 94.65 Mb
 To build a native executable of your Quarkus application using GraalVM, use the following command:
 
 ```
-mvn package -Pnative
+mvn install -DskipTests -Pnative
 ```
 
 If you use this command, you must have GraalVM and the necessary build tools installed on your machine.
@@ -154,14 +158,7 @@ Including, Visual Studio C++ build tools, If you use windows. Then, _x64 Native 
 be opened to run previous command to build a native binary.
 Otherwise, you may encounter errors during the build process.
 The resulting native binaries size is 64964kb, its docker image's size is 102.56 MB,
-and micro docker image size 95.91 MB,
-aslo this appraoch _has some drawbacks executing in a docker container._
-
-Both approaches requires to add
-`--initialize-at-run-time=io.smallrye.faulttolerance.standalone.StandaloneFaultToleranceSpi\$LazyDependenciesHolder`
-argument in either `application.properties` file or `pom.xml` or as `command-line argument`,
-because this library is being initialized during image built-up time, which leads to failed generation of a native
-binary.
+and micro docker image size 95.91 MB,  this approach _has some drawbacks executing in a docker container._
 
 In general, if you are developing on a machine that has _GraalVM and the necessary build tools installed,
 it is faster to use GraalVM approach_.
@@ -214,6 +211,8 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | MOD_USERS_CACHE_EXPIRATION_SECONDS           | 300                                 |  false   | Users cache ttl.                                                                                                                                              |
 | MOD_USERS_CACHE_INITIAL_CAPACITY             | 50                                  |  false   | Initial users cache size.                                                                                                                                     |
 | MOD_USERS_CACHE_MAX_CAPACITY                 | 1000                                |  false   | Max user cache size.                                                                                                                                          |
+| SC_LOG_LEVEL                                 | INFO                                |  false   | Log level for sidecar package: `org.folio.sidecar`.                                                                                                           |
+| ROOT_LOG_LEVEL                               | INFO                                |  false   | Root log level.                                                                                                                                               |
 
 ### Secure storage environment variables
 
