@@ -74,7 +74,8 @@ public class ServiceTokenProvider {
 
   private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider) {
     log.info("Authenticating service client for tenant: {}", tenantName);
-    return tokenProvider.get().onSuccess(token -> tokenCache.put(tenantName, token));
+    return tokenProvider.get().onSuccess(token -> tokenCache.put(tenantName, token))
+      .onFailure(e -> log.warn("Failed to obtain service token", e));
   }
 
   private Future<TokenResponse> obtainAdminToken() {
