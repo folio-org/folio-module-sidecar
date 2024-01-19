@@ -38,6 +38,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
 
   private static final String CACHE_KEY_DELIMITER = "#";
   private static final String KC_PERMISSION_NAME = "kcPermissionName";
+  private static final String AUTHORIZATION_FAILURE_MSG = "Failed to authorize request";
 
   private final KeycloakClient keycloakClient;
   private final Cache<String, JsonWebToken> authTokenCache;
@@ -120,7 +121,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
       throw securityError;
     }
 
-    throw new ForbiddenException("Failed to authorize request", error);
+    throw new ForbiddenException(AUTHORIZATION_FAILURE_MSG, error);
   }
 
   private Future<RoutingContext> processAuthorizationResponse(JsonWebToken accessToken, RoutingContext routingContext,
@@ -137,7 +138,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
 
     if (statusCode != OK.code()) {
       log.debug("Failed to authorize request: {}", httpResponse.bodyAsString());
-      return failedFuture(new ForbiddenException("Failed to authorize request"));
+      return failedFuture(new ForbiddenException(AUTHORIZATION_FAILURE_MSG));
     }
 
     var tenant = getTenant(routingContext);
