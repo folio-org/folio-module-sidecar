@@ -3,6 +3,7 @@ package org.folio.sidecar.it;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
@@ -289,6 +290,66 @@ class SidecarIT {
         "errors[0].type", is("UnauthorizedException"),
         "errors[0].code", is("authorization_error"),
         "errors[0].message", is("Unauthorized")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_negative_rptForbidden() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .delete("/foo/xyz")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_FORBIDDEN))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("ForbiddenException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Access Denied")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_negative_rptUnauthorized() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .post("/foo/xyz")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("UnauthorizedException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Unauthorized")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_negative_rptKcError() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .put("/foo/xyz")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_FORBIDDEN))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("ForbiddenException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Access Denied")
       );
   }
 

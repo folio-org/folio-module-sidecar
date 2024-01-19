@@ -11,11 +11,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.quarkus.security.ForbiddenException;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.ws.rs.ForbiddenException;
 import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;

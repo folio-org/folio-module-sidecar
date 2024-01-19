@@ -35,6 +35,21 @@
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/entities",
                 "permissionsRequired": [ "foo.entities.collection.get" ]
+              },
+              {
+                "methods": [ "DELETE" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.delete" ]
+              },
+              {
+                "methods": [ "PUT" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.put" ]
+              },
+              {
+                "methods": [ "POST" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.post" ]
               }
             ]
           },
