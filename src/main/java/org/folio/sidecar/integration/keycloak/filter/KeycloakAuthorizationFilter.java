@@ -15,13 +15,13 @@ import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_STATE_CLAIM;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.ForbiddenException;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Stream;
@@ -38,6 +38,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
 
   private static final String CACHE_KEY_DELIMITER = "#";
   private static final String KC_PERMISSION_NAME = "kcPermissionName";
+  private static final String AUTHORIZATION_FAILURE_MSG = "Failed to authorize request";
 
   private final KeycloakClient keycloakClient;
   private final Cache<String, JsonWebToken> authTokenCache;
@@ -98,7 +99,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
-      .otherwise(error -> handleAuthorizationError(error, tenant, permission));
+      .otherwise(error -> handleAuthorizationError(error));
   }
 
   private Future<RoutingContext> authorizeAndCacheSystemToken(RoutingContext routingContext, Throwable error) {
@@ -108,27 +109,23 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
   }
 
   private static Exception prepareSystemTokenError(Throwable error) {
-    var errorMessage = "Failed to find system token in request";
-    if (error instanceof UnauthorizedException) {
-      return new UnauthorizedException("Unauthorized", new ForbiddenException(errorMessage));
+    if (error instanceof SecurityException securityError) {
+      return securityError;
     }
 
-    return new UnauthorizedException(errorMessage, error);
+    return new ForbiddenException("Failed to find system token in request", error);
   }
 
-  private static RoutingContext handleAuthorizationError(Throwable throwable, String tenant, String permission) {
-    if (throwable instanceof ForbiddenException || throwable instanceof UnauthorizedException) {
-      throw (RuntimeException) throwable;
+  private static RoutingContext handleAuthorizationError(Throwable error) {
+    if (error instanceof SecurityException securityError) {
+      throw securityError;
     }
 
-    var errorMsg = String.format("Failed to authorize request: tenant = %s, permission = %s", tenant, permission);
-    throw new ForbiddenException(errorMsg, throwable);
+    throw new ForbiddenException(AUTHORIZATION_FAILURE_MSG, error);
   }
 
   private Future<RoutingContext> processAuthorizationResponse(JsonWebToken accessToken, RoutingContext routingContext,
-    HttpResponse<Buffer> httpResponse) {
-    var tenant = getTenant(routingContext);
-    var permission = getKeycloakPermissionName(routingContext);
+                                                              HttpResponse<Buffer> httpResponse) {
 
     var statusCode = httpResponse.statusCode();
     if (statusCode == FORBIDDEN.code()) {
@@ -140,11 +137,12 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
     }
 
     if (statusCode != OK.code()) {
-      var msgTemplate = "Failed to authorize request: status = %s, tenant = %s, permission = %s";
-      var errorMessage = String.format(msgTemplate, statusCode, tenant, permission);
-      return failedFuture(new ForbiddenException(errorMessage));
+      log.debug("Failed to authorize request: {}", httpResponse.bodyAsString());
+      return failedFuture(new ForbiddenException(AUTHORIZATION_FAILURE_MSG));
     }
 
+    var tenant = getTenant(routingContext);
+    var permission = getKeycloakPermissionName(routingContext);
     var cacheKey = getAccessTokenCacheKey(permission, tenant, accessToken);
     log.debug("Caching access token: key = {}", cacheKey);
     authTokenCache.put(cacheKey, accessToken);
@@ -168,7 +166,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
     var keyJoiner = new StringJoiner(CACHE_KEY_DELIMITER);
     keyJoiner.add(permission);
     keyJoiner.add(tenantName);
-    if (authToken.containsClaim(JWT_SESSION_STATE_CLAIM)) { // a service user token does not have session_state claim
+    if (authToken.containsClaim(JWT_SESSION_STATE_CLAIM)) { // a client token does not have session_state claim
       keyJoiner.add(authToken.getClaim(JWT_SESSION_STATE_CLAIM));
     }
     keyJoiner.add(Long.toString(authToken.getExpirationTime()));

@@ -27,13 +27,13 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
-import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.ServiceUnavailableException;
 import java.time.Instant;
 import java.util.List;
@@ -179,10 +179,8 @@ class KeycloakAuthorizationFilterTest {
 
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
-      .isInstanceOf(UnauthorizedException.class)
-      .hasMessage("Failed to find system token in request")
-      .hasCauseInstanceOf(ForbiddenException.class)
-      .hasRootCauseMessage("Access Denied");
+      .isInstanceOf(ForbiddenException.class)
+      .hasMessage("Access Denied");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
@@ -220,10 +218,8 @@ class KeycloakAuthorizationFilterTest {
 
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
-      .isInstanceOf(UnauthorizedException.class)
-      .hasMessage("Failed to find system token in request")
-      .hasCauseInstanceOf(ForbiddenException.class)
-      .hasRootCauseMessage("Unavailable");
+      .isInstanceOf(ForbiddenException.class)
+      .hasMessage("Failed to authorize request");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
@@ -240,9 +236,7 @@ class KeycloakAuthorizationFilterTest {
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
       .isInstanceOf(UnauthorizedException.class)
-      .hasMessage("Unauthorized")
-      .hasCauseInstanceOf(ForbiddenException.class)
-      .hasRootCauseMessage("Failed to find system token in request");
+      .hasMessage("Unauthorized");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
@@ -261,7 +255,7 @@ class KeycloakAuthorizationFilterTest {
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
       .isInstanceOf(ForbiddenException.class)
-      .hasMessage("Failed to authorize request: tenant = %s, permission = %s", TENANT_NAME, KC_PERMISSION);
+      .hasMessage("Failed to authorize request");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
