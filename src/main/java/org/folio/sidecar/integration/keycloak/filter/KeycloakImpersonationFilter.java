@@ -10,12 +10,12 @@ import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 
+import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

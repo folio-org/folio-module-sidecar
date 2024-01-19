@@ -3,12 +3,29 @@
     {
       "request": {
         "method": "POST",
-        "urlPattern": "/realms/test-tenant/protocol/openid-connect/token",
+        "urlPattern": "/realms/testtenant/protocol/openid-connect/token",
         "headers": {
           "Content-Type": {
             "equalTo": "application/x-www-form-urlencoded"
           }
-        }
+        },
+        "bodyPatterns": [
+          {
+            "contains": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Auma-ticket"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fxyz%23DELETE"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fxyz%23DELETE"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fxyz%23PUT"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fxyz%23POST"
+          }
+        ]
       },
       "response": {
         "status": 200,

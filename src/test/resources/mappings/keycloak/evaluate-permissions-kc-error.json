@@ -1,0 +1,32 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPattern": "/realms/testtenant/protocol/openid-connect/token",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/x-www-form-urlencoded"
+          }
+        },
+        "bodyPatterns": [
+          {
+            "contains": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Auma-ticket"
+          },
+          {
+            "contains": "permission=%2Ffoo%2Fxyz%23PUT"
+          }
+        ]
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "error": "Internal server error"
+        }
+      }
+    }
+  ]
+}

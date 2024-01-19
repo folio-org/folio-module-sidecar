@@ -16,11 +16,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;

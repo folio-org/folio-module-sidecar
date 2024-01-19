@@ -7,10 +7,10 @@ import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.UNAUTHORIZED;
 
+import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.Collections;
