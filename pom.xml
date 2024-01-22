@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>folio-module-sidecar</artifactId>
-  <version>0.0.1-SNAPSHOT.20240122</version>
+  <version>1.0.0-SNAPSHOT.20240122</version>
   <description>A sidecar application responsible for Folio modules</description>
   <packaging>jar</packaging>
 
