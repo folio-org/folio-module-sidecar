@@ -4,6 +4,7 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
@@ -434,6 +435,45 @@ class SidecarIT {
         "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
         "checks.find {check -> check.name == 'Module health check'}.data.host",
         Matchers.matchesPattern("GET http://localhost:\\d+" + TestConstants.MODULE_HEALTH_PATH)
+      );
+  }
+
+  @Test
+  void handleEgressRequest_negative_readTimeoutException() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .body("{\"name\":\"entity-timeout\",\"description\":\"Test description\"}")
+      .post("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("InternalServerErrorException"),
+        "errors[0].code", is("service_error"),
+        "errors[0].message", is("Failed to proxy request")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_negative_readTimeoutException() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/entities/d4707b3a-ca25-4b22-8406-8d712bc30b72")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("InternalServerErrorException"),
+        "errors[0].code", is("service_error"),
+        "errors[0].message", is("Failed to proxy request")
       );
   }
 }

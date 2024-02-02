@@ -213,6 +213,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | MOD_USERS_CACHE_MAX_CAPACITY                 | 1000                                |  false   | Max user cache size.                                                                                                                                          |
 | SC_LOG_LEVEL                                 | INFO                                |  false   | Log level for sidecar package: `org.folio.sidecar`.                                                                                                           |
 | ROOT_LOG_LEVEL                               | INFO                                |  false   | Root log level.                                                                                                                                               |
+| REQUEST_TIMEOUT                              | 60000                               |  false   | Configures the amount of time in milliseconds after which if the request does not return any data within the timeout period fails the request.                |
 
 ### Secure storage environment variables
 

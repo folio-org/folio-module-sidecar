@@ -36,6 +36,44 @@
           "description": "An entity description"
         }
       }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPath": "/bar/entities",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/bar"
+          }
+        },
+        "bodyPatterns": [
+          {
+            "equalToJson": {
+              "name": "entity-timeout",
+              "description": "Test description"
+            }
+          }
+        ]
+      },
+      "response": {
+        "fixedDelayMilliseconds": 1300,
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "id": "d747fc05-736e-494f-9b25-205c90d9d79a",
+          "name": "entity",
+          "description": "An entity description"
+        }
+      }
     }
   ]
 }
