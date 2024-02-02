@@ -83,6 +83,36 @@
     {
       "request": {
         "method": "GET",
+        "urlPath": "/foo/entities/d4707b3a-ca25-4b22-8406-8d712bc30b72",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/foo"
+          }
+        }
+      },
+      "response": {
+        "fixedDelayMilliseconds": 1300,
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "id": "d4707b3a-ca25-4b22-8406-8d712bc30b72",
+          "name": "Test-timeout entity",
+          "description": "A Test-timeout entity description"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
         "urlPath": "/admin/health"
       },
       "response": {

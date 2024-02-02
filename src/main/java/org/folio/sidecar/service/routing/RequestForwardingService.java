@@ -17,6 +17,7 @@ import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 
@@ -38,6 +39,7 @@ public class RequestForwardingService {
   private final WebClient webClient;
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
+  private final WebClientProperties webClientProperties;
 
   /**
    * Forwards incoming (ingress) or outgoing (egress) request.
@@ -52,6 +54,7 @@ public class RequestForwardingService {
 
     var bufferHttpRequest = webClient
       .requestAbs(request.method(), absUri)
+      .timeout(webClientProperties.getTimeout())
       .putHeaders(headers)
       .putHeader(REQUEST_ID, getRequestId(rc));
 
