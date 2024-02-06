@@ -24,7 +24,7 @@
     <quarkus.package.add-runner-suffix>false</quarkus.package.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.6.8</quarkus.platform.version>
+    <quarkus.platform.version>3.2.10.Final</quarkus.platform.version>
     <applications-poc-tools.version>1.0.0</applications-poc-tools.version>
 
     <lombok.version>1.18.30</lombok.version>
