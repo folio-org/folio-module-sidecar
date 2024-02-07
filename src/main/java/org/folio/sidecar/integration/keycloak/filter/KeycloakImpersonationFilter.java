@@ -8,6 +8,7 @@ import static org.folio.sidecar.utils.JwtUtils.extractTokenIssuer;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getTenant;
+import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 
 import io.quarkus.security.ForbiddenException;
@@ -53,6 +54,9 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext routingContext) {
+    if (isSelfRequest(routingContext)) {
+      return true;
+    }
     var tenant = getTenant(routingContext);
     var parsedToken = getParsedToken(routingContext);
     if (parsedToken.isEmpty() || isBlank(tenant)) {
