@@ -5,11 +5,13 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import io.restassured.filter.log.LogDetail;
 import java.util.Map;
 import java.util.UUID;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -171,6 +173,31 @@ class CrossTenantIT {
         "errors[0].type", is("ForbiddenException"),
         "errors[0].code", is("authorization_error"),
         "errors[0].message", is("Access Denied")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_positive_skipImpersonationIfSelfRequest() {
+    var signature = TestUtils.getSignature();
+    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, "newtenant");
+
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, signature)
+      .get("/foo/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is("d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[0].name", is("Test entity"),
+        "entities[0].description", is("A Test entity description")
       );
   }
 
