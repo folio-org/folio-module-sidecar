@@ -22,6 +22,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
 import org.folio.sidecar.integration.keycloak.KeycloakImpersonationService;
 import org.folio.sidecar.integration.users.UserService;
+import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
@@ -32,6 +33,7 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
   private final UserService userService;
   private final JsonWebTokenParser jwtParser;
   private final KeycloakImpersonationService impersonationService;
+  private final SidecarSignatureService sidecarSignatureService;
 
   @Override
   public Future<RoutingContext> filter(RoutingContext routingContext) {
@@ -53,6 +55,9 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext routingContext) {
+    if (sidecarSignatureService.isSelfRequest(routingContext)) {
+      return true;
+    }
     var tenant = getTenant(routingContext);
     var parsedToken = getParsedToken(routingContext);
     if (parsedToken.isEmpty() || isBlank(tenant)) {
