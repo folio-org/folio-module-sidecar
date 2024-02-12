@@ -5,6 +5,7 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
+import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.UNAUTHORIZED;
 
 import io.quarkus.security.ForbiddenException;
@@ -15,6 +16,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.TenantNotEnabledException;
@@ -45,6 +47,12 @@ public class ErrorHandler {
 
     if (throwable instanceof UnauthorizedException) {
       sendErrorResponse(rc, throwable, UNAUTHORIZED, ErrorCode.AUTHORIZATION_ERROR, "Unauthorized");
+      return;
+    }
+
+    var cause = throwable.getCause();
+    if (cause instanceof TimeoutException) {
+      sendErrorResponse(rc, cause, REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout");
       return;
     }
 
