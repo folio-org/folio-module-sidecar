@@ -4,10 +4,10 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
-import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -448,13 +448,13 @@ class SidecarIT {
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
-      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
+      .statusCode(is(SC_REQUEST_TIMEOUT))
       .contentType(is(APPLICATION_JSON))
       .body(
         "total_records", is(1),
-        "errors[0].type", is("InternalServerErrorException"),
-        "errors[0].code", is("service_error"),
-        "errors[0].message", is("Failed to proxy request")
+        "errors[0].type", is("NoStackTraceTimeoutException"),
+        "errors[0].code", is("read_timeout_error"),
+        "errors[0].message", is("Request Timeout")
       );
   }
 
@@ -467,13 +467,13 @@ class SidecarIT {
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
-      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
+      .statusCode(is(SC_REQUEST_TIMEOUT))
       .contentType(is(APPLICATION_JSON))
       .body(
         "total_records", is(1),
-        "errors[0].type", is("InternalServerErrorException"),
-        "errors[0].code", is("service_error"),
-        "errors[0].message", is("Failed to proxy request")
+        "errors[0].type", is("NoStackTraceTimeoutException"),
+        "errors[0].code", is("read_timeout_error"),
+        "errors[0].message", is("Request Timeout")
       );
   }
 }

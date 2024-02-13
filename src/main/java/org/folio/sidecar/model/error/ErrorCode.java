@@ -16,7 +16,8 @@ public enum ErrorCode {
   ROUTE_FOUND_ERROR("route_not_found_error"),
   UNKNOWN_TENANT("tenant_not_enabled"),
   FOUND_ERROR("found_error"),
-  AUTHORIZATION_ERROR("authorization_error");
+  AUTHORIZATION_ERROR("authorization_error"),
+  READ_TIMEOUT_ERROR("read_timeout_error");
 
   @JsonValue
   private final String value;
