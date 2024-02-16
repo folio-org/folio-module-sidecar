@@ -20,6 +20,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
+import org.folio.sidecar.service.TransactionLogHandler;
 
 @Log4j2
 @ApplicationScoped
@@ -40,6 +41,7 @@ public class RequestForwardingService {
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final WebClientProperties webClientProperties;
+  private final TransactionLogHandler transactionLogHandler;
 
   /**
    * Forwards incoming (ingress) or outgoing (egress) request.
@@ -61,7 +63,10 @@ public class RequestForwardingService {
     request.params().forEach(bufferHttpRequest::addQueryParam);
 
     bufferHttpRequest.sendStream(request)
-      .onSuccess(resp -> handleSuccessfulResponse(rc, resp))
+      .onSuccess(resp -> {
+        handleSuccessfulResponse(rc, resp);
+        transactionLogHandler.handle(rc, resp, bufferHttpRequest);
+      })
       .onFailure(error -> errorHandler.sendErrorResponse(
         rc, new InternalServerErrorException("Failed to proxy request", error)));
   }
