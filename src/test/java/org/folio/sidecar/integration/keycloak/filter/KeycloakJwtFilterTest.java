@@ -304,10 +304,10 @@ class KeycloakJwtFilterTest {
   }
 
   @Test
-  void shouldSkip_positive_noRequiredPermissions() {
+  void shouldSkip_negative_noRequiredPermissions() {
     var routingContext = routingContext(scRoutingEntry("not-system"), rc -> {});
     var actual = keycloakJwtFilter.shouldSkip(routingContext);
-    assertThat(actual).isTrue();
+    assertThat(actual).isFalse();
   }
 
   private static RoutingContext routingContext(ScRoutingEntry routingEntry, Consumer<RoutingContext> rcModifier) {

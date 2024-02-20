@@ -50,6 +50,11 @@
                 "methods": [ "POST" ],
                 "pathPattern": "/foo/xyz",
                 "permissionsRequired": [ "foo.xyz.collection.post" ]
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/bar",
+                "permissionsRequired": []
               }
             ]
           },

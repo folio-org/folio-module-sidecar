@@ -26,6 +26,12 @@ public class KeycloakSystemJwtFilter implements IngressRequestFilter {
 
   private final JsonWebTokenParser tokenParser;
 
+  /**
+   * Finds system token as X-System-Token header and parses it to {@link JsonWebToken} object.
+   *
+   * @param rc - {@link RoutingContext} object to filter
+   * @return {@link Future} of {@link RoutingContext} object
+   */
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
     return getSystemToken(rc)
