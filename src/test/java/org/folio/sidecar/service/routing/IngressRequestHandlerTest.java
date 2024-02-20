@@ -25,7 +25,6 @@ import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.support.TestConstants;
-import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +51,7 @@ class IngressRequestHandlerTest {
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(requestForwardingService, requestFilterService, errorHandler);
+    verifyNoMoreInteractions(requestForwardingService, requestFilterService, errorHandler, sidecarProperties);
   }
 
   @Test
@@ -63,6 +62,7 @@ class IngressRequestHandlerTest {
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
     var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
+    when(sidecarProperties.isModulePrefixEnabled()).thenReturn(false);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
 
     ingressRequestHandler.handle(routingContext, requestRoutingEntry);
@@ -79,17 +79,15 @@ class IngressRequestHandlerTest {
   }
 
   @Test
-  void handle_positive_selfRequest() {
+  void handle_positive_modulePrefixEnabled() {
     var headers = new HeadersMultiMap();
     var routingPath = "/foo/entities";
-    var routingContext = routingContext(rc -> {
-      when(rc.request().headers()).thenReturn(headers);
-      when(rc.get(RoutingUtils.ADD_MODULE_NAME_TO_PATH_KEY)).thenReturn(true);
-    });
+    var routingContext = routingContext(rc -> when(rc.request().headers()).thenReturn(headers));
 
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
     var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
+    when(sidecarProperties.isModulePrefixEnabled()).thenReturn(true);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
 
     ingressRequestHandler.handle(routingContext, requestRoutingEntry);
