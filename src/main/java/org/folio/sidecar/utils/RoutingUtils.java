@@ -29,7 +29,6 @@ public class RoutingUtils {
    */
   public static final String SC_ROUTING_ENTRY_KEY = "scRoutingEntry";
   public static final String SELF_REQUEST_KEY = "selfRequest";
-  public static final String ADD_MODULE_NAME_TO_PATH_KEY = "addModuleNameToPath";
 
   /**
    * Generates request id for ingress request.

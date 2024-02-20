@@ -1,6 +1,6 @@
 package org.folio.sidecar.service.routing;
 
-import static java.lang.Boolean.TRUE;
+import static org.folio.sidecar.utils.RoutingUtils.buildPathWithPrefix;
 
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -12,7 +12,6 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.filter.RequestFilterService;
-import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
@@ -46,8 +45,7 @@ public class IngressRequestHandler implements RequestHandler {
     headers.set(OkapiHeaders.URL, sidecarProperties.getUrl());
     headers.set(OkapiHeaders.MODULE_ID, moduleProperties.getId());
 
-    var addModuleNameToPath = TRUE.equals(rc.get(RoutingUtils.ADD_MODULE_NAME_TO_PATH_KEY));
-    var path = RoutingUtils.buildPathWithPrefix(rc, addModuleNameToPath, moduleProperties.getName());
+    var path = buildPathWithPrefix(rc, sidecarProperties.isModulePrefixEnabled(), moduleProperties.getName());
     log.info("Forwarding ingress request to underlying module: [method: {}, path: {}]", request.method(), path);
 
     var absUri = moduleProperties.getUrl() + path;
