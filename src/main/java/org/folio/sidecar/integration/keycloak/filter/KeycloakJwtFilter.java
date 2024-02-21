@@ -125,7 +125,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
    * @return {@link Future} of {@link RoutingContext} object
    */
   private static Future<RoutingContext> handleFailedTokenParsing(RoutingContext rc, Throwable error) {
-    if (hasNoPermissionsRequired(rc) && !(error instanceof UnauthorizedException)) {
+    if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())) {
       return succeededFuture(rc);
     }
     return failedFuture(error);
