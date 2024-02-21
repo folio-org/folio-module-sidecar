@@ -163,6 +163,30 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/foo/bar",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/foo"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        }
+      }
     }
   ]
 }

@@ -510,4 +510,17 @@ class SidecarIT {
       .contentType(is(APPLICATION_JSON))
       .body(is(asJson("json/unauthorized-error.json")));
   }
+
+  @Test
+  void handleIngressRequest_positive_emptyTokenWhilePermissionsNotRequired() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON));
+  }
 }
