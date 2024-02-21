@@ -56,6 +56,10 @@ public class TestUtils {
     return OBJECT_MAPPER.readTree(json).toString();
   }
 
+  public static String asJson(String path) {
+    return minify(readString(path));
+  }
+
   public static RequestSpecification givenJson() {
     return given()
       .log().ifValidationFails(LogDetail.BODY)

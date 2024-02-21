@@ -34,6 +34,8 @@ import org.folio.sidecar.service.filter.IngressRequestFilter;
 @RequiredArgsConstructor
 public class KeycloakJwtFilter implements IngressRequestFilter {
 
+  private static final String FAILED_TO_PARSE_JWT_ERROR_MSG = "Failed to parse JWT";
+
   private final JsonWebTokenParser jsonWebTokenParser;
 
   /**
@@ -41,19 +43,20 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
    * x-okapi-token (as we don't pass it during tenant install), mod-pubsub-client lib adds a default "dummy" token to
    * such requests and therefore sidecar should be able to process such request.
    *
-   * @param rc - routing context
-   * @return {@link Optional} of {@link JsonWebToken} object
+   * @param rc - {@link RoutingContext} routing context
+   * @return {@link Future} of {@link RoutingContext} object
    */
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
-    return getParsedSystemToken(rc).isPresent()
+    var future = getParsedSystemToken(rc).isPresent()
       ? authenticateRequestWithSystemJwt(rc)
       : authenticateRequest(rc);
+    return future.recover(error -> handleFailedTokenParsing(rc, error));
   }
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc) || hasNoPermissionsRequired(rc);
+    return isSystemRequest(rc);
   }
 
   @Override
@@ -99,7 +102,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
       var jsonWebToken = jsonWebTokenParser.parse(accessToken);
       return succeededFuture(populateContextAndHeaders(rc, jsonWebToken));
     } catch (ParseException exception) {
-      return failedFuture(new UnauthorizedException("Failed to parse JWT", exception));
+      return failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, exception));
     }
   }
 
@@ -112,12 +115,28 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
     }
   }
 
+  /**
+   * Handles failed token parsing. If no permissions are required and the error is not related to parsing JWT, then
+   * returns succeeded future. Otherwise, returns failed future with the error. Token should be parsed and data should
+   * be populated even if no permissions are required.
+   *
+   * @param rc - {@link RoutingContext} routing context
+   * @param error - {@link Throwable} error
+   * @return {@link Future} of {@link RoutingContext} object
+   */
+  private static Future<RoutingContext> handleFailedTokenParsing(RoutingContext rc, Throwable error) {
+    if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())) {
+      return succeededFuture(rc);
+    }
+    return failedFuture(error);
+  }
+
   private static Future<RoutingContext> handleParseExceptionForPresentSystemJwt(RoutingContext rc, ParseException err) {
     if (Objects.equals(INVALID_SEGMENTS_JWT_ERROR_MSG, err.getMessage())) {
       return succeededFuture(rc);
     }
 
-    return failedFuture(new UnauthorizedException("Failed to parse JWT", err));
+    return failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, err));
   }
 
   private static RoutingContext populateContextAndHeaders(RoutingContext rc, JsonWebToken parsedToken) {

@@ -9,6 +9,8 @@ import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
+import static org.folio.sidecar.support.TestConstants.USER_ID;
+import static org.folio.sidecar.support.TestUtils.asJson;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -475,5 +477,50 @@ class SidecarIT {
         "errors[0].code", is("read_timeout_error"),
         "errors[0].message", is("Request Timeout")
       );
+  }
+
+  @Test
+  void handleIngressRequest_positive_userJwtTokenShouldBeParsedWhilePermissionsNotRequired() {
+    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleIngressRequest_negative_401WithWrongJwtWhilePermissionsNotRequired() {
+    var authToken = TestJwtGenerator.generateExpiredJwtToken(keycloakUrl, TestConstants.TENANT_NAME);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/unauthorized-error.json")));
+  }
+
+  @Test
+  void handleIngressRequest_positive_emptyTokenWhilePermissionsNotRequired() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON));
   }
 }

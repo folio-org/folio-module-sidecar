@@ -19,6 +19,7 @@ public class TestConstants {
   public static final String TENANT_NAME = "testtenant";
   public static final String FOLIO_ENV = "folio";
   public static final String TENANT_ID = "90b113f0-4e98-45f7-bccc-cf318e13a9bc";
+  public static final String USER_ID = "00000000-0000-0000-0000-111111111111";
   public static final UUID TENANT_UUID = UUID.fromString(TENANT_ID);
   public static final String MODULE_NAME = "mod-foo";
   public static final String SIDECAR_NAME = "sc-mod-foo";
