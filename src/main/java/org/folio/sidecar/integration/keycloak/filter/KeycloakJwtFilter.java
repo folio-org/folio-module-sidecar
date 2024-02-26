@@ -10,6 +10,7 @@ import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
+import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
@@ -77,9 +78,8 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
   }
 
   private Optional<String> findAccessToken(RoutingContext rc) {
-    var request = rc.request();
-    var headers = request.headers();
-    var okapiToken = headers.get(TOKEN);
+    var headers = rc.request().headers();
+    var okapiToken = getToken(rc);
     var authToken = ofNullable(headers.get(AUTHORIZATION)).orElse(okapiToken);
 
     if (authToken == null) {
@@ -116,19 +116,29 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
   }
 
   /**
-   * Handles failed token parsing. If no permissions are required and the error is not related to parsing JWT, then
-   * returns succeeded future. Otherwise, returns failed future with the error. Token should be parsed and data should
-   * be populated even if no permissions are required.
+   * Handles failed token parsing. If no permissions are required and the error is not related to parsing JWT or
+   * the request is a self request and there is no token provided at all, then returns succeeded future.
+   * Otherwise, returns failed future with the error. Token should be parsed and data should be populated
+   * even if no permissions are required.
    *
    * @param rc - {@link RoutingContext} routing context
    * @param error - {@link Throwable} error
    * @return {@link Future} of {@link RoutingContext} object
    */
   private static Future<RoutingContext> handleFailedTokenParsing(RoutingContext rc, Throwable error) {
-    if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())) {
+    if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())
+      || isSelfRequest(rc) && !hasToken(rc)) {
       return succeededFuture(rc);
     }
     return failedFuture(error);
+  }
+
+  private static String getToken(RoutingContext rc) {
+    return rc.request().headers().get(TOKEN);
+  }
+
+  private static boolean hasToken(RoutingContext rc) {
+    return getToken(rc) != null;
   }
 
   private static Future<RoutingContext> handleParseExceptionForPresentSystemJwt(RoutingContext rc, ParseException err) {

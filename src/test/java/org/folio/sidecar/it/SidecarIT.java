@@ -18,6 +18,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.filter.log.LogDetail;
 import java.util.UUID;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.support.TestConstants;
@@ -70,6 +71,29 @@ class SidecarIT {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, signature)
+      .get("/foo/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is("d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[0].name", is("Test entity"),
+        "entities[0].description", is("A Test entity description")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_positive_selfRequestWithoutToken() {
+    var signature = TestUtils.getSignature();
+
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, signature)
       .get("/foo/entities")
       .then()
@@ -522,5 +546,28 @@ class SidecarIT {
       .statusCode(is(SC_OK))
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleIngressRequest_negative_selfRequestWithInvalidToken() {
+    authToken = RandomStringUtils.random(20);
+    var signature = TestUtils.getSignature();
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, signature)
+      .get("/foo/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("UnauthorizedException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Unauthorized")
+      );
   }
 }

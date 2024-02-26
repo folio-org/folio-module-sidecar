@@ -11,6 +11,7 @@ import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
+import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -214,6 +215,7 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
@@ -281,6 +283,50 @@ class KeycloakJwtFilterTest {
     assertThat(result.cause())
       .isInstanceOf(UnauthorizedException.class)
       .hasMessage("Failed to parse JWT");
+  }
+
+  @Test
+  void filter_positive_selfRequestWithoutToken() {
+    var requestHeaders = headers(Collections.emptyMap());
+    var routingContext = routingContext(scRoutingEntry(), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
+    });
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).isEqualTo(routingContext);
+
+    assertThat(requestHeaders.get(TOKEN)).isNull();
+    assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void filter_negative_selfRequestWithInvalidToken() throws ParseException {
+    var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
+    var routingContext = routingContext(scRoutingEntry(), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
+    });
+
+    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Failed to parse JWT");
+
+    verify(routingContext, never()).put(anyString(), any());
+    assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
+    assertThat(requestHeaders.get(USER_ID)).isNull();
+    assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
   }
 
   @Test
