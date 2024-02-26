@@ -141,7 +141,6 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
-      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
@@ -170,7 +169,6 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
-      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     when(jsonWebTokenParser.parse(dummyToken)).thenThrow(new ParseException(INVALID_SEGMENTS_JWT_ERROR_MSG));
@@ -196,7 +194,6 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
-      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -289,6 +286,50 @@ class KeycloakJwtFilterTest {
   }
 
   @Test
+  void filter_positive_selfRequestWithoutToken() {
+    var requestHeaders = headers(Collections.emptyMap());
+    var routingContext = routingContext(scRoutingEntry(), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
+    });
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).isEqualTo(routingContext);
+
+    assertThat(requestHeaders.get(TOKEN)).isNull();
+    assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void filter_negative_selfRequestWithInvalidToken() throws ParseException {
+    var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
+    var routingContext = routingContext(scRoutingEntry(), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
+    });
+
+    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Failed to parse JWT");
+
+    verify(routingContext, never()).put(anyString(), any());
+    assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
+    assertThat(requestHeaders.get(USER_ID)).isNull();
+    assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
+  }
+
+  @Test
   void getOrder_positive() {
     var actual = keycloakJwtFilter.getOrder();
     assertThat(actual).isEqualTo(120);
@@ -304,15 +345,6 @@ class KeycloakJwtFilterTest {
   @Test
   void shouldSkip_positive_systemRequest() {
     var routingContext = routingContext(scRoutingEntry("system", "foo.item.get"), rc -> {});
-    var actual = keycloakJwtFilter.shouldSkip(routingContext);
-    assertThat(actual).isTrue();
-  }
-
-  @Test
-  void shouldSkip_positive_selfRequest() {
-    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"),
-      rc -> when(rc.get(SELF_REQUEST_KEY)).thenReturn(true));
-
     var actual = keycloakJwtFilter.shouldSkip(routingContext);
     assertThat(actual).isTrue();
   }
