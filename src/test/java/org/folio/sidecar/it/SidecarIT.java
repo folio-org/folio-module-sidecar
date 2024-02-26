@@ -88,6 +88,29 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_positive_selfRequestWithoutToken() {
+    var signature = TestUtils.getSignature();
+
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, signature)
+      .get("/foo/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is("d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[0].name", is("Test entity"),
+        "entities[0].description", is("A Test entity description")
+      );
+  }
+
+  @Test
   void handleIngressRequest_positive_entityById() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)

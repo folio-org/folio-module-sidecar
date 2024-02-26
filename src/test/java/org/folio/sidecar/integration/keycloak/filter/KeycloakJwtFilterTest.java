@@ -11,6 +11,7 @@ import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
+import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -140,6 +141,7 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
@@ -168,6 +170,7 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     when(jsonWebTokenParser.parse(dummyToken)).thenThrow(new ParseException(INVALID_SEGMENTS_JWT_ERROR_MSG));
@@ -193,6 +196,7 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -214,6 +218,7 @@ class KeycloakJwtFilterTest {
       when(rc.request()).thenReturn(request);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemJwt);
       when(request.headers()).thenReturn(requestHeaders);
+      when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
@@ -299,6 +304,15 @@ class KeycloakJwtFilterTest {
   @Test
   void shouldSkip_positive_systemRequest() {
     var routingContext = routingContext(scRoutingEntry("system", "foo.item.get"), rc -> {});
+    var actual = keycloakJwtFilter.shouldSkip(routingContext);
+    assertThat(actual).isTrue();
+  }
+
+  @Test
+  void shouldSkip_positive_selfRequest() {
+    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"),
+      rc -> when(rc.get(SELF_REQUEST_KEY)).thenReturn(true));
+
     var actual = keycloakJwtFilter.shouldSkip(routingContext);
     assertThat(actual).isTrue();
   }

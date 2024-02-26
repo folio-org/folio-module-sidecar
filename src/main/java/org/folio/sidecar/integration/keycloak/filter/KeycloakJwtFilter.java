@@ -10,6 +10,7 @@ import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
+import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
@@ -56,7 +57,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc);
+    return isSystemRequest(rc) || isSelfRequest(rc);
   }
 
   @Override
