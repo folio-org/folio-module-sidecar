@@ -13,3 +13,8 @@ updates:
       prefix: fix
       prefix-development: chore
       include: scope
+    groups:
+      dev-deps:
+        dependency-type: "development"
+      prod-deps:
+        dependency-type: "production"
