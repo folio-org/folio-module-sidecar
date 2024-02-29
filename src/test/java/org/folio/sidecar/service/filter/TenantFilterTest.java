@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -35,6 +36,7 @@ class TenantFilterTest {
   void filter_positive() {
     var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
 
+    when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
     when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(true);
 
     var result = tenantFilter.applyFilter(routingContext);
@@ -58,6 +60,7 @@ class TenantFilterTest {
   void filter_negative_unknownTenant() {
     var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
 
+    when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
     when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(false);
 
     var result = tenantFilter.applyFilter(routingContext);
@@ -66,6 +69,38 @@ class TenantFilterTest {
     assertThat(result.cause())
       .isInstanceOf(TenantNotEnabledException.class)
       .hasMessage("Application is not enabled for tenant: %s", TestConstants.TENANT_NAME);
+  }
+
+  @Test
+  void shouldSkip_positive_selfRequest() {
+    var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
+
+    when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(true);
+
+    var result = tenantFilter.shouldSkip(routingContext);
+
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  void shouldSkip_positive_tenantInstallRequest() {
+    var scRoutingEntry = TestValues.scRoutingEntrySysInterface("_tenant", "/_/tenant", HttpMethod.POST);
+    var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME, scRoutingEntry);
+
+    var result = tenantFilter.shouldSkip(routingContext);
+
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  void shouldSkip_negative() {
+    var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
+
+    when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
+
+    var result = tenantFilter.shouldSkip(routingContext);
+
+    assertThat(result).isFalse();
   }
 
   @Test
