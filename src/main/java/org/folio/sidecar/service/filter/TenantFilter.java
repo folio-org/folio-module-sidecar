@@ -2,6 +2,7 @@ package org.folio.sidecar.service.filter;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
@@ -29,8 +30,8 @@ public class TenantFilter implements IngressRequestFilter {
   }
 
   @Override
-  public boolean shouldSkip(RoutingContext routingContext) {
-    return RoutingUtils.isTenantInstallRequest(routingContext);
+  public boolean shouldSkip(RoutingContext rc) {
+    return RoutingUtils.isTenantInstallRequest(rc) || isSelfRequest(rc);
   }
 
   @Override

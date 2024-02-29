@@ -20,6 +20,6 @@ public class SidecarSignatureFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 160;
+    return 170;
   }
 }
