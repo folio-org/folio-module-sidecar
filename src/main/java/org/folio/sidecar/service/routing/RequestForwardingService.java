@@ -65,7 +65,7 @@ public class RequestForwardingService {
     bufferHttpRequest.sendStream(request)
       .onSuccess(resp -> {
         handleSuccessfulResponse(rc, resp);
-        transactionLogHandler.handle(rc, resp, bufferHttpRequest);
+        transactionLogHandler.log(rc, resp, bufferHttpRequest);
       })
       .onFailure(error -> errorHandler.sendErrorResponse(
         rc, new InternalServerErrorException("Failed to proxy request", error)));
@@ -92,8 +92,10 @@ public class RequestForwardingService {
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
+    rc.addHeadersEndHandler(event -> rc.put("uht", System.currentTimeMillis()));
 
     removeSidecarSignatureThenEndResponse(resp, response);
+    rc.addBodyEndHandler(event -> rc.put("urt", System.currentTimeMillis()));
   }
 
   /**
