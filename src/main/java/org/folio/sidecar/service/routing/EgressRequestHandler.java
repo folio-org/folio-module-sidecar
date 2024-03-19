@@ -125,7 +125,7 @@ public class EgressRequestHandler implements RequestHandler {
     String updatedPath) {
     log.info("Forwarding egress request to module: [method: {}, path: {}, moduleId: {}, url: {}]",
       rq.method(), updatedPath, moduleId, url);
-    requestForwardingService.forward(rc, url + updatedPath);
+    requestForwardingService.forwardWithTls(rc, url + updatedPath);
   }
 
   private static void setSysUserTokenIfAvailable(RoutingContext rc, AsyncResult<String> tokenResult) {
