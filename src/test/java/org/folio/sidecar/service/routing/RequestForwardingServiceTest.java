@@ -31,6 +31,7 @@ import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
+import org.folio.sidecar.service.TransactionLogHandler;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,7 @@ class RequestForwardingServiceTest {
   @Mock private MultiMap headers;
   @Mock private SidecarSignatureService sidecarSignatureService;
   @Mock private WebClientProperties webClientProperties;
+  @Mock private TransactionLogHandler transactionLogHandler;
 
   @Captor private ArgumentCaptor<MultiMap> requestHeadersMapCaptor;
   @Captor private ArgumentCaptor<MultiMap> responseHeadersMapCaptor;

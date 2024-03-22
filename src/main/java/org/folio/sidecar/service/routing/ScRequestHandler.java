@@ -30,6 +30,7 @@ public class ScRequestHandler implements Handler<RoutingContext> {
   @Override
   public void handle(RoutingContext rc) {
     try {
+      rc.put("rt", System.currentTimeMillis());
       handler.handle(rc);
     } catch (Exception error) {
       errorHandler.sendErrorResponse(rc, error);

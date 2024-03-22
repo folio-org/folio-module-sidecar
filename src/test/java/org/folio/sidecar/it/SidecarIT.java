@@ -9,15 +9,18 @@ import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.support.TestUtils.asJson;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import io.quarkus.test.InMemoryLogHandler;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.filter.log.LogDetail;
 import java.util.UUID;
+import java.util.logging.Formatter;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
@@ -27,6 +30,10 @@ import org.folio.sidecar.support.TestUtils;
 import org.folio.sidecar.support.extensions.WireMockExtension;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
+import org.jboss.logmanager.Level;
+import org.jboss.logmanager.LogManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,8 +42,30 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(WireMockExtension.class)
 class SidecarIT {
 
+  private static final java.util.logging.Logger TRANSACTION_LOGGER =
+    LogManager.getLogManager().getLogger("transaction");
+  private static final InMemoryLogHandler MEMORY_LOG_HANDLER = new InMemoryLogHandler(
+    record -> record.getLevel().intValue() >= Level.INFO.intValue());
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;
   private String authToken;
+
+  @BeforeAll
+  static void beforeAll() {
+    var transaction = TRANSACTION_LOGGER.getHandlers()[0];
+    MEMORY_LOG_HANDLER.setFormatter(transaction.getFormatter());
+    TRANSACTION_LOGGER.addHandler(MEMORY_LOG_HANDLER);
+  }
+
+  @AfterAll
+  static void verifyLogs() {
+    String pattern =
+      "([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+)\\s+-\\s+(.|\\s)+\\s+-\\s+(.|\\s)+\\[\\d{2}/\\d{2}/"
+        + "\\d{4}:\\d{2}:\\d{2}:\\d{2}.+\\]\\s+(GET|POST|PUT|DELETE|OPTIONS)\\s+(.|\\s)+\\s+(.|\\s)+\\s+\\d{3}\\s+.+"
+        + "\\s+rt=.+\\s+uct=.+\\s+uht=.+\\s+urt=.+\\s+.+\\s+(.|\\s)+";
+    Formatter formatter = MEMORY_LOG_HANDLER.getFormatter();
+    assertThat(MEMORY_LOG_HANDLER.getRecords())
+      .allSatisfy(logRecord -> assertThat(formatter.format(logRecord)).matches(pattern));
+  }
 
   @BeforeEach
   void init() {
