@@ -24,7 +24,8 @@ public class TransactionLogHandler {
     ThreadContext.put("path", request.path());
     ThreadContext.put("protocol", String.valueOf(request.version()));
     ThreadContext.put("status", String.valueOf(resp.statusCode()));
-    ThreadContext.put("bytes", String.valueOf(resp.body().getBytes().length));
+    var bytes = String.valueOf(resp.body() == null ? 0 : resp.body().getBytes().length);
+    ThreadContext.put("bytes", bytes);
     ThreadContext.put("user-agent", request.getHeader(HttpHeaders.USER_AGENT));
     ThreadContext.put("x-okapi-tenant", request.getHeader(OkapiHeaders.TENANT));
     ThreadContext.put("x-okapi-user-id", request.getHeader(OkapiHeaders.USER_ID));
