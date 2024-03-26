@@ -161,7 +161,7 @@ class SidecarIT {
   }
 
   @Test
-  void handleIngressRequest_positive_duplicated_header() {
+  void handleIngressRequest_positive_duplicatedHeader() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
