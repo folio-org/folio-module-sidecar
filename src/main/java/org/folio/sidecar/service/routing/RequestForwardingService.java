@@ -94,8 +94,7 @@ public class RequestForwardingService {
     response.setStatusCode(resp.statusCode());
     rc.addHeadersEndHandler(event -> rc.put("uht", System.currentTimeMillis()));
 
-    removeSidecarSignatureThenEndResponse(resp, response);
-    rc.addBodyEndHandler(event -> rc.put("urt", System.currentTimeMillis()));
+    removeSidecarSignatureThenEndResponse(resp, response, rc);
   }
 
   /**
@@ -104,9 +103,11 @@ public class RequestForwardingService {
    * @param resp - {@link HttpResponse} object
    * @param response - {@link HttpServerResponse} object
    */
-  private void removeSidecarSignatureThenEndResponse(HttpResponse<Buffer> resp, HttpServerResponse response) {
+  private void removeSidecarSignatureThenEndResponse(HttpResponse<Buffer> resp, HttpServerResponse response,
+    RoutingContext rc) {
     sidecarSignatureService.removeSignature(response);
     var responseBodyBuffer = resp.bodyAsBuffer();
+    rc.addBodyEndHandler(event -> rc.put("urt", System.currentTimeMillis()));
     if (responseBodyBuffer == null) {
       response.end();
       return;
