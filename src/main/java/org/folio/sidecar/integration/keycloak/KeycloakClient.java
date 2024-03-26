@@ -24,7 +24,7 @@ public class KeycloakClient {
   private final WebClient webClient;
   private final KeycloakProperties properties;
 
-  public KeycloakClient(@Named("webClient") WebClient webClient, KeycloakProperties properties) {
+  public KeycloakClient(@Named("webClientTls") WebClient webClient, KeycloakProperties properties) {
     this.webClient = webClient;
     this.properties = properties;
   }
