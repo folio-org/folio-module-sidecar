@@ -73,7 +73,7 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
   }
 
   private RoutingContext populateRoutingContextByAccessToken(RoutingContext rc, String impersonatedUserToken) {
-    rc.request().headers().add(TOKEN, impersonatedUserToken);
+    rc.request().headers().set(TOKEN, impersonatedUserToken);
     try {
       var jsonWebToken = jwtParser.parse(impersonatedUserToken);
       putParsedToken(rc, jsonWebToken);

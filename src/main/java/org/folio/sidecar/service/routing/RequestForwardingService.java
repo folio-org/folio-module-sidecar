@@ -82,7 +82,7 @@ public class RequestForwardingService {
     var headers = new HeadersMultiMap();
     for (var h : request.headers()) {
       if (headerPredicate.test(h.getKey())) {
-        headers.add(h.getKey(), h.getValue());
+        headers.set(h.getKey(), h.getValue());
       }
     }
     return headers;

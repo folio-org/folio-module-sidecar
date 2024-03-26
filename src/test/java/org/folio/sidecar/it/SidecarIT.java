@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.support.TestUtils.asJson;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.quarkus.test.InMemoryLogHandler;
@@ -145,6 +146,27 @@ class SidecarIT {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/entities/d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "id", is("d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "name", is("Test entity"),
+        "description", is("A Test entity description")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_positive_duplicated_header() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer duplicated")
       .get("/foo/entities/d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec")
       .then()
       .log().ifValidationFails(LogDetail.ALL)

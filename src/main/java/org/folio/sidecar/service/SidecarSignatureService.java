@@ -32,7 +32,7 @@ public class SidecarSignatureService {
   }
 
   public RoutingContext populateSignature(RoutingContext rc) {
-    rc.request().headers().add(SIGNATURE_HEADER, SIGNATURE);
+    rc.request().headers().set(SIGNATURE_HEADER, SIGNATURE);
     return rc;
   }
 
