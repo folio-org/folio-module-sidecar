@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.routing;
 
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
+import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
@@ -12,9 +13,10 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import jakarta.ws.rs.InternalServerErrorException;
+import java.net.URI;
 import java.util.function.Predicate;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
@@ -24,7 +26,6 @@ import org.folio.sidecar.service.TransactionLogHandler;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class RequestForwardingService {
 
   /**
@@ -38,10 +39,23 @@ public class RequestForwardingService {
   private static final Predicate<String> HEADERS_PREDICATE = header -> !USER_AGENT.equalsIgnoreCase(header);
 
   private final WebClient webClient;
+  private final WebClient webClientTls;
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final WebClientProperties webClientProperties;
   private final TransactionLogHandler transactionLogHandler;
+
+  public RequestForwardingService(@Named("webClient") WebClient webClient,
+    @Named("webClientTls") WebClient webClientTls, ErrorHandler errorHandler,
+    SidecarSignatureService sidecarSignatureService, WebClientProperties webClientProperties,
+    TransactionLogHandler transactionLogHandler) {
+    this.webClient = webClient;
+    this.webClientTls = webClientTls;
+    this.errorHandler = errorHandler;
+    this.sidecarSignatureService = sidecarSignatureService;
+    this.webClientProperties = webClientProperties;
+    this.transactionLogHandler = transactionLogHandler;
+  }
 
   /**
    * Forwards incoming (ingress) or outgoing (egress) request.
@@ -51,13 +65,28 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forward(RoutingContext rc, String absUri) {
+    forward(rc, absUri, webClient);
+  }
+
+  /**
+   * Forwards incoming (ingress) or outgoing (egress) request.
+   *
+   * @param rc - {@link RoutingContext} object to forward request
+   * @param absUri - absolute uri as {@link String} object
+   */
+  @SneakyThrows
+  public void forwardWithTls(RoutingContext rc, String absUri) {
+    forward(rc, toHttpsUri(absUri), webClientTls);
+  }
+
+  @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
+  private void forward(RoutingContext rc, String absUri, WebClient webClient) {
     var request = rc.request();
-    var headers = filterHeaders(request, HEADERS_PREDICATE);
 
     var bufferHttpRequest = webClient
       .requestAbs(request.method(), absUri)
       .timeout(webClientProperties.getTimeout())
-      .putHeaders(headers)
+      .putHeaders(filterHeaders(request))
       .putHeader(REQUEST_ID, getRequestId(rc));
 
     request.params().forEach(bufferHttpRequest::addQueryParam);
@@ -71,14 +100,18 @@ public class RequestForwardingService {
         rc, new InternalServerErrorException("Failed to proxy request", error)));
   }
 
+  private String toHttpsUri(String uri) {
+    URI httpUri = URI.create(uri);
+    return format("https://%s:%s%s", httpUri.getHost(), webClientProperties.getTlsPort(), httpUri.getPath());
+  }
+
   /**
    * Filters request headers with the given predicate.
    *
    * @param request request
-   * @param headerPredicate predicate for filtering headers
    * @return filtered headers
    */
-  private static HeadersMultiMap filterHeaders(HttpServerRequest request, Predicate<String> headerPredicate) {
+  private static HeadersMultiMap filterHeaders(HttpServerRequest request) {
     var headers = new HeadersMultiMap();
     for (var h : request.headers()) {
       if (headerPredicate.test(h.getKey())) {

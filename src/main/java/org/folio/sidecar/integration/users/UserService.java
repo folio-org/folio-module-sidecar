@@ -12,7 +12,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.RequiredArgsConstructor;
+import jakarta.inject.Named;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
@@ -20,13 +20,20 @@ import org.folio.sidecar.service.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class UserService {
 
   private final WebClient webClient;
   private final ModUsersProperties modUsersProperties;
   private final Cache<String, User> userCache;
   private final ServiceTokenProvider serviceTokenProvider;
+
+  public UserService(@Named("webClientTls") WebClient webClient, ModUsersProperties modUsersProperties,
+    Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
+    this.webClient = webClient;
+    this.modUsersProperties = modUsersProperties;
+    this.userCache = userCache;
+    this.serviceTokenProvider = serviceTokenProvider;
+  }
 
   public Future<User> findUser(String targetTenant, String userId, RoutingContext rc) {
     var cacheKey = buildKey(userId, targetTenant);

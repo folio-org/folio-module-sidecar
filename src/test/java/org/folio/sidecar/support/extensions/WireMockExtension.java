@@ -19,8 +19,11 @@ public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    var wireMockConfiguration = WireMockConfiguration.options().dynamicPort().globalTemplating(true);
-    wireMockServer = new WireMockServer(wireMockConfiguration);
+    var config = WireMockConfiguration.options().dynamicPort().httpsPort(8443)
+      .keystorePath("certificates/bcfks.keystore.jks").keystorePassword("secretpassword")
+      .keyManagerPassword("secretpassword").globalTemplating(true);
+
+    wireMockServer = new WireMockServer(config);
     wireMockServer.start();
     var wiremockUrl = String.format("http://localhost:%s", wireMockServer.port());
     log.info("Wiremock server started at: {}", wiremockUrl);

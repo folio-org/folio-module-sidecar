@@ -8,6 +8,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.integration.te.model.Entitlement;
@@ -23,7 +24,7 @@ public class TenantEntitlementClient {
   private final JsonConverter jsonConverter;
   private final TenantEntitlementClientProperties clientProperties;
 
-  public TenantEntitlementClient(WebClient webClient, JsonConverter jsonConverter,
+  public TenantEntitlementClient(@Named("webClientTls") WebClient webClient, JsonConverter jsonConverter,
     TenantEntitlementClientProperties clientProperties) {
     validateBatchSizeValue(clientProperties.getBatchSize());
     this.webClient = webClient;
