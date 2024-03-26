@@ -114,7 +114,7 @@ public class RequestForwardingService {
   private static HeadersMultiMap filterHeaders(HttpServerRequest request) {
     var headers = new HeadersMultiMap();
     for (var h : request.headers()) {
-      if (headerPredicate.test(h.getKey())) {
+      if (HEADERS_PREDICATE.test(h.getKey())) {
         headers.set(h.getKey(), h.getValue());
       }
     }
