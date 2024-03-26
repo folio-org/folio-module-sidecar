@@ -54,7 +54,7 @@ class SidecarSignatureServiceTest {
 
     sidecarSignatureService.populateSignature(routingContext);
 
-    verify(headers).add(eq(SIGNATURE_HEADER), any(String.class));
+    verify(headers).set(eq(SIGNATURE_HEADER), any(String.class));
   }
 
   @Test

@@ -161,6 +161,27 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_positive_duplicatedHeader() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer duplicated")
+      .get("/foo/entities/d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "id", is("d12c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "name", is("Test entity"),
+        "description", is("A Test entity description")
+      );
+  }
+
+  @Test
   void handleIngressRequest_positive_systemToken() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
