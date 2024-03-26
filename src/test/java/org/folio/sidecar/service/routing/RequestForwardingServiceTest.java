@@ -100,6 +100,41 @@ class RequestForwardingServiceTest {
   }
 
   @Test
+  void forwardWithTls_positive() {
+    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+
+    when(webClientProperties.getTlsPort()).thenReturn(8443);
+    var absoluteHttpsUrl = "https://sc-foo:8443/foo/entities";
+    when(webClient.requestAbs(GET, absoluteHttpsUrl)).thenReturn(httpRequest);
+    prepareHttpRequestMocks(routingContext);
+    prepareHttpResponseMocks(buffer);
+
+    var response = routingContext.response();
+    when(response.headers()).thenReturn(headers);
+    when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
+    when(response.end(buffer)).thenReturn(succeededFuture());
+
+    service.forwardWithTls(routingContext, absoluteUrl);
+
+    var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
+    assertThat(capturedRequestHeaders).hasSize(3);
+    assertThat(capturedRequestHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
+    assertThat(capturedRequestHeaders.get(OkapiHeaders.TENANT)).isEqualTo(TestConstants.TENANT_ID);
+    assertThat(capturedRequestHeaders.get(OkapiHeaders.TOKEN)).isEqualTo(TestConstants.AUTH_TOKEN);
+    assertThat(capturedRequestHeaders.contains(USER_AGENT)).isFalse();
+
+    var responseHeaders = responseHeadersMapCaptor.getValue();
+    assertThat(responseHeaders).hasSize(2);
+    assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
+    assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
+    assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
+    assertThat(queryParamCaptor.getAllValues()).containsExactly("query", "name==test", "offset", "10", "size", "50");
+    assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
+
+    verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
+  }
+
+  @Test
   void forward_positive_nullBodyBuffer() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
 

@@ -9,11 +9,11 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.tm.model.Tenant;
 import org.folio.sidecar.integration.tm.model.TenantList;
@@ -23,12 +23,18 @@ import org.folio.sidecar.utils.GenericCompositeFuture;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class TenantManagerClient {
 
   private final WebClient webClient;
   private final JsonConverter jsonConverter;
   private final TenantManagerClientProperties clientProperties;
+
+  public TenantManagerClient(@Named("webClientTls") WebClient webClient, JsonConverter jsonConverter,
+    TenantManagerClientProperties clientProperties) {
+    this.webClient = webClient;
+    this.jsonConverter = jsonConverter;
+    this.clientProperties = clientProperties;
+  }
 
   /**
    * Provides tenant info.
