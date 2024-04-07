@@ -24,11 +24,11 @@
     <quarkus.package.add-runner-suffix>false</quarkus.package.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.6.9</quarkus.platform.version>
-    <applications-poc-tools.version>1.3.0</applications-poc-tools.version>
+    <quarkus.platform.version>3.9.2</quarkus.platform.version>
+    <applications-poc-tools.version>1.3.1</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
 
-    <lombok.version>1.18.30</lombok.version>
+    <lombok.version>1.18.32</lombok.version>
 
     <!-- Test properties -->
     <jjwt.version>0.12.5</jjwt.version>
@@ -39,9 +39,9 @@
 
     <!-- Plugin properties-->
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
-    <compiler-plugin.version>3.12.1</compiler-plugin.version>
-    <maven-checkstyle.version>10.13.0</maven-checkstyle.version>
-    <jacoco-maven-plugin.version>0.8.11</jacoco-maven-plugin.version>
+    <compiler-plugin.version>3.13.0</compiler-plugin.version>
+    <maven-checkstyle.version>10.15.0</maven-checkstyle.version>
+    <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
