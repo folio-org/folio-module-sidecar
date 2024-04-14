@@ -14,6 +14,7 @@ public class ModuleBootstrapEndpoint {
   private String pathPattern;
   private String path;
   private List<String> permissionsRequired;
+  private List<String> permissionsDesired;
 
   /**
    * Constructor.

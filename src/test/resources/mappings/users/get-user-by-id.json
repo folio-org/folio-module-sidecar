@@ -39,6 +39,31 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/users/00000000-0000-0000-0000-111111111111/permissions?desiredPermissions=bar.foo.desired.*&desiredPermissions=bar.foo.item.get",
+        "headers": {
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "permissions": [
+            "bar.foo.desired.get",
+            "bar.foo.desired.post",
+            "bar.foo.item.get"
+          ]
+        }
+      }
     }
   ]
 }
