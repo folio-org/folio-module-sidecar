@@ -55,6 +55,11 @@
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/bar",
                 "permissionsRequired": []
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/bar/foo",
+                "permissionsDesired": ["bar.foo.desired.*", "bar.foo.item.get"]
               }
             ]
           },

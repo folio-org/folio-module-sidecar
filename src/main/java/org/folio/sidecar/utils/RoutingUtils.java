@@ -6,8 +6,10 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
+import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 
 import io.vertx.ext.web.RoutingContext;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.AccessLevel;
@@ -171,5 +173,19 @@ public class RoutingUtils {
 
   public static void setUserIdHeader(RoutingContext rc, String userId) {
     rc.request().headers().set(USER_ID, userId);
+  }
+
+  public static Optional<String> getUserIdHeader(RoutingContext rc) {
+    return Optional.ofNullable(rc.request().headers().get(USER_ID));
+  }
+
+  public static boolean hasPermissionsDesired(RoutingContext rc) {
+    return isNotEmpty(getPermissionsDesired(rc));
+  }
+
+  public static List<String> getPermissionsDesired(RoutingContext rc) {
+    var scRoutingEntry = getScRoutingEntry(rc);
+    var endpoint = scRoutingEntry.getRoutingEntry();
+    return endpoint.getPermissionsDesired();
   }
 }

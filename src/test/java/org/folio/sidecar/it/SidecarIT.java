@@ -620,4 +620,34 @@ class SidecarIT {
         "errors[0].message", is("Unauthorized")
       );
   }
+
+  @Test
+  void handleIngressRequest_positive_permissionHeaderPopulated() {
+    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .get("/bar/foo")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleIngressRequest_positive_permissionHeaderRemoved() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.PERMISSIONS, "foo.bar.item.get")
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON));
+  }
 }
