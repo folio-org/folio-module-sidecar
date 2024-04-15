@@ -30,7 +30,7 @@ public class UserService {
   private final Cache<String, User> userCache;
   private final ServiceTokenProvider serviceTokenProvider;
 
-  public UserService(@Named("webClientTls") WebClient webClient, ModUsersProperties modUsersProperties,
+  public UserService(@Named("webClientEgress") WebClient webClient, ModUsersProperties modUsersProperties,
     Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
     this.webClient = webClient;
     this.modUsersProperties = modUsersProperties;

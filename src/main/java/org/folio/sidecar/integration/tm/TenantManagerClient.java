@@ -29,7 +29,7 @@ public class TenantManagerClient {
   private final JsonConverter jsonConverter;
   private final TenantManagerClientProperties clientProperties;
 
-  public TenantManagerClient(@Named("webClientTls") WebClient webClient, JsonConverter jsonConverter,
+  public TenantManagerClient(@Named("webClientEgress") WebClient webClient, JsonConverter jsonConverter,
     TenantManagerClientProperties clientProperties) {
     this.webClient = webClient;
     this.jsonConverter = jsonConverter;

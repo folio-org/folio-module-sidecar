@@ -18,4 +18,9 @@ public class SidecarProperties {
   @ConfigProperty(name = "sidecar.forward-unknown-requests") boolean forwardUnknownRequests;
   @ConfigProperty(name = "sidecar.forward-unknown-requests.destination") String unknownRequestsDestination;
   @ConfigProperty(name = "sidecar.cross-tenant.enabled") boolean crossTenantEnabled;
+  @ConfigProperty(name = "sidecar.client.tls.enabled") boolean clientTlsEnabled;
+  @ConfigProperty(name = "sidecar.client.tls.trust-store-path") String trustStorePath;
+  @ConfigProperty(name = "sidecar.client.tls.trust-store-password") String trustStorePassword;
+  @ConfigProperty(name = "sidecar.client.tls.trust-store-file-type") String trustStoreFileType;
+  @ConfigProperty(name = "sidecar.client.tls.trust-store-provider") String trustStoreProvider;
 }

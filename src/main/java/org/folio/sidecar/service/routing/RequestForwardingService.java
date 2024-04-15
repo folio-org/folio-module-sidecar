@@ -39,18 +39,20 @@ public class RequestForwardingService {
   private static final Predicate<String> HEADERS_PREDICATE = header -> !USER_AGENT.equalsIgnoreCase(header);
 
   private final WebClient webClient;
-  private final WebClient webClientTls;
+  private final WebClient webClientEgress;
+  private final WebClient webClientGateway;
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final WebClientProperties webClientProperties;
   private final TransactionLogHandler transactionLogHandler;
 
   public RequestForwardingService(@Named("webClient") WebClient webClient,
-    @Named("webClientTls") WebClient webClientTls, ErrorHandler errorHandler,
-    SidecarSignatureService sidecarSignatureService, WebClientProperties webClientProperties,
+    @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
+    ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, WebClientProperties webClientProperties,
     TransactionLogHandler transactionLogHandler) {
     this.webClient = webClient;
-    this.webClientTls = webClientTls;
+    this.webClientEgress = webClientEgress;
+    this.webClientGateway = webClientGateway;
     this.errorHandler = errorHandler;
     this.sidecarSignatureService = sidecarSignatureService;
     this.webClientProperties = webClientProperties;
@@ -65,22 +67,32 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forward(RoutingContext rc, String absUri) {
-    forward(rc, absUri, webClient);
+    forwardRequest(rc, absUri, webClient);
   }
 
   /**
-   * Forwards incoming (ingress) or outgoing (egress) request.
+   * Forwards outgoing (egress) request under HTTPS if TLS is enabled.
    *
    * @param rc - {@link RoutingContext} object to forward request
    * @param absUri - absolute uri as {@link String} object
    */
   @SneakyThrows
-  public void forwardWithTls(RoutingContext rc, String absUri) {
-    forward(rc, toHttpsUri(absUri), webClientTls);
+  public void forwardEgress(RoutingContext rc, String absUri) {
+    forwardRequest(rc, toHttpsUri(absUri), webClientEgress);
   }
 
-  @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
-  private void forward(RoutingContext rc, String absUri, WebClient webClient) {
+  /**
+   * Forwards outgoing (egress) request to Gateway under HTTPS if TLS is enabled.
+   *
+   * @param rc - {@link RoutingContext} object to forward request
+   * @param absUri - absolute uri as {@link String} object
+   */
+  @SneakyThrows
+  public void forwardToGateway(RoutingContext rc, String absUri) {
+    forwardRequest(rc, toHttpsUri(absUri), webClientGateway);
+  }
+
+  private void forwardRequest(RoutingContext rc, String absUri, WebClient webClient) {
     var request = rc.request();
 
     var bufferHttpRequest = webClient

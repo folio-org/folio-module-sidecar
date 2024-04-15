@@ -1,5 +1,7 @@
 package org.folio.sidecar.service.routing;
 
+import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
@@ -76,8 +78,7 @@ public class EgressRequestHandler implements RequestHandler {
     }
 
     var moduleId = routingEntry.getModuleId();
-    var url = routingEntry.getLocation();
-    if (url == null) {
+    if (routingEntry.getLocation() == null) {
       var errorMessage = "Module location is not found for moduleId: " + moduleId;
       errorHandler.sendErrorResponse(rc, new BadRequestException(errorMessage));
       return;
@@ -85,7 +86,7 @@ public class EgressRequestHandler implements RequestHandler {
 
     RoutingUtils.setHeader(rc, OkapiHeaders.MODULE_ID, moduleId);
 
-    authenticateAndForwardRequest(rc, rq, moduleId, url);
+    authenticateAndForwardRequest(rc, rq, routingEntry);
   }
 
   /**
@@ -95,10 +96,9 @@ public class EgressRequestHandler implements RequestHandler {
    *
    * @param rc routing context
    * @param rq egress request
-   * @param moduleId module identifier for request forwarding
-   * @param url url for request forwarding
+   * @param routingEntry entry for request forwarding
    */
-  private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, String moduleId, String url) {
+  private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry) {
     var updatedPath = RoutingUtils.updatePath(rc, modulePrefixEnabled, moduleProperties.getName());
     tokenProvider.getServiceToken(rc)
       .onSuccess(serviceToken -> {
@@ -109,11 +109,11 @@ public class EgressRequestHandler implements RequestHandler {
           var tenantName = RoutingUtils.getTenant(rc);
           systemUserService.getToken(tenantName)
             .onComplete(token -> setSysUserTokenIfAvailable(rc, token))
-            .andThen(token -> forwardRequest(rc, rq, moduleId, url, updatedPath));
+            .andThen(token -> forwardRequest(rc, rq, routingEntry, updatedPath));
           return;
         }
 
-        forwardRequest(rc, rq, moduleId, url, updatedPath);
+        forwardRequest(rc, rq, routingEntry, updatedPath);
       });
   }
 
@@ -121,11 +121,15 @@ public class EgressRequestHandler implements RequestHandler {
     return !RoutingUtils.hasUserIdHeader(rc) || !RoutingUtils.hasHeader(rc, OkapiHeaders.TOKEN);
   }
 
-  private void forwardRequest(RoutingContext rc, HttpServerRequest rq, String moduleId, String url,
+  private void forwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry,
     String updatedPath) {
     log.info("Forwarding egress request to module: [method: {}, path: {}, moduleId: {}, url: {}]",
-      rq.method(), updatedPath, moduleId, url);
-    requestForwardingService.forwardWithTls(rc, url + updatedPath);
+      rq.method(), updatedPath, routingEntry.getModuleId(), routingEntry.getLocation());
+    if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
+      requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath);
+    } else {
+      requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
+    }
   }
 
   private static void setSysUserTokenIfAvailable(RoutingContext rc, AsyncResult<String> tokenResult) {

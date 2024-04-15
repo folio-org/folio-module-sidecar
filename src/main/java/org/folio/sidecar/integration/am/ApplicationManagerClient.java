@@ -20,7 +20,7 @@ public class ApplicationManagerClient {
   private final JsonConverter jsonConverter;
   private final AppManagerClientProperties clientProperties;
 
-  public ApplicationManagerClient(@Named("webClientTls") WebClient webClient, JsonConverter jsonConverter,
+  public ApplicationManagerClient(@Named("webClientEgress") WebClient webClient, JsonConverter jsonConverter,
     AppManagerClientProperties clientProperties) {
     this.webClient = webClient;
     this.jsonConverter = jsonConverter;

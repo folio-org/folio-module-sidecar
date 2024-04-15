@@ -8,6 +8,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 @RequiredArgsConstructor(staticName = "of")
 public class ScRoutingEntry {
 
+  public static final String GATEWAY_INTERFACE_ID = "GATEWAY";
   /**
    * Module id.
    */
@@ -48,10 +49,10 @@ public class ScRoutingEntry {
   }
 
   public static ScRoutingEntry gatewayRoutingEntry(String location) {
-    return ScRoutingEntry.of("NONE", location, "GATEWAY", null);
+    return ScRoutingEntry.of("NONE", location, GATEWAY_INTERFACE_ID, null);
   }
 
   public static ScRoutingEntry gatewayRoutingEntry(String location, String moduleId) {
-    return ScRoutingEntry.of(moduleId, location, "GATEWAY", null);
+    return ScRoutingEntry.of(moduleId, location, GATEWAY_INTERFACE_ID, null);
   }
 }

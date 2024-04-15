@@ -24,7 +24,7 @@ public class TenantEntitlementClient {
   private final JsonConverter jsonConverter;
   private final TenantEntitlementClientProperties clientProperties;
 
-  public TenantEntitlementClient(@Named("webClientTls") WebClient webClient, JsonConverter jsonConverter,
+  public TenantEntitlementClient(@Named("webClientEgress") WebClient webClient, JsonConverter jsonConverter,
     TenantEntitlementClientProperties clientProperties) {
     validateBatchSizeValue(clientProperties.getBatchSize());
     this.webClient = webClient;
