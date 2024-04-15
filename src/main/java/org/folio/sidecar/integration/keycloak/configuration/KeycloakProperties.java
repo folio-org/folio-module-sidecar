@@ -20,4 +20,10 @@ public class KeycloakProperties {
 
   @ConfigProperty(name = "keycloak.authorization-cache-max-size") long authorizationCacheMaxSize;
   @ConfigProperty(name = "keycloak.authorization-cache-ttl-offset") long authorizationCacheTtlOffset;
+
+  @ConfigProperty(name = "keycloak.client.tls.enabled") boolean clientTlsEnabled;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-path") String trustStorePath;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-password") String trustStorePassword;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-file-type") String trustStoreFileType;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-provider") String trustStoreProvider;
 }

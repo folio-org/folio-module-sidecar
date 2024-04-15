@@ -19,7 +19,7 @@ public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    var config = WireMockConfiguration.options().dynamicPort().httpsPort(8443)
+    var config = WireMockConfiguration.options().dynamicPort().dynamicHttpsPort()
       .keystorePath("certificates/bcfks.keystore.jks").keystorePassword("secretpassword")
       .keyManagerPassword("secretpassword").globalTemplating(true);
 
@@ -37,6 +37,7 @@ public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
       entry("TM_CLIENT_URL", wiremockUrl),
       entry("KC_URL", wiremockUrl),
       entry("OKAPI_URL", wiremockUrl),
+      entry("WEB_CLIENT_TLS_PORT", String.valueOf(wireMockServer.httpsPort())),
       entry("OKAPI_TOKEN", "T2thcGkgdGVzdCBhdXRoIHRva2Vu"),
       entry("SIDECAR_URL", "http://test-sidecar:8081"),
       entry("SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION", wiremockUrl),

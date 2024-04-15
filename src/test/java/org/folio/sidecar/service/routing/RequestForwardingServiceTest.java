@@ -100,7 +100,7 @@ class RequestForwardingServiceTest {
   }
 
   @Test
-  void forwardWithTls_positive() {
+  void forwardEgress_positive() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
 
     when(webClientProperties.getTlsPort()).thenReturn(8443);
@@ -114,7 +114,7 @@ class RequestForwardingServiceTest {
     when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
     when(response.end(buffer)).thenReturn(succeededFuture());
 
-    service.forwardWithTls(routingContext, absoluteUrl);
+    service.forwardEgress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
