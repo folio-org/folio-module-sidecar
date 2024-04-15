@@ -177,6 +177,35 @@
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/foo"
+          },
+          "X-Okapi-Permissions": {
+            "absent": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        }
+      }
+    }, {
+      "request": {
+        "method": "GET",
+        "urlPath": "/bar/foo",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Permissions": {
+            "equalTo": "bar.foo.desired.get,bar.foo.desired.post,bar.foo.item.get"
           }
         }
       },
