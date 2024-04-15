@@ -62,7 +62,7 @@ public class UserService {
 
     return serviceTokenProvider.getServiceToken(rc)
       .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken))
-      .onFailure(error -> log.error("Failed to find user permissions: user = {}, tenant = {}", userId, tenant, error));
+      .onFailure(error -> log.warn("Failed to find user permissions: user = {}, tenant = {}", userId, tenant, error));
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
