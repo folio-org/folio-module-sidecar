@@ -3,7 +3,7 @@
     {
       "request": {
         "method": "GET",
-        "urlPath": "/users/00000000-0000-0000-0000-000000000000",
+        "urlPath": "/users-keycloak/users/00000000-0000-0000-0000-000000000000",
         "headers": {
           "X-Okapi-Tenant": {
             "equalTo": "testtenant"
@@ -25,7 +25,7 @@
     {
       "request": {
         "method": "GET",
-        "urlPath": "/users/12300000-0000-0000-0000-000000000123",
+        "urlPath": "/users-keycloak/users/12300000-0000-0000-0000-000000000123",
         "headers": {
           "X-Okapi-Tenant": {
             "equalTo": "testtenant"
@@ -43,7 +43,7 @@
     {
       "request": {
         "method": "GET",
-        "url": "/users/00000000-0000-0000-0000-111111111111/permissions?desiredPermissions=bar.foo.desired.*&desiredPermissions=bar.foo.item.get",
+        "url": "/users-keycloak/users/00000000-0000-0000-0000-111111111111/permissions?desiredPermissions=bar.foo.desired.*&desiredPermissions=bar.foo.item.get",
         "headers": {
           "X-Okapi-Tenant": {
             "equalTo": "testtenant"
