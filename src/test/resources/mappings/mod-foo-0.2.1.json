@@ -205,7 +205,7 @@
             "matches": "\\d{6}/bar"
           },
           "X-Okapi-Permissions": {
-            "equalTo": "bar.foo.desired.get,bar.foo.desired.post,bar.foo.item.get"
+            "equalTo": "[\"bar.foo.desired.get\",\"bar.foo.desired.post\",\"bar.foo.item.get\"]"
           }
         }
       },
