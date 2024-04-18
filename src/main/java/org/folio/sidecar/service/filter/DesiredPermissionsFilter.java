@@ -40,11 +40,12 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     }
 
     if (hasPermissionsDesired(rc)) {
-      return succeededFuture(userIdHeader.get())
-        .flatMap(userId -> userService.findUserPermissions(rc, getPermissionsDesired(rc), userId, getTenant(rc)))
-        .flatMap(permissions -> succeededFuture(populatePermissions(rc, permissions)))
+      var userId = userIdHeader.get();
+      return succeededFuture(userId)
+        .flatMap(id -> userService.findUserPermissions(rc, getPermissionsDesired(rc), userId, getTenant(rc)))
+        .flatMap(permissions -> succeededFuture(populatePermissions(rc, permissions, userId)))
         .otherwise(error -> {
-          log.warn("Error occurred while searching user permissions: user = {}, tenant = {}", userIdHeader.get(),
+          log.warn("Error occurred while searching user permissions: userId = {}, tenant = {}", userId,
             getTenant(rc), error);
           return rc;
         });
@@ -53,15 +54,15 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     return succeededFuture(rc);
   }
 
-  private static RoutingContext populatePermissions(RoutingContext rc, List<String> permissions) {
+  private static RoutingContext populatePermissions(RoutingContext rc, List<String> permissions, String userId) {
     if (isEmpty(permissions)) {
-      log.warn("Skipping population of X-Okapi-Permissions: permissions is empty");
+      log.warn("Skipping population of X-Okapi-Permissions: permissions is empty, userId = {}", userId);
       return rc;
     }
 
     var perms = new JsonArray(permissions).encode();
     rc.request().headers().set(PERMISSIONS, perms);
-    log.info("X-Okapi-Permissions populated: permissions = {}", permissions);
+    log.info("X-Okapi-Permissions populated: permissions = {}, userId = {}", permissions, userId);
     return rc;
   }
 }
