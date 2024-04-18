@@ -52,10 +52,10 @@ public class UserService {
     requireNonNull(permissions, "Permissions must not be null");
 
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
+    log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getServiceToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken))
-      .onFailure(error -> log.warn("Failed to find user permissions: user = {}, tenant = {}", userId, tenant, error));
+      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
@@ -64,7 +64,7 @@ public class UserService {
       .putHeader(TENANT, tenant)
       .putHeader(TOKEN, token)
       .send()
-      .map(response -> response.bodyAsJson(PermissionContainer.class).permissions());
+      .flatMap(this::processResponsePermissions);
   }
 
   private Future<User> findUserById(String targetTenant, String userId, String serviceToken) {
@@ -77,18 +77,27 @@ public class UserService {
 
   private Future<User> processResponse(HttpResponse<Buffer> response) {
     if (response.statusCode() != 200) {
-      log.error("User tenants not found: status = {}, body = {}", response.statusCode(), response.bodyAsString());
+      log.warn("User tenants not found: status = {}, body = {}", response.statusCode(), response.bodyAsString());
       return failedFuture("User tenants not found");
     }
     return succeededFuture(response.bodyAsJson(User.class));
   }
 
+  private Future<List<String>> processResponsePermissions(HttpResponse<Buffer> response) {
+    if (response.statusCode() != 200) {
+      log.debug("Failed to find user permissions: status = {}, body = {}", response::statusCode,
+        response::bodyAsString);
+      return failedFuture("failed to find user permissions");
+    }
+    return succeededFuture(response.bodyAsJson(PermissionContainer.class).permissions);
+  }
+
   private static String buildUserPermissionsPath(String modUsersUrl, String userId) {
-    return String.format("%s/users/%s/permissions", modUsersUrl, userId);
+    return String.format("%s/users-keycloak/users/%s/permissions", modUsersUrl, userId);
   }
 
   private static String buildUsersUrl(String modUsersUrl, String userId) {
-    return modUsersUrl + "/users/" + userId;
+    return modUsersUrl + "/users-keycloak/users/" + userId;
   }
 
   private static String buildKey(String userId, String tenant) {

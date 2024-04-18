@@ -37,6 +37,7 @@ class UserServiceTest {
 
   private static final String TARGET_TENANT = "targetTenant";
   private static final String USER_ID = "00000000-0000-0000-0000-000000000000";
+  private static final String MOD_URL = "http://mod-users-keycloak";
 
   @InjectMocks private UserService userService;
 
@@ -70,7 +71,7 @@ class UserServiceTest {
 
     when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
-    when(modUsersProperties.getUrl()).thenReturn("http://mod-users");
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
     when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
@@ -94,7 +95,7 @@ class UserServiceTest {
 
     when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
-    when(modUsersProperties.getUrl()).thenReturn("http://mod-users");
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
     when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
@@ -111,15 +112,16 @@ class UserServiceTest {
   void findUserPermissions_positive() {
     var permissions = List.of("perm1", "perm2");
     var routingContext = routingContext(TENANT_NAME);
-    var usersPath = "http://mod-users";
-    var url = usersPath + "/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var url =
+      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
     when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
-    when(modUsersProperties.getUrl()).thenReturn(usersPath);
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
     when(httpRequest.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(200);
     when(response.bodyAsJson(PermissionContainer.class)).thenReturn(new PermissionContainer(permissions));
 
     var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
@@ -130,14 +132,36 @@ class UserServiceTest {
   }
 
   @Test
+  void findUserPermissions_negative_400WhilePermissionSearch() {
+    var permissions = List.of("perm1", "perm2");
+    var routingContext = routingContext(TENANT_NAME);
+    var url =
+      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+
+    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(webClient.getAbs(url)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
+    when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
+    when(httpRequest.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(400);
+
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+
+    assertThat(userPermissions.succeeded()).isFalse();
+    verify(webClient).getAbs(url);
+    verifyNoMoreInteractions(webClient);
+  }
+
+  @Test
   void findUserPermissions_negative_errorWhileSearchingPermissions() {
     var permissions = List.of("perm1", "perm2");
     var routingContext = routingContext(TENANT_NAME);
-    var usersPath = "http://mod-users";
-    var url = usersPath + "/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var url =
+      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
     when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
-    when(modUsersProperties.getUrl()).thenReturn(usersPath);
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);

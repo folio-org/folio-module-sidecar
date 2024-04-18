@@ -37,7 +37,7 @@ public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
       entry("OKAPI_TOKEN", "T2thcGkgdGVzdCBhdXRoIHRva2Vu"),
       entry("SIDECAR_URL", "http://test-sidecar:8081"),
       entry("SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION", wiremockUrl),
-      entry("MOD_USERS_URL", wiremockUrl)
+      entry("MOD_USERS_KEYCLOAK_URL", wiremockUrl)
     );
   }
 
