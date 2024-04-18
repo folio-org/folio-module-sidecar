@@ -35,7 +35,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     var userIdHeader = getUserIdHeader(rc);
 
     if (userIdHeader.isEmpty()) {
-      log.warn("Skipping population of X-Okapi-Permissions: user ID not found.");
+      log.info("Skipping population of X-Okapi-Permissions: user ID not found");
       return succeededFuture(rc);
     }
 
@@ -55,13 +55,13 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
 
   private static RoutingContext populatePermissions(RoutingContext rc, List<String> permissions) {
     if (isEmpty(permissions)) {
-      log.warn("Skipping population of X-Okapi-Permissions: permissions is empty.");
+      log.warn("Skipping population of X-Okapi-Permissions: permissions is empty");
       return rc;
     }
 
     var perms = join(",", permissions);
     rc.request().headers().set(PERMISSIONS, perms);
-    log.info("X-Okapi-Permissions populated, permissions = {}", perms);
+    log.info("X-Okapi-Permissions populated: permissions = {}", perms);
     return rc;
   }
 }
