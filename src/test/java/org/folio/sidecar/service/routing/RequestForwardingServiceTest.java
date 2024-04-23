@@ -8,6 +8,7 @@ import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.support.TestConstants.MODULE_URL_TLS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +28,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.ws.rs.InternalServerErrorException;
 import java.util.function.Consumer;
+import org.folio.sidecar.configuration.properties.GatewayProperties;
+import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.ErrorHandler;
@@ -47,7 +50,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class RequestForwardingServiceTest {
 
   public static final long TIMEOUT = 5000L;
-  private final String absoluteUrl = TestConstants.MODULE_URL + "/foo/entities";
+  private static final String PATH = "/foo/entities";
+  private final String absoluteUrl = TestConstants.MODULE_URL + PATH;
 
   @InjectMocks private RequestForwardingService service;
   @Mock private WebClient webClient;
@@ -58,6 +62,8 @@ class RequestForwardingServiceTest {
   @Mock private MultiMap headers;
   @Mock private SidecarSignatureService sidecarSignatureService;
   @Mock private WebClientProperties webClientProperties;
+  @Mock private SidecarProperties sidecarProperties;
+  @Mock private GatewayProperties gatewayProperties;
   @Mock private TransactionLogHandler transactionLogHandler;
 
   @Captor private ArgumentCaptor<MultiMap> requestHeadersMapCaptor;
@@ -79,7 +85,7 @@ class RequestForwardingServiceTest {
     when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
     when(response.end(buffer)).thenReturn(succeededFuture());
 
-    service.forward(routingContext, absoluteUrl);
+    service.forwardIngress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -103,9 +109,8 @@ class RequestForwardingServiceTest {
   void forwardEgress_positive() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
 
-    when(webClientProperties.getTlsPort()).thenReturn(8443);
-    var absoluteHttpsUrl = "https://sc-foo:8443/foo/entities";
-    when(webClient.requestAbs(GET, absoluteHttpsUrl)).thenReturn(httpRequest);
+    when(sidecarProperties.isClientTlsEnabled()).thenReturn(true);
+    when(webClient.requestAbs(GET, MODULE_URL_TLS + PATH)).thenReturn(httpRequest);
     prepareHttpRequestMocks(routingContext);
     prepareHttpResponseMocks(buffer);
 
@@ -147,7 +152,7 @@ class RequestForwardingServiceTest {
     when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
     when(response.end()).thenReturn(succeededFuture());
 
-    service.forward(routingContext, absoluteUrl);
+    service.forwardIngress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -180,7 +185,7 @@ class RequestForwardingServiceTest {
     when(httpRequest.putHeader(eq(OkapiHeaders.REQUEST_ID), anyString())).thenReturn(httpRequest);
     when(httpRequest.sendStream(routingContext.request())).thenReturn(failedFuture(error));
 
-    service.forward(routingContext, absoluteUrl);
+    service.forwardIngress(routingContext, absoluteUrl);
 
     verify(errorHandler).sendErrorResponse(eq(routingContext), any(InternalServerErrorException.class));
   }
@@ -206,7 +211,7 @@ class RequestForwardingServiceTest {
 
     when(routingContext.request()).thenReturn(request);
     when(request.method()).thenReturn(GET);
-    when(request.path()).thenReturn("/foo/entities");
+    when(request.path()).thenReturn(PATH);
     when(request.headers()).thenReturn(requestHeaders());
     when(request.params()).thenReturn(requestParams());
 

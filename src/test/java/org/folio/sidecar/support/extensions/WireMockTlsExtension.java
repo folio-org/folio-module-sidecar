@@ -11,19 +11,19 @@ import lombok.extern.log4j.Log4j2;
 
 @Getter
 @Log4j2
-public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
+public class WireMockTlsExtension implements QuarkusTestResourceLifecycleManager {
 
   public static WireMockServer wireMockServer;
 
   @Override
   public Map<String, String> start() {
-    var config = WireMockConfiguration.options().dynamicPort().dynamicHttpsPort()
+    var config = WireMockConfiguration.options().dynamicHttpsPort()
       .keystorePath("certificates/bcfks.keystore.jks").keystorePassword("secretpassword")
       .keyManagerPassword("secretpassword").globalTemplating(true);
 
     wireMockServer = new WireMockServer(config);
     wireMockServer.start();
-    var wiremockUrl = String.format("http://localhost:%s", wireMockServer.port());
+    var wiremockUrl = String.format("https://localhost:%s", wireMockServer.httpsPort());
     log.info("Wiremock server started at: {}", wiremockUrl);
 
     return Map.ofEntries(
@@ -38,7 +38,7 @@ public class WireMockExtension implements QuarkusTestResourceLifecycleManager {
       entry("OKAPI_TOKEN", "T2thcGkgdGVzdCBhdXRoIHRva2Vu"),
       entry("SIDECAR_URL", "http://test-sidecar:8081"),
       entry("SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION", wiremockUrl),
-      entry("MOD_USERS_KEYCLOAK_URL", wiremockUrl)
+      entry("MOD_USERS_URL", wiremockUrl)
     );
   }
 
