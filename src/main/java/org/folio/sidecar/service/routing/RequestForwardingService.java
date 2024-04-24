@@ -19,6 +19,8 @@ import java.net.URI;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.configuration.properties.GatewayProperties;
+import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
@@ -44,11 +46,14 @@ public class RequestForwardingService {
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final WebClientProperties webClientProperties;
+  private final SidecarProperties sidecarProperties;
+  private final GatewayProperties gatewayProperties;
   private final TransactionLogHandler transactionLogHandler;
 
   public RequestForwardingService(@Named("webClient") WebClient webClient,
     @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
     ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, WebClientProperties webClientProperties,
+    SidecarProperties sidecarProperties, GatewayProperties gatewayProperties,
     TransactionLogHandler transactionLogHandler) {
     this.webClient = webClient;
     this.webClientEgress = webClientEgress;
@@ -56,17 +61,19 @@ public class RequestForwardingService {
     this.errorHandler = errorHandler;
     this.sidecarSignatureService = sidecarSignatureService;
     this.webClientProperties = webClientProperties;
+    this.sidecarProperties = sidecarProperties;
+    this.gatewayProperties = gatewayProperties;
     this.transactionLogHandler = transactionLogHandler;
   }
 
   /**
-   * Forwards incoming (ingress) or outgoing (egress) request.
+   * Forwards incoming (ingress) request.
    *
    * @param rc - {@link RoutingContext} object to forward request
    * @param absUri - absolute uri as {@link String} object
    */
   @SneakyThrows
-  public void forward(RoutingContext rc, String absUri) {
+  public void forwardIngress(RoutingContext rc, String absUri) {
     forwardRequest(rc, absUri, webClient);
   }
 
@@ -78,7 +85,10 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forwardEgress(RoutingContext rc, String absUri) {
-    forwardRequest(rc, toHttpsUri(absUri), webClientEgress);
+    if (sidecarProperties.isClientTlsEnabled()) {
+      absUri = toHttpsUri(absUri);
+    }
+    forwardRequest(rc, absUri, webClientEgress);
   }
 
   /**
@@ -89,7 +99,10 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forwardToGateway(RoutingContext rc, String absUri) {
-    forwardRequest(rc, toHttpsUri(absUri), webClientGateway);
+    if (gatewayProperties.isClientTlsEnabled()) {
+      absUri = toHttpsUri(absUri);
+    }
+    forwardRequest(rc, absUri, webClientGateway);
   }
 
   private void forwardRequest(RoutingContext rc, String absUri, WebClient webClient) {
@@ -114,7 +127,7 @@ public class RequestForwardingService {
 
   private String toHttpsUri(String uri) {
     URI httpUri = URI.create(uri);
-    return format("https://%s:%s%s", httpUri.getHost(), webClientProperties.getTlsPort(), httpUri.getPath());
+    return format("https://%s:%s%s", httpUri.getHost(), httpUri.getPort(), httpUri.getPath());
   }
 
   /**

@@ -9,7 +9,6 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Named;
 import jakarta.ws.rs.Produces;
 import lombok.RequiredArgsConstructor;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.GatewayProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
@@ -18,13 +17,6 @@ import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 @Dependent
 @RequiredArgsConstructor
 public class WebClientConfiguration {
-
-  @ConfigProperty(name = "keycloak.client.tls.enabled", defaultValue = "false")
-  boolean keycloakClientTlsEnabled;
-  @ConfigProperty(name = "sidecar.client.tls.enabled", defaultValue = "false")
-  boolean sidecarClientTlsEnabled;
-  @ConfigProperty(name = "gateway.client.tls.enabled", defaultValue = "false")
-  boolean gatewayClientTlsEnabled;
 
   private final WebClientProperties webClientProperties;
   private final KeycloakProperties keycloakProperties;
@@ -55,7 +47,7 @@ public class WebClientConfiguration {
   @ApplicationScoped
   @Named("webClientKeycloak")
   public WebClient webClientKeycloak(Vertx vertx) {
-    if (keycloakClientTlsEnabled) {
+    if (keycloakProperties.isClientTlsEnabled()) {
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(keycloakProperties.getTrustStorePassword())
         .setPath(keycloakProperties.getTrustStorePath())
@@ -75,7 +67,7 @@ public class WebClientConfiguration {
   @ApplicationScoped
   @Named("webClientEgress")
   public WebClient webClientEgress(Vertx vertx) {
-    if (sidecarClientTlsEnabled) {
+    if (sidecarProperties.isClientTlsEnabled()) {
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(sidecarProperties.getTrustStorePassword())
         .setPath(sidecarProperties.getTrustStorePath())
@@ -96,7 +88,7 @@ public class WebClientConfiguration {
   @ApplicationScoped
   @Named("webClientGateway")
   public WebClient webClientGateway(Vertx vertx) {
-    if (gatewayClientTlsEnabled) {
+    if (gatewayProperties.isClientTlsEnabled()) {
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(gatewayProperties.getTrustStorePassword())
         .setPath(gatewayProperties.getTrustStorePath())

@@ -14,5 +14,4 @@ public class WebClientProperties {
 
   @ConfigProperty(name = "http.request.timeout") Long timeout;
   @ConfigProperty(name = "web.client.tls.verify.hostname") boolean tlsHostnameVerified;
-  @ConfigProperty(name = "web.client.tls.port") int tlsPort;
 }

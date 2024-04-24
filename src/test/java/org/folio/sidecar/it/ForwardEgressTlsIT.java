@@ -1,0 +1,154 @@
+package org.folio.sidecar.it;
+
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.http.HttpStatus.SC_CREATED;
+import static org.apache.http.HttpStatus.SC_NOT_FOUND;
+import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+
+import io.quarkus.test.InMemoryLogHandler;
+import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.filter.log.LogDetail;
+import java.util.logging.Formatter;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.folio.sidecar.integration.okapi.OkapiHeaders;
+import org.folio.sidecar.support.TestConstants;
+import org.folio.sidecar.support.TestJwtGenerator;
+import org.folio.sidecar.support.TestUtils;
+import org.folio.sidecar.support.extensions.WireMockTlsExtension;
+import org.folio.support.types.IntegrationTest;
+import org.hamcrest.Matchers;
+import org.jboss.logmanager.Level;
+import org.jboss.logmanager.LogManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+@IntegrationTest
+@QuarkusTest
+@QuarkusTestResource(value = WireMockTlsExtension.class, restrictToAnnotatedClass = true)
+class ForwardEgressTlsIT {
+
+  private static final java.util.logging.Logger TRANSACTION_LOGGER =
+    LogManager.getLogManager().getLogger("transaction");
+  private static final InMemoryLogHandler MEMORY_LOG_HANDLER = new InMemoryLogHandler(
+    record -> record.getLevel().intValue() >= Level.INFO.intValue());
+  @ConfigProperty(name = "keycloak.url") String keycloakUrl;
+  private String authToken;
+
+  @BeforeAll
+  static void beforeAll() {
+    var transaction = TRANSACTION_LOGGER.getHandlers()[0];
+    MEMORY_LOG_HANDLER.setFormatter(transaction.getFormatter());
+    TRANSACTION_LOGGER.addHandler(MEMORY_LOG_HANDLER);
+  }
+
+  @AfterAll
+  static void verifyLogs() {
+    String pattern =
+      "([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+)\\s+-\\s+(.|\\s)+\\s+-\\s+(.|\\s)+\\[\\d{2}/\\d{2}/"
+        + "\\d{4}:\\d{2}:\\d{2}:\\d{2}.+\\]\\s+(GET|POST|PUT|DELETE|OPTIONS)\\s+(.|\\s)+\\s+(.|\\s)+\\s+\\d{3}\\s+.+"
+        + "\\s+rt=.+\\s+uct=.+\\s+uht=.+\\s+urt=.+\\s+.+\\s+(.|\\s)+";
+    Formatter formatter = MEMORY_LOG_HANDLER.getFormatter();
+    assertThat(MEMORY_LOG_HANDLER.getRecords())
+      .allSatisfy(logRecord -> assertThat(formatter.format(logRecord)).matches(pattern));
+  }
+
+  @BeforeEach
+  void init() {
+    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME);
+  }
+
+  @Test
+  void handleEgressRequest_negative_readTimeoutException() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .body("{\"name\":\"entity-timeout\",\"description\":\"Test description\"}")
+      .post("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_REQUEST_TIMEOUT))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("NoStackTraceTimeoutException"),
+        "errors[0].code", is("read_timeout_error"),
+        "errors[0].message", is("Request Timeout")
+      );
+  }
+
+  @Test
+  void handleEgressRequest_positive_multipleInterfaceType() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.MODULE_ID, "mod-qux-0.0.2")
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .get("/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_OK))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(2),
+        "entities[0].id", is("d22c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[0].name", is("Test entity 1"),
+        "entities[0].description", is("A Test entity 1 description"),
+        "entities[1].id", is("d23c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[1].name", is("Test entity 2"),
+        "entities[1].description", is("A Test entity 2 description")
+      );
+  }
+
+  @Test
+  void handleEgressRequest_negative_routeNotFoundForInvalidHttpMethod() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .get("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_NOT_FOUND))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("NotFoundException"),
+        "errors[0].code", is("route_not_found_error"),
+        "errors[0].message", is("Route is not found [method: GET, path: /bar/entities]")
+      );
+  }
+
+  @Test
+  void handleEgressRequest_positive() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .body("{\"name\":\"entity\",\"description\":\"An entity description\"}")
+      .post("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_CREATED))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "id", is("d747fc05-736e-494f-9b25-205c90d9d79a"),
+        "name", is("entity"),
+        "description", is("An entity description")
+      );
+  }
+}

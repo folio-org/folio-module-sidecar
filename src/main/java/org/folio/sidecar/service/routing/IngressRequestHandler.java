@@ -50,6 +50,6 @@ public class IngressRequestHandler implements RequestHandler {
     log.info("Forwarding ingress request to underlying module: [method: {}, path: {}]", request.method(), path);
 
     var absUri = moduleProperties.getUrl() + path;
-    requestForwardingService.forward(rc, absUri);
+    requestForwardingService.forwardIngress(rc, absUri);
   }
 }

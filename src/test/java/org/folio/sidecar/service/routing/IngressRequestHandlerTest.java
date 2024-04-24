@@ -70,7 +70,7 @@ class IngressRequestHandlerTest {
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
     verify(moduleProperties).getName();
-    verify(requestForwardingService).forward(routingContext, TestConstants.MODULE_URL + routingPath);
+    verify(requestForwardingService).forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath);
 
     assertThat(headers).hasSize(2);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
@@ -97,7 +97,7 @@ class IngressRequestHandlerTest {
     verify(moduleProperties).getName();
 
     var expectedPath = String.format("%s/%s%s", TestConstants.MODULE_URL, TestConstants.MODULE_NAME, routingPath);
-    verify(requestForwardingService).forward(routingContext, expectedPath);
+    verify(requestForwardingService).forwardIngress(routingContext, expectedPath);
 
     assertThat(headers).hasSize(2);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);

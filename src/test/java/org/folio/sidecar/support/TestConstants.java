@@ -27,6 +27,7 @@ public class TestConstants {
   public static final String MODULE_VERSION = "0.2.1";
   public static final String MODULE_ID = MODULE_NAME + "-" + MODULE_VERSION;
   public static final String MODULE_URL = "http://sc-foo:8081";
+  public static final String MODULE_URL_TLS = "https://sc-foo:8081";
   public static final String MODULE_HEALTH_PATH = "/admin/health";
   public static final String APPLICATION_ID = "application-0.0.1";
   public static final ModuleBootstrap MODULE_BOOTSTRAP =

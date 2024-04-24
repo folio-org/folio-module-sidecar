@@ -8,7 +8,9 @@ public class ForwardUnknownTestProfile implements QuarkusTestProfile {
   @Override
   public Map<String, String> getConfigOverrides() {
     return Map.of(
-      "sidecar.forward-unknown-requests", "true"
+      "sidecar.forward-unknown-requests", "true",
+      "gateway.client.tls.enabled", "false",
+      "sidecar.client.tls.enabled", "false"
     );
   }
 }
