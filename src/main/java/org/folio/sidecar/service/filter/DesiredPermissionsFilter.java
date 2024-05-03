@@ -35,7 +35,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     var userIdHeader = getUserIdHeader(rc);
 
     if (userIdHeader.isEmpty()) {
-      log.info("Skipping population of X-Okapi-Permissions: user ID not found");
+      log.debug("Skipping population of X-Okapi-Permissions: user ID not found");
       return succeededFuture(rc);
     }
 

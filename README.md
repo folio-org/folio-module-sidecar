@@ -304,6 +304,10 @@ Required when `SECRET_STORE_TYPE=AWS_SSM`
 | SECRET_STORE_AWS_SSM_USE_IAM                  | true          | If true, will rely on the current IAM role for authorization instead of explicitly providing AWS credentials (access_key/secret_key)                           |
 | SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_ENDPOINT | -             | The HTTP endpoint to use for retrieving AWS credentials. This is ignored if useIAM is true                                                                     |
 | SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_PATH     | -             | The path component of the credentials endpoint URI. This value is appended to the credentials endpoint to form the URI from which credentials can be obtained. |
+| SECRET_STORE_AWS_SSM_FIPS_ENABLED             | false         | Configure whether the AWS SDK should use the AWS fips endpoints.                                                                                               |
+| SECRET_STORE_AWS_SSM_TRUSTSTORE_PATH          | -             | Truststore file relative path (should start from a leading slash) for FIPS mode.                                                                               |
+| SECRET_STORE_AWS_SSM_TRUSTSTORE_PASSWORD      | -             | Truststore password for FIPS mode.                                                                                                                             |
+| SECRET_STORE_AWS_SSM_TRUSTSTORE_FILE_TYPE     | -             | Truststore file type.                                                                                                                                          |
 
 #### Vault
 
