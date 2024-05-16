@@ -1,5 +1,7 @@
 package org.folio.sidecar.configuration;
 
+import static org.folio.sidecar.utils.StringUtils.isBlank;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.ext.web.client.WebClient;
@@ -9,11 +11,13 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Named;
 import jakarta.ws.rs.Produces;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.GatewayProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.configuration.properties.WebClientProperties;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 
+@Log4j2
 @Dependent
 @RequiredArgsConstructor
 public class WebClientConfiguration {
@@ -48,6 +52,9 @@ public class WebClientConfiguration {
   @Named("webClientKeycloak")
   public WebClient webClientKeycloak(Vertx vertx) {
     if (keycloakProperties.isClientTlsEnabled()) {
+      if (isBlank(keycloakProperties.getTrustStorePath())) {
+        return getPublicTrustedCertWebClient(vertx);
+      }
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(keycloakProperties.getTrustStorePassword())
         .setPath(keycloakProperties.getTrustStorePath())
@@ -68,6 +75,9 @@ public class WebClientConfiguration {
   @Named("webClientEgress")
   public WebClient webClientEgress(Vertx vertx) {
     if (sidecarProperties.isClientTlsEnabled()) {
+      if (isBlank(sidecarProperties.getTrustStorePath())) {
+        return getPublicTrustedCertWebClient(vertx);
+      }
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(sidecarProperties.getTrustStorePassword())
         .setPath(sidecarProperties.getTrustStorePath())
@@ -89,6 +99,9 @@ public class WebClientConfiguration {
   @Named("webClientGateway")
   public WebClient webClientGateway(Vertx vertx) {
     if (gatewayProperties.isClientTlsEnabled()) {
+      if (isBlank(gatewayProperties.getTrustStorePath())) {
+        return getPublicTrustedCertWebClient(vertx);
+      }
       return WebClient.create(vertx, webClientOptions(new KeyStoreOptions()
         .setPassword(gatewayProperties.getTrustStorePassword())
         .setPath(gatewayProperties.getTrustStorePath())
@@ -96,6 +109,11 @@ public class WebClientConfiguration {
         .setProvider(gatewayProperties.getTrustStoreProvider())));
     }
     return webClient(vertx);
+  }
+
+  private WebClient getPublicTrustedCertWebClient(Vertx vertx) {
+    log.debug("Creating WebClient for Public Trusted Certificates");
+    return WebClient.create(vertx, new WebClientOptions().setSsl(true).setTrustAll(false));
   }
 
   private WebClientOptions webClientOptions(KeyStoreOptions options) {
