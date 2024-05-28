@@ -29,6 +29,7 @@
     <cloudwatch.version>6.6.0</cloudwatch.version>
 
     <lombok.version>1.18.32</lombok.version>
+    <bcpkix-fips.version>1.0.7</bcpkix-fips.version>
 
     <!-- Test properties -->
     <jjwt.version>0.12.5</jjwt.version>
@@ -130,6 +131,17 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bc-fips</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bctls-fips</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-fips</artifactId>
+      <version>${bcpkix-fips.version}</version>
     </dependency>
 
     <dependency>
