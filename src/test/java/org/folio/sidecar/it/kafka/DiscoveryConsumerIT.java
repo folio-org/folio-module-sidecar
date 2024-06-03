@@ -1,30 +1,32 @@
-package org.folio.sidecar.integration.kafka;
+package org.folio.sidecar.it.kafka;
 
 import static org.mockito.Mockito.verify;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.ResourceArg;
-import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.smallrye.reactive.messaging.memory.InMemoryConnector;
 import io.smallrye.reactive.messaging.memory.InMemorySource;
 import jakarta.enterprise.inject.Any;
 import jakarta.inject.Inject;
+import org.folio.sidecar.integration.kafka.DiscoveryConsumer;
+import org.folio.sidecar.integration.kafka.DiscoveryEvent;
 import org.folio.sidecar.service.routing.RoutingService;
-import org.folio.sidecar.support.profile.InMemoryMessagingResourceLifecycleManager;
+import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.extensions.InMemoryMessagingExtension;
 import org.folio.sidecar.support.profile.InMemoryMessagingTestProfile;
-import org.folio.support.types.UnitTest;
+import org.folio.support.types.IntegrationTest;
 import org.junit.jupiter.api.Test;
 
-@UnitTest
-@QuarkusTest
+@IntegrationTest
 @TestProfile(InMemoryMessagingTestProfile.class)
-@QuarkusTestResource(value = InMemoryMessagingResourceLifecycleManager.class, initArgs = {
+@QuarkusTestResource(value = InMemoryMessagingExtension.class, initArgs = {
   @ResourceArg(value = "incoming", name = "discovery")
 })
-class DiscoveryConsumerTest {
+@EnableWireMock
+class DiscoveryConsumerIT {
 
   private static final String MODULE_ID = "mod-foo-1.0.0";
 

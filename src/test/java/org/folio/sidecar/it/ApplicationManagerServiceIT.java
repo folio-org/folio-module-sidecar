@@ -11,21 +11,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import java.net.ConnectException;
 import org.folio.sidecar.integration.am.ApplicationManagerClient;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.support.TestConstants;
-import org.folio.sidecar.support.extensions.WireMockExtension;
+import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
-@QuarkusTest
-@QuarkusTestResource(WireMockExtension.class)
+@TestProfile(CommonIntegrationTestProfile.class)
+@EnableWireMock
 class ApplicationManagerServiceIT {
 
   @InjectMock ApplicationManagerClient amClient;

@@ -1,11 +1,11 @@
-package org.folio.sidecar.support.profile;
+package org.folio.sidecar.support.extensions;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import io.smallrye.reactive.messaging.memory.InMemoryConnector;
 import java.util.HashMap;
 import java.util.Map;
 
-public class InMemoryMessagingResourceLifecycleManager implements QuarkusTestResourceLifecycleManager {
+public class InMemoryMessagingExtension implements QuarkusTestResourceLifecycleManager {
 
   private final Map<String, String> params = new HashMap<>();
 
