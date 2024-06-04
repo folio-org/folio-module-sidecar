@@ -22,6 +22,8 @@ import org.folio.sidecar.support.profile.InMemoryMessagingResourceLifecycleManag
 import org.folio.sidecar.support.profile.InMemoryMessagingTestProfile;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @UnitTest
 @QuarkusTest
@@ -38,9 +40,10 @@ class TenantEntitlementConsumerTest {
   @Any
   InMemoryConnector connector;
 
-  @Test
-  void consume_positive_entitleEvent() {
-    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE);
+  @ParameterizedTest
+  @EnumSource(value = Type.class, names = {"ENTITLE", "UPGRADE"})
+  void consume_positive_entitleOrUpgradeEvent(Type type) {
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
 
     sendEvent(event);

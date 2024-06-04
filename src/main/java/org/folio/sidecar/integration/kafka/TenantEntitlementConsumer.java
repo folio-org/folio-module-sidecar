@@ -1,11 +1,13 @@
 package org.folio.sidecar.integration.kafka;
 
 import static org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type.ENTITLE;
+import static org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type.UPGRADE;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
 import org.folio.sidecar.service.TenantService;
 
 @Log4j2
@@ -24,11 +26,15 @@ public class TenantEntitlementConsumer {
     }
 
     var tenantName = event.getTenantName();
-    if (event.getType() == ENTITLE) {
+    if (shouldEnableTenant(event.getType())) {
       tenantService.enableTenant(tenantName);
       return;
     }
 
     tenantService.disableTenant(tenantName);
+  }
+
+  private boolean shouldEnableTenant(Type type) {
+    return type == ENTITLE || type == UPGRADE;
   }
 }
