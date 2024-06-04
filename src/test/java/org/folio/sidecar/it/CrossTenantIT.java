@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 @IntegrationTest
 @TestProfile(CrossTenantTestProfile.class)
-@EnableWireMock(https = true, verbose = true)
+@EnableWireMock(verbose = true)
 class CrossTenantIT {
 
   private static final String USER_ID = "00000000-0000-0000-0000-000000000000";

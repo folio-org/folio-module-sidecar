@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 @IntegrationTest
 @TestProfile(ForwardUnknownTestProfile.class)
 //@QuarkusTestResource(WireMockExtension.class)
-@EnableWireMock
+@EnableWireMock(verbose = true)
 class ForwardUnknownEgressIT {
 
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;

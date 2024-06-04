@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 @IntegrationTest
 @TestProfile(CommonIntegrationTestProfile.class)
 //@QuarkusTestResource(WireMockExtension.class)
-@EnableWireMock
+@EnableWireMock(verbose = true)
 class SidecarIT {
 
   private static final java.util.logging.Logger TRANSACTION_LOGGER =
