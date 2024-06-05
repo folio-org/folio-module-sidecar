@@ -9,8 +9,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.TestProfile;
+import io.quarkus.test.junit.mockito.InjectSpy;
 import jakarta.inject.Inject;
 import java.net.ConnectException;
 import lombok.extern.log4j.Log4j2;
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 @Log4j2
 class ApplicationManagerServiceIT {
 
-  @InjectMock ApplicationManagerClient amClient;
+  @InjectSpy ApplicationManagerClient amClient;
   @Inject ApplicationManagerService service;
 
   @Test
