@@ -21,21 +21,9 @@ public class ApplicationManagerService {
 
   public Future<ModuleBootstrap> getModuleBootstrap() {
     var moduleId = moduleProperties.getId();
-    var intHolder = new Holder<>(0);
-    return retryTemplate.callAsync(() -> {
-      log.info("Calling ApplicationManagerService.getModuleBootstrap() with retry: {}", intHolder.value);
-      intHolder.value = intHolder.value + 1;
-
-      return tokenProvider.getAdminToken().compose(token ->
-        client.getModuleBootstrap(moduleId, token));
-    });
-  }
-
-  private static final class Holder<T> {
-    T value;
-
-    Holder(T value) {
-      this.value = value;
-    }
+    return retryTemplate.callAsync(() ->
+      tokenProvider.getAdminToken().compose(token ->
+        client.getModuleBootstrap(moduleId, token))
+    );
   }
 }

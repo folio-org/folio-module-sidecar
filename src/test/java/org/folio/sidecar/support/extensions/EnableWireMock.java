@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@QuarkusTestResource(value = WiremockResourceConfigurable.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = WireMockExtension.class, restrictToAnnotatedClass = true)
 public @interface EnableWireMock {
 
   boolean https() default false;

@@ -38,7 +38,6 @@ import org.junit.jupiter.api.Test;
 
 @IntegrationTest
 @TestProfile(CommonIntegrationTestProfile.class)
-//@QuarkusTestResource(WireMockExtension.class)
 @EnableWireMock(verbose = true)
 class SidecarIT {
 

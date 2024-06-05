@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 
 @IntegrationTest
 @TestProfile(CommonIntegrationTestProfile.class)
-//@QuarkusTestResource(value = WireMockTlsExtension.class, restrictToAnnotatedClass = true)
 @EnableWireMock(https = true, verbose = true)
 class ForwardEgressTlsIT {
 
