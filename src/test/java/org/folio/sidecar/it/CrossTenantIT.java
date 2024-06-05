@@ -4,10 +4,10 @@ import static io.restassured.filter.log.LogDetail.ALL;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_OK;
-import static org.folio.sidecar.support.extensions.WiremockResourceConfigurable.wireMockServer;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
@@ -21,6 +21,7 @@ import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestJwtGenerator;
 import org.folio.sidecar.support.TestUtils;
 import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.extensions.InjectWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
@@ -36,6 +37,7 @@ class CrossTenantIT {
 
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;
   private String authToken;
+  @InjectWireMock WireMockServer wireMockServer;
 
   @BeforeEach
   void init() {

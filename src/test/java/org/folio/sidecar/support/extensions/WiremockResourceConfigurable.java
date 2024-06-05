@@ -57,6 +57,12 @@ public class WiremockResourceConfigurable implements QuarkusTestResourceConfigur
     wireMockServer = null;
   }
 
+  @Override
+  public void inject(TestInjector testInjector) {
+    testInjector.injectIntoFields(wireMockServer,
+      new TestInjector.AnnotatedAndMatchesType(InjectWireMock.class, WireMockServer.class));
+  }
+
   private static final class WireMockServerManager {
 
     private final WireMockConfiguration configuration;
