@@ -37,6 +37,7 @@
     <assertj-core.version>3.25.3</assertj-core.version>
     <mockito-core.version>5.8.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
+    <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
@@ -351,6 +352,7 @@
           </systemPropertyVariables>
           <useSystemClassLoader>false</useSystemClassLoader>
           <groups>unit</groups>
+          <skip>${skipSurefireTests}</skip>
         </configuration>
       </plugin>
 
