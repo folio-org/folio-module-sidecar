@@ -39,6 +39,7 @@ public class TenantEntitlementEvent {
 
   public enum Type {
     ENTITLE,
+    UPGRADE,
     REVOKE
   }
 }
