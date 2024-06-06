@@ -1,10 +1,9 @@
 package org.folio.sidecar.support.profile;
 
-import io.quarkus.test.junit.QuarkusTestProfile;
 import java.util.HashMap;
 import java.util.Map;
 
-public class InMemoryMessagingTestProfile implements QuarkusTestProfile {
+public class InMemoryMessagingTestProfile extends CommonIntegrationTestProfile {
 
   @Override
   public String getConfigProfile() {
@@ -13,10 +12,10 @@ public class InMemoryMessagingTestProfile implements QuarkusTestProfile {
 
   @Override
   public Map<String, String> getConfigOverrides() {
-    Map<String, String> env = new HashMap<>();
+    var result = new HashMap<>(super.getConfigOverrides());
 
-    env.put("quarkus.kafka.devservices.enabled", "false");
+    result.put("quarkus.kafka.devservices.enabled", "false");
 
-    return env;
+    return result;
   }
 }

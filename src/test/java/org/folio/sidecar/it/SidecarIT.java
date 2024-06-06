@@ -15,8 +15,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.quarkus.test.InMemoryLogHandler;
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
 import java.util.UUID;
 import java.util.logging.Formatter;
@@ -26,7 +25,8 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestJwtGenerator;
 import org.folio.sidecar.support.TestUtils;
-import org.folio.sidecar.support.extensions.WireMockExtension;
+import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
 import org.jboss.logmanager.Level;
@@ -37,8 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
-@QuarkusTest
-@QuarkusTestResource(WireMockExtension.class)
+@TestProfile(CommonIntegrationTestProfile.class)
+@EnableWireMock(verbose = true)
 class SidecarIT {
 
   private static final java.util.logging.Logger TRANSACTION_LOGGER =

@@ -7,11 +7,11 @@ import static org.apache.http.HttpStatus.SC_OK;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.stubbing.StubMapping;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -20,20 +20,23 @@ import org.folio.sidecar.it.CrossTenantIT.CrossTenantTestProfile;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestJwtGenerator;
 import org.folio.sidecar.support.TestUtils;
-import org.folio.sidecar.support.extensions.WireMockExtension;
+import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.extensions.InjectWireMock;
+import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
-@QuarkusTest
 @TestProfile(CrossTenantTestProfile.class)
+@EnableWireMock(verbose = true)
 class CrossTenantIT {
 
   private static final String USER_ID = "00000000-0000-0000-0000-000000000000";
 
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;
+  @InjectWireMock WireMockServer wireMockServer;
   private String authToken;
 
   @BeforeEach
@@ -62,7 +65,7 @@ class CrossTenantIT {
         "entities[0].description", is("A Test entity description")
       );
 
-    WireMockExtension.wireMockServer.removeStubMapping(mockId);
+    wireMockServer.removeStubMapping(mockId);
   }
 
   @Test
@@ -86,7 +89,7 @@ class CrossTenantIT {
         "entities[0].description", is("A Test entity description")
       );
 
-    WireMockExtension.wireMockServer.removeStubMapping(mockId);
+    wireMockServer.removeStubMapping(mockId);
   }
 
   @Test
@@ -110,7 +113,7 @@ class CrossTenantIT {
         "entities[0].description", is("A Test entity description")
       );
 
-    WireMockExtension.wireMockServer.removeStubMapping(mockId);
+    wireMockServer.removeStubMapping(mockId);
   }
 
   @Test
@@ -134,7 +137,7 @@ class CrossTenantIT {
         "entities[0].description", is("A Test entity description")
       );
 
-    WireMockExtension.wireMockServer.removeStubMapping(mockId);
+    wireMockServer.removeStubMapping(mockId);
   }
 
   @Test
@@ -217,18 +220,20 @@ class CrossTenantIT {
       .replace("{{sessionState}}", sessionState.toString());
 
     var stubMapping = StubMapping.buildFrom(obtainTokenRequestStubMappingJson);
-    WireMockExtension.wireMockServer.addStubMapping(stubMapping);
+    wireMockServer.addStubMapping(stubMapping);
 
     return stubMapping.getId();
   }
 
-  public static class CrossTenantTestProfile implements QuarkusTestProfile {
+  public static final class CrossTenantTestProfile extends CommonIntegrationTestProfile {
 
     @Override
     public Map<String, String> getConfigOverrides() {
-      return Map.of(
-        "sidecar.cross-tenant.enabled", "true"
-      );
+      var result = new HashMap<>(super.getConfigOverrides());
+
+      result.put("sidecar.cross-tenant.enabled", "true");
+
+      return result;
     }
   }
 }

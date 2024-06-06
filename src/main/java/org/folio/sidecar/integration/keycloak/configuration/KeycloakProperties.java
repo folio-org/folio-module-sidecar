@@ -21,9 +21,12 @@ public class KeycloakProperties {
   @ConfigProperty(name = "keycloak.authorization-cache-max-size") long authorizationCacheMaxSize;
   @ConfigProperty(name = "keycloak.authorization-cache-ttl-offset") long authorizationCacheTtlOffset;
 
-  @ConfigProperty(name = "keycloak.client.tls.enabled") boolean clientTlsEnabled;
-  @ConfigProperty(name = "keycloak.client.tls.trust-store-path") String trustStorePath;
-  @ConfigProperty(name = "keycloak.client.tls.trust-store-password") String trustStorePassword;
-  @ConfigProperty(name = "keycloak.client.tls.trust-store-file-type") String trustStoreFileType;
-  @ConfigProperty(name = "keycloak.client.tls.trust-store-provider") String trustStoreProvider;
+  @ConfigProperty(name = "keycloak.client.tls.enabled", defaultValue = "false") boolean clientTlsEnabled;
+  // replace String with Optional<String> for the next 4 properties
+  // to support missing property values instead of using " " as a default value
+  // see also https://quarkus.io/guides/config-reference#inject
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-path", defaultValue = " ") String trustStorePath;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-password", defaultValue = " ") String trustStorePassword;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-file-type", defaultValue = " ") String trustStoreFileType;
+  @ConfigProperty(name = "keycloak.client.tls.trust-store-provider", defaultValue = " ") String trustStoreProvider;
 }

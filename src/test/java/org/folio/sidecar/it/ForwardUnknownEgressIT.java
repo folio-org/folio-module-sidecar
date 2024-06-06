@@ -6,26 +6,26 @@ import static org.apache.http.HttpStatus.SC_OK;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
+import java.util.HashMap;
+import java.util.Map;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
+import org.folio.sidecar.it.ForwardUnknownEgressIT.ForwardUnknownTestProfile;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestJwtGenerator;
 import org.folio.sidecar.support.TestUtils;
-import org.folio.sidecar.support.extensions.WireMockExtension;
-import org.folio.support.profiles.ForwardUnknownTestProfile;
+import org.folio.sidecar.support.extensions.EnableWireMock;
+import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
-@QuarkusTest
 @TestProfile(ForwardUnknownTestProfile.class)
-@QuarkusTestResource(WireMockExtension.class)
+@EnableWireMock(verbose = true)
 class ForwardUnknownEgressIT {
 
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;
@@ -101,5 +101,20 @@ class ForwardUnknownEgressIT {
         "entities[0].name", is("Test entity 3"),
         "entities[0].description", is("A Test entity 3 description")
       );
+  }
+
+  public static final class ForwardUnknownTestProfile extends CommonIntegrationTestProfile {
+
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      var result = new HashMap<>(super.getConfigOverrides());
+
+      result.put("sidecar.forward-unknown-requests", "true");
+      result.put("keycloak.client.tls.enabled", "false");
+      result.put("gateway.client.tls.enabled", "false");
+      result.put("sidecar.client.tls.enabled", "false");
+
+      return result;
+    }
   }
 }
