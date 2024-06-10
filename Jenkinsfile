@@ -1,7 +1,7 @@
-import org.folio.eurekaImage.EurekaImage
+import org.folio.eureka.EurekaImage
 import org.jenkinsci.plugins.workflow.libs.Library
 
-@Library('pipelines-shared-library@master') _
+@Library('pipelines-shared-library') _
 node('jenkins-agent-java17') {
   stage('Build Docker Image') {
     dir('folio-module-sidecar') {
