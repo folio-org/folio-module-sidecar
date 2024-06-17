@@ -40,14 +40,14 @@
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
-    <surefire-plugin.version>3.2.5</surefire-plugin.version>
+    <surefire-plugin.version>3.3.0</surefire-plugin.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <maven-checkstyle.version>10.17.0</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
-    <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
+    <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
-    <maven-failsafe-plugin.version>3.2.5</maven-failsafe-plugin.version>
+    <maven-failsafe-plugin.version>3.3.0</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.0.1</folio-java-checkstyle.version>
 
     <sonar.exclusions>
