@@ -38,7 +38,7 @@ class ModuleHealthCheckTest {
     var sidecarProperties = new SidecarProperties();
     sidecarProperties.setName(SIDECAR_NAME);
     sidecarProperties.setUrl(SIDECAR_URL);
-    sidecarProperties.setModulePrefixEnabled(modulePrefixEnabled);
+    sidecarProperties.setModuleHealthPathPrefixEnabled(modulePrefixEnabled);
     return sidecarProperties;
   }
 }

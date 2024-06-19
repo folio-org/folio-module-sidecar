@@ -15,6 +15,7 @@ public class SidecarProperties {
   @ConfigProperty(name = "sidecar.name") String name;
   @ConfigProperty(name = "sidecar.url") String url;
   @ConfigProperty(name = "sidecar.module-path-prefix.enabled") boolean modulePrefixEnabled;
+  @ConfigProperty(name = "sidecar.module-health-path-prefix.enabled") boolean moduleHealthPathPrefixEnabled;
   @ConfigProperty(name = "sidecar.forward-unknown-requests") boolean forwardUnknownRequests;
   @ConfigProperty(name = "sidecar.forward-unknown-requests.destination") String unknownRequestsDestination;
   @ConfigProperty(name = "sidecar.cross-tenant.enabled") boolean crossTenantEnabled;

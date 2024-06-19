@@ -24,7 +24,7 @@ public class ModuleHealthCheck {
 
   protected String getModuleHealthCheckUrl() {
     var healthUrlBuilder = new StringBuilder(moduleProperties.getUrl());
-    if (sidecarProperties.isModulePrefixEnabled()) {
+    if (sidecarProperties.isModuleHealthPathPrefixEnabled()) {
       healthUrlBuilder.append('/').append(moduleProperties.getName());
     }
     healthUrlBuilder.append(moduleProperties.getHealthPath());
