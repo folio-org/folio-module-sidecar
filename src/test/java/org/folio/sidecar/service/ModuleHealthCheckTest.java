@@ -1,44 +1,44 @@
 package org.folio.sidecar.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.support.TestConstants.MODULE_HEALTH_PATH;
+import static org.folio.sidecar.support.TestConstants.MODULE_NAME;
+import static org.folio.sidecar.support.TestConstants.MODULE_URL;
+import static org.mockito.Mockito.when;
 
-import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
+@ExtendWith(MockitoExtension.class)
 class ModuleHealthCheckTest {
 
   private static final String SIDECAR_NAME = "sc-test";
   private static final String SIDECAR_URL = "http://sc-test";
 
+  @Mock private PathProcessor pathProcessor;
+
   @Test
   void testHealthCheckUrl_positive_withoutPathPrefix() {
-    var sidecarProperties = sidecarProperties(false);
-    var service = new ModuleHealthCheck(TestConstants.MODULE_PROPERTIES, sidecarProperties);
+    when(pathProcessor.getModulePath(MODULE_HEALTH_PATH)).thenReturn(MODULE_HEALTH_PATH);
+    var service = new ModuleHealthCheck(pathProcessor, TestConstants.MODULE_PROPERTIES);
 
     var result = service.getModuleHealthCheckUrl();
 
-    assertThat(result).isEqualTo(TestConstants.MODULE_URL + TestConstants.MODULE_HEALTH_PATH);
+    assertThat(result).isEqualTo(MODULE_URL + MODULE_HEALTH_PATH);
   }
 
   @Test
   void testHealthCheckUrl_positive_withPathPrefix() {
-    var sidecarProperties = sidecarProperties(true);
-    var service = new ModuleHealthCheck(TestConstants.MODULE_PROPERTIES, sidecarProperties);
+    var service = new ModuleHealthCheck(pathProcessor, TestConstants.MODULE_PROPERTIES);
+    when(pathProcessor.getModulePath(MODULE_HEALTH_PATH)).thenReturn("/" + MODULE_NAME + MODULE_HEALTH_PATH);
 
     var result = service.getModuleHealthCheckUrl();
 
-    assertThat(result).isEqualTo(
-      TestConstants.MODULE_URL + "/" + TestConstants.MODULE_NAME + TestConstants.MODULE_HEALTH_PATH);
-  }
-
-  private static SidecarProperties sidecarProperties(boolean modulePrefixEnabled) {
-    var sidecarProperties = new SidecarProperties();
-    sidecarProperties.setName(SIDECAR_NAME);
-    sidecarProperties.setUrl(SIDECAR_URL);
-    sidecarProperties.setModulePrefixEnabled(modulePrefixEnabled);
-    return sidecarProperties;
+    assertThat(result).isEqualTo(MODULE_URL + "/" + MODULE_NAME + MODULE_HEALTH_PATH);
   }
 }

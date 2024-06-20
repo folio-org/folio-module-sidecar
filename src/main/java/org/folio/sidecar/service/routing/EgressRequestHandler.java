@@ -11,11 +11,10 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.ServiceTokenProvider;
 import org.folio.sidecar.service.SystemUserTokenProvider;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
@@ -26,14 +25,12 @@ import org.folio.sidecar.utils.RoutingUtils;
 @ApplicationScoped
 public class EgressRequestHandler implements RequestHandler {
 
-  @ConfigProperty(name = "sidecar.module-path-prefix.enabled") boolean modulePrefixEnabled;
-
   private final ErrorHandler errorHandler;
+  private final PathProcessor pathProcessor;
   private final List<EgressRequestFilter> requestFilters;
   private final RequestForwardingService requestForwardingService;
   private final ServiceTokenProvider tokenProvider;
   private final SystemUserTokenProvider systemUserService;
-  private final ModuleProperties moduleProperties;
 
   /**
    * Injects dependencies from quarkus context.
@@ -43,22 +40,17 @@ public class EgressRequestHandler implements RequestHandler {
    * @param filters - iterable {@link Instance} of {@link EgressRequestFilter} components
    * @param tokenProvider - Keycloak system token provider
    * @param systemUserService - System user service
-   * @param moduleProperties - Information about the module
    */
   @Inject
-  public EgressRequestHandler(
-    ErrorHandler errorHandler,
-    RequestForwardingService requestForwardingService,
-    Instance<EgressRequestFilter> filters,
-    ServiceTokenProvider tokenProvider,
-    SystemUserTokenProvider systemUserService,
-    ModuleProperties moduleProperties) {
+  public EgressRequestHandler(ErrorHandler errorHandler, PathProcessor pathProcessor,
+    RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
+    ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
     this.errorHandler = errorHandler;
+    this.pathProcessor = pathProcessor;
     this.requestForwardingService = requestForwardingService;
     this.requestFilters = CollectionUtils.sortByOrder(filters);
     this.tokenProvider = tokenProvider;
     this.systemUserService = systemUserService;
-    this.moduleProperties = moduleProperties;
   }
 
   /**
@@ -99,7 +91,7 @@ public class EgressRequestHandler implements RequestHandler {
    * @param routingEntry entry for request forwarding
    */
   private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry) {
-    var updatedPath = RoutingUtils.updatePath(rc, modulePrefixEnabled, moduleProperties.getName());
+    var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
     tokenProvider.getServiceToken(rc)
       .onSuccess(serviceToken -> {
 
