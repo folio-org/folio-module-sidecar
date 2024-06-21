@@ -13,6 +13,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 public class KeycloakProperties {
 
   @ConfigProperty(name = "keycloak.url") String url;
+  @ConfigProperty(name = "keycloak.uri-validation.enabled") boolean uriValidationEnabled;
   @ConfigProperty(name = "keycloak.login.client-suffix") String loginClientSuffix;
   @ConfigProperty(name = "keycloak.admin.client-id") String adminClientId;
   @ConfigProperty(name = "keycloak.service.client-id") String serviceClientId;
