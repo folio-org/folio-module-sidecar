@@ -57,7 +57,7 @@ public class JsonWebTokenParser {
       throw new ParseException("Issuer not found in the JsonWebToken.");
     }
 
-    if (!issuer.startsWith(properties.getUrl())) {
+    if (properties.isUriValidationEnabled() && !issuer.startsWith(properties.getUrl())) {
       throw new ParseException("Invalid JsonWebToken issuer.");
     }
 

@@ -80,6 +80,7 @@ public class WireMockExtension implements QuarkusTestResourceConfigurableLifecyc
     static WireMockServerManager withHttps(String keystorePath, String keystoreType, String keystorePassword,
         String keyManagerPassword, boolean verbose) {
       var config = WireMockConfiguration.options()
+        .httpDisabled(true)
         .dynamicHttpsPort()
         .keystorePath(keystorePath)
         .keystoreType(keystoreType)

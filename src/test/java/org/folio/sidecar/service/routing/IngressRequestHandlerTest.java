@@ -23,6 +23,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -43,6 +44,7 @@ class IngressRequestHandlerTest {
   @InjectMocks private IngressRequestHandler ingressRequestHandler;
 
   @Mock private ErrorHandler errorHandler;
+  @Mock private PathProcessor pathProcessor;
   @Mock private RequestFilterService requestFilterService;
   @Mock private RequestForwardingService requestForwardingService;
 
@@ -62,42 +64,14 @@ class IngressRequestHandlerTest {
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
     var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
-    when(sidecarProperties.isModulePrefixEnabled()).thenReturn(false);
+    when(pathProcessor.getModulePath(routingPath)).thenReturn(routingPath);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
 
     ingressRequestHandler.handle(routingContext, requestRoutingEntry);
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
-    verify(moduleProperties).getName();
     verify(requestForwardingService).forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath);
-
-    assertThat(headers).hasSize(2);
-    assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
-    assertThat(headers.get(OkapiHeaders.MODULE_ID)).isEqualTo(TestConstants.MODULE_ID);
-    assertThat(headers.get(OkapiHeaders.PERMISSIONS_REQUIRED)).isNull();
-  }
-
-  @Test
-  void handle_positive_modulePrefixEnabled() {
-    var headers = new HeadersMultiMap();
-    var routingPath = "/foo/entities";
-    var routingContext = routingContext(rc -> when(rc.request().headers()).thenReturn(headers));
-
-    var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
-    var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
-
-    when(sidecarProperties.isModulePrefixEnabled()).thenReturn(true);
-    when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
-
-    ingressRequestHandler.handle(routingContext, requestRoutingEntry);
-
-    verify(sidecarProperties).getUrl();
-    verify(moduleProperties).getUrl();
-    verify(moduleProperties).getName();
-
-    var expectedPath = String.format("%s/%s%s", TestConstants.MODULE_URL, TestConstants.MODULE_NAME, routingPath);
-    verify(requestForwardingService).forwardIngress(routingContext, expectedPath);
 
     assertThat(headers).hasSize(2);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);

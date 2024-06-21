@@ -7,14 +7,13 @@ import lombok.RequiredArgsConstructor;
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.Readiness;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
-import org.folio.sidecar.configuration.properties.SidecarProperties;
 
 @ApplicationScoped
 @RequiredArgsConstructor
 public class ModuleHealthCheck {
 
+  private final PathProcessor pathProcessor;
   private final ModuleProperties moduleProperties;
-  private final SidecarProperties sidecarProperties;
 
   @Readiness
   HealthCheck checkModule() {
@@ -24,10 +23,8 @@ public class ModuleHealthCheck {
 
   protected String getModuleHealthCheckUrl() {
     var healthUrlBuilder = new StringBuilder(moduleProperties.getUrl());
-    if (sidecarProperties.isModulePrefixEnabled()) {
-      healthUrlBuilder.append('/').append(moduleProperties.getName());
-    }
-    healthUrlBuilder.append(moduleProperties.getHealthPath());
+    var moduleHealthUrlPath = pathProcessor.getModulePath(moduleProperties.getHealthPath());
+    healthUrlBuilder.append(moduleHealthUrlPath);
     return healthUrlBuilder.toString();
   }
 }

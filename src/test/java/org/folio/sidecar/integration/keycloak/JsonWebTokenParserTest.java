@@ -45,6 +45,7 @@ class JsonWebTokenParserTest {
 
     when(openidJwtParserProvider.getParser(ISSUER_URL)).thenReturn(jwtParser);
     when(keycloakProperties.getUrl()).thenReturn(KEYCLOAK_URL);
+    when(keycloakProperties.isUriValidationEnabled()).thenReturn(true);
     when(jwtParser.parse(jwt)).thenReturn(jsonWebToken);
 
     var result = jsonWebTokenParser.parse(jwt);
@@ -71,6 +72,7 @@ class JsonWebTokenParserTest {
   @Test
   void parse_negative_unknownIssuerUrl() {
     var jwt = TestJwtGenerator.generateJwtString("https://keycloak:8080", TENANT_NAME, KEYCLOAK_URL, USER_ID);
+    when(keycloakProperties.isUriValidationEnabled()).thenReturn(true);
     when(keycloakProperties.getUrl()).thenReturn(KEYCLOAK_URL);
 
     assertThatThrownBy(() -> jsonWebTokenParser.parse(jwt))
@@ -79,9 +81,23 @@ class JsonWebTokenParserTest {
   }
 
   @Test
+  void parse_negative_disabledUriValidation() throws ParseException {
+    var keycloakUrl = "https://keycloak:8080";
+    var jwt = TestJwtGenerator.generateJwtString(keycloakUrl, TENANT_NAME, KEYCLOAK_URL, USER_ID);
+    when(openidJwtParserProvider.getParser(keycloakUrl + "/realms/" + TENANT_NAME)).thenReturn(jwtParser);
+    when(keycloakProperties.isUriValidationEnabled()).thenReturn(false);
+    when(jwtParser.parse(jwt)).thenReturn(jsonWebToken);
+
+    var result = jsonWebTokenParser.parse(jwt);
+
+    assertThat(result).isEqualTo(jsonWebToken);
+  }
+
+  @Test
   void parse_negative_jwtParserNotFound() {
     var jwt = TestJwtGenerator.generateJwtString(KEYCLOAK_URL, TENANT_NAME, KEYCLOAK_URL, USER_ID);
     when(keycloakProperties.getUrl()).thenReturn(KEYCLOAK_URL);
+    when(keycloakProperties.isUriValidationEnabled()).thenReturn(true);
     when(openidJwtParserProvider.getParser(ISSUER_URL)).thenReturn(null);
 
     assertThatThrownBy(() -> jsonWebTokenParser.parse(jwt))

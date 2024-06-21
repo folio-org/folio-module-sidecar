@@ -16,13 +16,13 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
+import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.utils.CollectionUtils;
 import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.sidecar.utils.StringUtils;
@@ -35,19 +35,19 @@ public class RequestMatchingService {
   Map<String, List<ScRoutingEntry>> ingressRequestCache = new HashMap<>();
   Map<String, List<ScRoutingEntry>> egressRequestCache = new HashMap<>();
 
-  private final ModuleProperties moduleProperties;
+  private final PathProcessor pathProcessor;
   private final SidecarProperties sidecarProperties;
   private final ScRoutingEntry gatewayRoutingEntry;
 
   /**
    * Injects dependencies from quarkus context and initializes internal caches.
    *
-   * @param moduleProperties - Information about the module
+   * @param pathProcessor - request path processor
    * @param sidecarProperties - Sidecar configuration properties
    */
   @Inject
-  public RequestMatchingService(ModuleProperties moduleProperties, SidecarProperties sidecarProperties) {
-    this.moduleProperties = moduleProperties;
+  public RequestMatchingService(PathProcessor pathProcessor, SidecarProperties sidecarProperties) {
+    this.pathProcessor = pathProcessor;
     this.sidecarProperties = sidecarProperties;
     this.gatewayRoutingEntry = gatewayRoutingEntry(sidecarProperties.getUnknownRequestsDestination());
   }
@@ -65,7 +65,7 @@ public class RequestMatchingService {
     log.debug("Searching routing entries for ingress request: method [{}], path [{}]",
       request.method(), request.path());
 
-    var path = RoutingUtils.updatePath(rc, sidecarProperties.isModulePrefixEnabled(), moduleProperties.getName());
+    var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, ingressRequestCache, false);
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
@@ -87,16 +87,18 @@ public class RequestMatchingService {
     log.debug("Searching routing entries for egress request: method [{}], path [{}]",
       request.method(), request.path());
 
-    var path = RoutingUtils.updatePath(rc, sidecarProperties.isModulePrefixEnabled(), moduleProperties.getName());
+    var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, egressRequestCache, true);
 
     if (sidecarProperties.isForwardUnknownRequests() && entry.isEmpty()) {
       var moduleIdHeader = request.getHeader(OkapiHeaders.MODULE_ID);
+      var unknownRequestsDestination = sidecarProperties.getUnknownRequestsDestination();
       log.warn("Egress routing entry was not found for the request's path. Forwarding request to the Gateway:"
           + "moduleId = {}, path = {}, destination = {}, x-okapi-module-id = {}",
-        sidecarProperties.getName(), path, sidecarProperties.getUnknownRequestsDestination(), moduleIdHeader);
-      entry = StringUtils.isBlank(moduleIdHeader) ? Optional.of(gatewayRoutingEntry)
-        : Optional.of(gatewayRoutingEntry(sidecarProperties.getUnknownRequestsDestination(), moduleIdHeader));
+        sidecarProperties.getName(), path, unknownRequestsDestination, moduleIdHeader);
+      entry = StringUtils.isBlank(moduleIdHeader)
+        ? Optional.of(gatewayRoutingEntry)
+        : Optional.of(gatewayRoutingEntry(unknownRequestsDestination, moduleIdHeader));
     }
 
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
