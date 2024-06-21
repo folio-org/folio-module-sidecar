@@ -30,7 +30,7 @@ public enum ModulePrefixStrategy {
   STRIP("strip"),
 
   /**
-   * Defines a strip strategy for handing module name prefix in URL path.
+   * Defines a strategy that ignores module prefix in URL path.
    *
    * <pre>
    * → [gateway] /entities

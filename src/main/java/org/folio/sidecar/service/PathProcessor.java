@@ -12,7 +12,7 @@ import org.folio.sidecar.model.ModulePrefixStrategy;
 @ApplicationScoped
 public class PathProcessor {
 
-  private final ModuleProperties moduleProperties;
+  private final String modulePathPrefix;
   private final ModulePrefixStrategy modulePrefixStrategy;
 
   /**
@@ -23,8 +23,8 @@ public class PathProcessor {
    */
   @Inject
   public PathProcessor(ModuleProperties moduleProperties, SidecarProperties scProperties) {
-    this.moduleProperties = moduleProperties;
     this.modulePrefixStrategy = scProperties.isModulePrefixEnabled() ? PROXY : scProperties.getModulePrefixStrategy();
+    this.modulePathPrefix = '/' + moduleProperties.getName();
   }
 
   /**
@@ -35,7 +35,6 @@ public class PathProcessor {
    */
   public String getModulePath(String path) {
     if (modulePrefixStrategy == PROXY) {
-      var modulePathPrefix = '/' + moduleProperties.getName();
       return !path.startsWith(modulePathPrefix) ? modulePathPrefix + path : path;
     }
 
@@ -54,7 +53,6 @@ public class PathProcessor {
    */
   public String cleanIngressRequestPath(String path) {
     if (modulePrefixStrategy == PROXY || modulePrefixStrategy == STRIP) {
-      var modulePathPrefix = '/' + moduleProperties.getName();
       return path.startsWith(modulePathPrefix) ? path.substring(modulePathPrefix.length()) : path;
     }
 
