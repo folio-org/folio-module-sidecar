@@ -55,8 +55,8 @@ public class SecureStoreConfiguration {
       .ecsCredentialsEndpoint(getValue(AWS_PREFIX, "ecs-credentials-endpoint"))
       .fipsEnabled(Boolean.parseBoolean(getValue(AWS_PREFIX, "fips-enabled")))
       .trustStorePath(getValue(AWS_PREFIX, "trust-store-path"))
-      .trustStorePath(getValue(AWS_PREFIX, "trust-store-password"))
-      .trustStorePath(getValue(AWS_PREFIX, "trust-store-file-type"))
+      .trustStorePassword(getValue(AWS_PREFIX, "trust-store-password"))
+      .trustStoreFileType(getValue(AWS_PREFIX, "trust-store-file-type"))
       .build();
   }
 
