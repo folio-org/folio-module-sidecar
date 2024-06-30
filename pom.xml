@@ -32,8 +32,8 @@
     <bcpkix-fips.version>1.0.7</bcpkix-fips.version>
 
     <!-- Test properties -->
-    <jjwt.version>0.12.5</jjwt.version>
-    <wiremock.version>3.6.0</wiremock.version>
+    <jjwt.version>0.12.6</jjwt.version>
+    <wiremock.version>3.8.0</wiremock.version>
     <assertj-core.version>3.26.0</assertj-core.version>
     <mockito-core.version>5.8.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
