@@ -1,5 +1,7 @@
 package org.folio.sidecar.it.kafka;
 
+import static org.awaitility.Durations.FIVE_SECONDS;
+import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
 import static org.mockito.Mockito.verify;
 
 import io.quarkus.test.InjectMock;
@@ -11,6 +13,8 @@ import io.smallrye.reactive.messaging.memory.InMemoryConnector;
 import io.smallrye.reactive.messaging.memory.InMemorySource;
 import jakarta.enterprise.inject.Any;
 import jakarta.inject.Inject;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ThrowingRunnable;
 import org.folio.sidecar.integration.kafka.DiscoveryConsumer;
 import org.folio.sidecar.integration.kafka.DiscoveryEvent;
 import org.folio.sidecar.service.routing.RoutingService;
@@ -42,12 +46,19 @@ class DiscoveryConsumerIT {
     DiscoveryEvent event = DiscoveryEvent.of(MODULE_ID);
     sendEvent(event);
 
-    verify(discoveryConsumer).consume(event);
+    awaitUntilAsserted(() -> verify(discoveryConsumer).consume(event));
     verify(routingService).updateModuleRoutes(MODULE_ID);
   }
 
   private void sendEvent(DiscoveryEvent event) {
     InMemorySource<DiscoveryEvent> discoveryIn = connector.source("discovery");
     discoveryIn.send(event);
+  }
+
+  private static void awaitUntilAsserted(ThrowingRunnable runnable) {
+    Awaitility.await()
+      .atMost(FIVE_SECONDS)
+      .pollDelay(ONE_HUNDRED_MILLISECONDS)
+      .untilAsserted(runnable);
   }
 }
