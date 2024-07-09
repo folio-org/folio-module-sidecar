@@ -8,8 +8,6 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
-import static org.folio.sidecar.support.TestConstants.MODULE_ID;
-import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
@@ -30,12 +28,10 @@ import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.BadRequestException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
@@ -48,7 +44,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class KeycloakJwtFilterTest {
+class KeycloakJwtFilterTest extends AbstractFilterTest {
 
   private static final String TEST_USER_ID = UUID.randomUUID().toString();
 
@@ -356,6 +352,13 @@ class KeycloakJwtFilterTest {
     assertThat(actual).isFalse();
   }
 
+  @Test
+  void shouldSkip_negative_timerEndpoint() {
+    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer", "somepermission "), rc -> {});
+    var actual = keycloakJwtFilter.shouldSkip(routingContext);
+    assertThat(actual).isFalse();
+  }
+
   private static RoutingContext routingContext(ScRoutingEntry routingEntry, Consumer<RoutingContext> rcModifier) {
     var routingContext = mock(RoutingContext.class);
     when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(routingEntry);
@@ -367,15 +370,5 @@ class KeycloakJwtFilterTest {
     var entries = new HeadersMultiMap();
     entries.addAll(headers);
     return entries;
-  }
-
-  private static ScRoutingEntry scRoutingEntry() {
-    return scRoutingEntry(null, "foo.items.get");
-  }
-
-  private static ScRoutingEntry scRoutingEntry(String interfaceType, String... permissionRequired) {
-    var bootstrapEndpoint = new ModuleBootstrapEndpoint("/foo/items", "GET");
-    bootstrapEndpoint.setPermissionsRequired(List.of(permissionRequired));
-    return ScRoutingEntry.of(MODULE_ID, MODULE_URL, "mod-foo-api-1.0", interfaceType, bootstrapEndpoint);
   }
 }

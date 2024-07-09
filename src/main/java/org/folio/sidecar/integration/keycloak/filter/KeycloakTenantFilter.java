@@ -9,6 +9,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
+import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
 
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
@@ -54,7 +55,7 @@ public class KeycloakTenantFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc) || hasNoPermissionsRequired(rc) || isSelfRequest(rc);
+    return isSystemRequest(rc) && !isTimerRequest(rc) || hasNoPermissionsRequired(rc) || isSelfRequest(rc);
   }
 
   @Override

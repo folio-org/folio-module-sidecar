@@ -25,6 +25,7 @@ public class RoutingUtils {
 
   public static final String TENANT_INTERFACE = "_tenant";
   public static final String SYS_INTERFACE_TYPE = "system";
+  public static final String TIMER_INTERFACE_ID = "_timer";
 
   /**
    * Key of the {@link ScRoutingEntry routing entry} in the context.
@@ -141,6 +142,11 @@ public class RoutingUtils {
   public static boolean isSystemRequest(RoutingContext rc) {
     var scRoutingEntry = getScRoutingEntry(rc);
     return SYS_INTERFACE_TYPE.equals(scRoutingEntry.getInterfaceType());
+  }
+
+  public static boolean isTimerRequest(RoutingContext rc) {
+    var scRoutingEntry = getScRoutingEntry(rc);
+    return TIMER_INTERFACE_ID.equals(scRoutingEntry.getInterfaceId());
   }
 
   public static boolean isSelfRequest(RoutingContext rc) {

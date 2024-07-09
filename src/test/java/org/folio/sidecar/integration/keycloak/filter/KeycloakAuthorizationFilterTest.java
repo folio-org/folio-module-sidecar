@@ -9,8 +9,6 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
-import static org.folio.sidecar.support.TestConstants.MODULE_ID;
-import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.support.TestConstants.SYS_TOKEN;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
@@ -19,6 +17,7 @@ import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_STATE_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,7 +35,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.ws.rs.ServiceUnavailableException;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
@@ -53,7 +51,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class KeycloakAuthorizationFilterTest {
+class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
   private static final String KC_PERMISSION = "/foo/entities/{id}#GET";
   private static final String REQUIRED_PERMISSION = "foo.entities.item.get";
@@ -302,6 +300,13 @@ class KeycloakAuthorizationFilterTest {
     assertThat(result).isTrue();
   }
 
+  @Test
+  void shouldSkip_negative_timerEndpoint() {
+    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer", "somepermission "), rc -> {});
+    var actual = keycloakAuthorizationFilter.shouldSkip(routingContext);
+    assertThat(actual).isFalse();
+  }
+
   private void prepareUserTokenMocks(boolean cached) {
     when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
     when(userToken.containsClaim(JWT_SESSION_STATE_CLAIM)).thenReturn(true);
@@ -341,19 +346,9 @@ class KeycloakAuthorizationFilterTest {
     when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(re);
     when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
     when(routingContext.request().method()).thenReturn(HttpMethod.GET);
-    when(routingContext.request().getHeader(TENANT)).thenReturn(TENANT_NAME);
+    lenient().when(routingContext.request().getHeader(TENANT)).thenReturn(TENANT_NAME);
     modifier.accept(routingContext);
     return routingContext;
-  }
-
-  private static ScRoutingEntry scRoutingEntry() {
-    return scRoutingEntry(null, REQUIRED_PERMISSION);
-  }
-
-  private static ScRoutingEntry scRoutingEntry(String interfaceType, String... permissionRequired) {
-    var bootstrapEndpoint = new ModuleBootstrapEndpoint("/foo/entities/{id}", "GET");
-    bootstrapEndpoint.setPermissionsRequired(List.of(permissionRequired));
-    return ScRoutingEntry.of(MODULE_ID, MODULE_URL, "mod-foo-api-1.0", interfaceType, bootstrapEndpoint);
   }
 
   private static String userTokenCacheKey() {
@@ -362,5 +357,9 @@ class KeycloakAuthorizationFilterTest {
 
   private static String systemTokenCacheKey() {
     return String.format("%s#%s#%s", KC_PERMISSION, TENANT_NAME, SYSTEM_TOKEN_EXPIRATION_TIME);
+  }
+
+  protected ModuleBootstrapEndpoint moduleBootstrapEndpoint() {
+    return new ModuleBootstrapEndpoint("/foo/entities/{id}", "GET");
   }
 }
