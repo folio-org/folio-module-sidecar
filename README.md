@@ -124,6 +124,13 @@ Then run the container using:
 ```shell
 docker run -i --rm -p 8080:8080 quarkus/sidecar
 ```
+### Building FIPS compatible image
+
+```shell
+export QUARKUS_SECURITY_SECURITY_PROVIDERS=BCFIPSJSSE
+mvn clean -Pfips install
+docker build -f docker/Dockerfile.fips -t {{image-tag}}:{{image-version}}
+```
 
 ### Difference between building native executables using a docker-approach and a Graalvm-approach
 

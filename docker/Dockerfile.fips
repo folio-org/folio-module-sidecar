@@ -1,21 +1,3 @@
-ARG ALPINE_VERSION=3.20.1
-FROM alpine:$ALPINE_VERSION AS fipsJarDownloader
-
-# Set the working directory
-WORKDIR /tmp/fips-jars
-
-# Bouncy Castle JAR versions to download
-ARG BC_FIPS_VERSION=1.0.2.5
-ARG BCTLS_FIPS_VERSION=1.0.19
-ARG BCPKIX_FIPS_VERSION=1.0.7
-
-ARG BC_MAVEN_URL=https://repo1.maven.org/maven2/org/bouncycastle
-# Download Bouncy Castle JAR files
-RUN apk upgrade --no-cache && apk --no-cache add curl \
- && curl -O ${BC_MAVEN_URL}/bc-fips/${BC_FIPS_VERSION}/bc-fips-${BC_FIPS_VERSION}.jar \
- && curl -O ${BC_MAVEN_URL}/bctls-fips/${BCTLS_FIPS_VERSION}/bctls-fips-${BCTLS_FIPS_VERSION}.jar \
- && curl -O ${BC_MAVEN_URL}/bcpkix-fips/${BCPKIX_FIPS_VERSION}/bcpkix-fips-${BCPKIX_FIPS_VERSION}.jar
-
 ## Tables of environment variables used for image configuration are published to
 ## https://jboss-container-images.github.io/openjdk/ubi9/ubi9-openjdk-17-runtime.html
 ##
@@ -40,13 +22,11 @@ COPY --chown=185 ${BUILD_DIR}/lib/ ${JAVA_APP_DIR}/lib/
 COPY --chown=185 ${BUILD_DIR}/*.jar ${JAVA_APP_DIR}/
 COPY --chown=185 ${BUILD_DIR}/app/ ${JAVA_APP_DIR}/app/
 COPY --chown=185 ${BUILD_DIR}/quarkus/ ${JAVA_APP_DIR}/quarkus/
-COPY --chown=185 --from=fipsJarDownloader  /tmp/fips-jars/ ${JAVA_APP_DIR}/lib/boot
 
 ARG JAVA_OPTS_BASIC="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ARG JAVA_OPTS_FIPS="-Dorg.bouncycastle.fips.approved_only=true -Djava.security.properties=/deployments/config/java.security.fips --add-exports java.base/sun.security.provider=ALL-UNNAMED --add-opens java.base/java.security=ALL-UNNAMED"
 ARG JAVA_OPTS_PROFILES="-Dquarkus.profile=prod,fips"
 
-ENV SC_SECURITY_PROVIDERS="BCFIPSJSSE"
 ENV JAVA_OPTS_APPEND="${JAVA_OPTS_PROFILES} ${JAVA_OPTS_BASIC} ${JAVA_OPTS_FIPS}"
 ENV JAVA_APP_JAR="${JAVA_APP_DIR}/quarkus-run.jar"
 
