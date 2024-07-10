@@ -7,6 +7,7 @@ node('jenkins-agent-java17') {
     dir('folio-module-sidecar') {
       EurekaImage image = new EurekaImage(this)
       image.setModuleName('folio-module-sidecar')
+      image.setBranch('EUREKA-210')
       image.makeImage()
     }
   }
