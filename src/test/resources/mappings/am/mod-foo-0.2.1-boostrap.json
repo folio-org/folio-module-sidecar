@@ -60,6 +60,11 @@
                 "methods": [ "GET" ],
                 "pathPattern": "/bar/foo",
                 "permissionsDesired": ["bar.foo.desired.*", "bar.foo.item.get"]
+              },
+              {
+                "methods": [ "POST" ],
+                "pathPattern": "/foo/expire/timer",
+                "permissionsRequired": []
               }
             ]
           },
