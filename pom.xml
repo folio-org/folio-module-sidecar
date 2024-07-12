@@ -25,8 +25,9 @@
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.version>3.12.1</quarkus.platform.version>
-    <applications-poc-tools.version>1.5.4-SNAPSHOT</applications-poc-tools.version>
+    <applications-poc-tools.version>1.5.4</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
+    <bcpkix-fips.version>1.0.7</bcpkix-fips.version>
 
     <lombok.version>1.18.32</lombok.version>
 
@@ -410,6 +411,32 @@
         <quarkus.native.enabled>true</quarkus.native.enabled>
         <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
       </properties>
+    </profile>
+
+    <profile>
+      <id>fips</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-security</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bc-fips</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bctls-fips</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcpkix-fips</artifactId>
+          <version>${bcpkix-fips.version}</version>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
