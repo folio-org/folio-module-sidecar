@@ -219,7 +219,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
 
   @Test
   void shouldSkip_negative_timerEndpoint() {
-    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer", "somepermission"), rc -> {});
+    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer"), rc -> {});
     var actual = keycloakTenantFilter.shouldSkip(routingContext);
     assertThat(actual).isFalse();
   }

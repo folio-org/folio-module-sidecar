@@ -66,7 +66,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc) && !isTimerRequest(rc) || hasNoPermissionsRequired(rc) || isSelfRequest(rc);
+    return !isTimerRequest(rc) && (isSystemRequest(rc) || hasNoPermissionsRequired(rc)) || isSelfRequest(rc);
   }
 
   @Override

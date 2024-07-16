@@ -354,7 +354,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
   @Test
   void shouldSkip_negative_timerEndpoint() {
-    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer", "somepermission "), rc -> {});
+    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer"), rc -> {});
     var actual = keycloakJwtFilter.shouldSkip(routingContext);
     assertThat(actual).isFalse();
   }
