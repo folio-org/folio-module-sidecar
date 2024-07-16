@@ -21,34 +21,35 @@
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.package.add-runner-suffix>false</quarkus.package.add-runner-suffix>
+    <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.6.9</quarkus.platform.version>
-    <applications-poc-tools.version>1.5.3</applications-poc-tools.version>
+    <quarkus.platform.version>3.12.2</quarkus.platform.version>
+    <applications-poc-tools.version>1.5.5-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
-
-    <lombok.version>1.18.32</lombok.version>
     <bcpkix-fips.version>1.0.7</bcpkix-fips.version>
 
+    <lombok.version>1.18.34</lombok.version>
+
     <!-- Test properties -->
-    <jjwt.version>0.12.5</jjwt.version>
-    <wiremock.version>3.6.0</wiremock.version>
-    <assertj-core.version>3.26.0</assertj-core.version>
+    <jjwt.version>0.12.6</jjwt.version>
+    <wiremock.version>3.8.0</wiremock.version>
+    <assertj-core.version>3.26.3</assertj-core.version>
     <mockito-core.version>5.8.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
-    <surefire-plugin.version>3.3.0</surefire-plugin.version>
+    <surefire-plugin.version>3.3.1</surefire-plugin.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
     <maven-checkstyle.version>10.17.0</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
-    <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
-    <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
-    <maven-failsafe-plugin.version>3.3.0</maven-failsafe-plugin.version>
+    <maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>
+    <maven-release-plugin.version>3.1.0</maven-release-plugin.version>
+    <maven-failsafe-plugin.version>3.3.1</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.0.1</folio-java-checkstyle.version>
+    <aws-crt.version>0.30.0</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
@@ -77,11 +78,23 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-secret-store-common</artifactId>
       <version>${applications-poc-tools.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bc-fips</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>software.amazon.awssdk.crt</groupId>
+      <artifactId>aws-crt</artifactId>
+      <version>${aws-crt.version}</version>
     </dependency>
 
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
+      <artifactId>quarkus-rest-jackson</artifactId>
     </dependency>
 
     <dependency>
@@ -116,7 +129,7 @@
 
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
+      <artifactId>quarkus-messaging-kafka</artifactId>
     </dependency>
 
     <dependency>
@@ -127,22 +140,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-security</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bc-fips</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bctls-fips</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-fips</artifactId>
-      <version>${bcpkix-fips.version}</version>
     </dependency>
 
     <dependency>
@@ -405,14 +402,41 @@
       </activation>
       <properties>
         <skipITs>false</skipITs>
-        <quarkus.package.type>native</quarkus.package.type>
         <quarkus.native.additional-build-args>
           -march=native,\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
           -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
+        <quarkus.native.enabled>true</quarkus.native.enabled>
+        <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
       </properties>
+    </profile>
+
+    <profile>
+      <id>fips</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-security</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bc-fips</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bctls-fips</artifactId>
+        </dependency>
+
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcpkix-fips</artifactId>
+          <version>${bcpkix-fips.version}</version>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
