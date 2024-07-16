@@ -307,6 +307,18 @@ Default transaction/access log format:
 | DISCOVERY_TLS_TRUSTSTORE_TYPE         | -             |  false   | Truststore type for Discovery consumer. PEM, if certificates are provided as PEM using DISCOVERY_TLS_TRUSTSTORE_CERTIFICATES |
 | DISCOVERY_TLS_TRUSTSTORE_CERTIFICATES | -             |  false   | The content of certificate in PEM format for Discovery consumer.                                                             |
 
+### Kafka configuration properties for `{{env}}.{{tenant}}.mod-login-keycloak.logout` event
+| Name                               | Default value | Required | Description                                                                                                                   |
+|:-----------------------------------|:--------------|:--------:|:------------------------------------------------------------------------------------------------------------------------------|
+| LOGOUT_SECURITY_PROTOCOL           | PLAINTEXT     |  false   | Security protocol for Logout events consumer.                                                                                 |
+| LOGOUT_TLS_KEY_PASSWORD            | -             |  false   | Key password for Logout events consumer.                                                                                      |
+| LOGOUT_TLS_KEYSTORE_FILE_PATH      | -             |  false   | Keystore file path for Logout events consumer.                                                                                |
+| LOGOUT_TLS_KEYSTORE_PASSWORD       | -             |  false   | Keystore password for Logout events consumer.                                                                                 |
+| LOGOUT_TLS_TRUSTSTORE_PATH         | -             |  false   | Truststore file path for Logout events consumer.                                                                              |
+| LOGOUT_TLS_TRUSTSTORE_PASSWORD     | -             |  false   | Truststore password for Logout events consumer.                                                                               |
+| LOGOUT_TLS_TRUSTSTORE_TYPE         | -             |  false   | Truststore type for Logout events consumer. PEM, if certificates are provided as PEM using LOGOUT_TLS_TRUSTSTORE_CERTIFICATES |
+| LOGOUT_TLS_TRUSTSTORE_CERTIFICATES | -             |  false   | The content of certificate in PEM format for Logout events consumer.                                                          |
+
 ### mod-users-keycloak integration environment variables
 
 | Name                                        | Default value                  | Required | Description                    |
