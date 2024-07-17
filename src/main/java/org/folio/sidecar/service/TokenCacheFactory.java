@@ -10,10 +10,12 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.function.BiConsumer;
+import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.keycloak.configuration.TokenCacheExpiry;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 
+@Log4j2
 @ApplicationScoped
 public class TokenCacheFactory {
 
@@ -51,7 +53,8 @@ public class TokenCacheFactory {
       .expireAfter(new TokenCacheExpiry(this::calculateTtl))
       .scheduler(Scheduler.systemScheduler())
       .initialCapacity(cacheProperties.getInitialCapacity())
-      .maximumSize(cacheProperties.getMaxCapacity());
+      .maximumSize(cacheProperties.getMaxCapacity())
+      .removalListener((k, jwt, cause) -> log.debug("Cached token removed: key={}, cause={}", k, cause));
 
     if (refreshFunction != null) {
       builder.removalListener(refreshOnExpiration(refreshFunction));
