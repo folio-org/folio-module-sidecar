@@ -1,6 +1,5 @@
 package org.folio.sidecar.integration.keycloak.configuration;
 
-import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -25,7 +24,7 @@ public class JsonWebTokenExpiry implements Expiry<String, JsonWebToken> {
 
   @Override
   public long expireAfterCreate(String s, JsonWebToken jsonWebToken, long currentTime) {
-    return SECONDS.toNanos(jsonWebToken.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis() + expireOffset);
+    return SECONDS.toNanos(jsonWebToken.getExpirationTime()) - currentTime - expireOffset;
   }
 
   @Override
