@@ -53,8 +53,7 @@ public class TokenCacheFactory {
       .expireAfter(new TokenCacheExpiry(this::calculateTtl))
       .scheduler(Scheduler.systemScheduler())
       .initialCapacity(cacheProperties.getInitialCapacity())
-      .maximumSize(cacheProperties.getMaxCapacity())
-      .removalListener((k, jwt, cause) -> log.debug("Cached token removed: key={}, cause={}", k, cause));
+      .maximumSize(cacheProperties.getMaxCapacity());
 
     if (refreshFunction != null) {
       builder.removalListener(refreshOnExpiration(refreshFunction));
@@ -74,6 +73,7 @@ public class TokenCacheFactory {
   private static RemovalListener<String, TokenResponse> refreshOnExpiration(
     BiConsumer<String, TokenResponse> refreshFunction) {
     return (tenant, token, cause) -> {
+      log.debug("Cached token removed: key={}, cause={}", token, cause);
       if (cause == RemovalCause.EXPIRED) {
         refreshFunction.accept(tenant, token);
       }
