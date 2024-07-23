@@ -88,7 +88,7 @@ class UserServiceTest {
   }
 
   @Test
-  void findUser_negative_modUsersInteraction() {
+  void findUser_negative_modUsersInteractionError() {
     var routingContext = routingContext(TARGET_TENANT);
     var token = "service-token";
     var key = USER_ID + "#" + TARGET_TENANT;

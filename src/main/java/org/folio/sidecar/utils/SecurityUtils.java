@@ -8,7 +8,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SecurityUtils {
 
-  public static final String JWT_SESSION_STATE_CLAIM = "session_state";
+  public static final String JWT_SESSION_ID_CLAIM = "sid";
   public static final String JWT_OKAPI_USER_ID_CLAIM = "user_id";
   public static final String JWT_ACCESS_TOKEN = "access_token";
 

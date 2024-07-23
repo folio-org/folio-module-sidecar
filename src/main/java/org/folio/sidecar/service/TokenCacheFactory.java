@@ -10,10 +10,12 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.function.BiConsumer;
+import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.keycloak.configuration.TokenCacheExpiry;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 
+@Log4j2
 @ApplicationScoped
 public class TokenCacheFactory {
 
@@ -55,6 +57,8 @@ public class TokenCacheFactory {
 
     if (refreshFunction != null) {
       builder.removalListener(refreshOnExpiration(refreshFunction));
+    } else {
+      builder.removalListener((k, jwt, cause) -> log.debug("Cached access token removed: key={}, cause={}", k, cause));
     }
     return builder.build();
   }
@@ -70,9 +74,10 @@ public class TokenCacheFactory {
 
   private static RemovalListener<String, TokenResponse> refreshOnExpiration(
     BiConsumer<String, TokenResponse> refreshFunction) {
-    return (tenant, token, cause) -> {
+    return (key, token, cause) -> {
+      log.debug("Cached token removed: key={}, cause={}", key, cause);
       if (cause == RemovalCause.EXPIRED) {
-        refreshFunction.accept(tenant, token);
+        refreshFunction.accept(key, token);
       }
     };
   }

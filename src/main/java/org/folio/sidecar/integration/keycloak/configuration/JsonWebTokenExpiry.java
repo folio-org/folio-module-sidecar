@@ -25,7 +25,7 @@ public class JsonWebTokenExpiry implements Expiry<String, JsonWebToken> {
 
   @Override
   public long expireAfterCreate(String s, JsonWebToken jsonWebToken, long currentTime) {
-    return SECONDS.toNanos(jsonWebToken.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis() + expireOffset);
+    return SECONDS.toNanos(jsonWebToken.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis()) - expireOffset;
   }
 
   @Override

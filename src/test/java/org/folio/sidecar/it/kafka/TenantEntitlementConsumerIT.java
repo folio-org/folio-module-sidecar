@@ -1,5 +1,7 @@
 package org.folio.sidecar.it.kafka;
 
+import static org.awaitility.Durations.FIVE_SECONDS;
+import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
@@ -15,6 +17,8 @@ import io.smallrye.reactive.messaging.memory.InMemoryConnector;
 import io.smallrye.reactive.messaging.memory.InMemorySource;
 import jakarta.enterprise.inject.Any;
 import jakarta.inject.Inject;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ThrowingRunnable;
 import org.folio.sidecar.integration.kafka.TenantEntitlementConsumer;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
@@ -50,7 +54,7 @@ class TenantEntitlementConsumerIT {
 
     sendEvent(event);
 
-    verify(consumer).consume(event);
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
     verify(tenantService).enableTenant(TENANT_NAME);
   }
 
@@ -61,12 +65,19 @@ class TenantEntitlementConsumerIT {
 
     sendEvent(event);
 
-    verify(consumer).consume(event);
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
     verify(tenantService).disableTenant(TENANT_NAME);
   }
 
   private void sendEvent(TenantEntitlementEvent event) {
     InMemorySource<TenantEntitlementEvent> discoveryIn = connector.source("entitlement");
     discoveryIn.send(event);
+  }
+
+  private static void awaitUntilAsserted(ThrowingRunnable runnable) {
+    Awaitility.await()
+      .atMost(FIVE_SECONDS)
+      .pollDelay(ONE_HUNDRED_MILLISECONDS)
+      .untilAsserted(runnable);
   }
 }

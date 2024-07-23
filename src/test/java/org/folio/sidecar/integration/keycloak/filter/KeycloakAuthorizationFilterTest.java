@@ -1,10 +1,13 @@
 package org.folio.sidecar.integration.keycloak.filter;
 
 import static io.vertx.core.Future.succeededFuture;
+import static java.util.UUID.randomUUID;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
+import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT_ALL;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
@@ -13,9 +16,11 @@ import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.support.TestConstants.SYS_TOKEN;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_STATE_CLAIM;
+import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
+import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -37,10 +42,12 @@ import io.vertx.ext.web.client.HttpResponse;
 import jakarta.ws.rs.ServiceUnavailableException;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
+import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
@@ -57,7 +64,7 @@ class KeycloakAuthorizationFilterTest {
 
   private static final String KC_PERMISSION = "/foo/entities/{id}#GET";
   private static final String REQUIRED_PERMISSION = "foo.entities.item.get";
-  private static final String SESSION_STATE = UUID.randomUUID().toString();
+  private static final String SESSION_STATE = randomUUID().toString();
   private static final String KC_PERMISSION_NAME_KEY = "kcPermissionName";
 
   private static final long VALID_TOKEN_EXPIRATION_TIME = Instant.now().plusSeconds(60).getEpochSecond();
@@ -302,16 +309,60 @@ class KeycloakAuthorizationFilterTest {
     assertThat(result).isTrue();
   }
 
+  @Test
+  void invalidate_positive_logoutEvent() {
+    var mockedToken = mock(JsonWebToken.class);
+    var cache = new ConcurrentHashMap<>(Map.of(
+      systemTokenCacheKey(), mockedToken,
+      userTokenCacheKey(USER_ID, "wrong-sid"), mockedToken,
+      userTokenCacheKey(USER_ID, SESSION_STATE), mockedToken,
+      "testkey", mockedToken
+    ));
+    when(authTokenCache.asMap()).thenReturn(cache);
+
+    var event = LogoutEvent.of(USER_ID, SESSION_STATE, null, LOGOUT);
+    keycloakAuthorizationFilter.invalidate(event);
+
+    assertThat(cache.get(userTokenCacheKey())).isNull();
+    assertThat(cache.size()).isEqualTo(3);
+    verify(authTokenCache).asMap();
+  }
+
+  @Test
+  void invalidate_positive_logoutAllEvent() {
+    var mockedToken = mock(JsonWebToken.class);
+    var keyForInvalidating1 = userTokenCacheKey(USER_ID, "wrong-sid");
+    var keyForInvalidating2 = userTokenCacheKey(USER_ID, SESSION_STATE);
+    var cache = new ConcurrentHashMap<>(Map.of(
+      systemTokenCacheKey(), mockedToken,
+      keyForInvalidating1, mockedToken,
+      keyForInvalidating2, mockedToken,
+      "testkey", mockedToken
+    ));
+    when(authTokenCache.asMap()).thenReturn(cache);
+
+    var event = LogoutEvent.of(USER_ID, null, null, LOGOUT_ALL);
+    keycloakAuthorizationFilter.invalidate(event);
+
+    assertThat(cache.get(keyForInvalidating1)).isNull();
+    assertThat(cache.get(keyForInvalidating2)).isNull();
+    assertThat(cache.size()).isEqualTo(2);
+    verify(authTokenCache).asMap();
+  }
+
   private void prepareUserTokenMocks(boolean cached) {
     when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
-    when(userToken.containsClaim(JWT_SESSION_STATE_CLAIM)).thenReturn(true);
-    when(userToken.getClaim(JWT_SESSION_STATE_CLAIM)).thenReturn(SESSION_STATE);
+    when(userToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(true);
+    when(userToken.getClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(USER_ID);
+    when(userToken.containsClaim(JWT_SESSION_ID_CLAIM)).thenReturn(true);
+    when(userToken.getClaim(JWT_SESSION_ID_CLAIM)).thenReturn(SESSION_STATE);
     when(authTokenCache.getIfPresent(userTokenCacheKey())).thenReturn(cached ? userToken : null);
   }
 
   private void prepareSystemTokenMocks(boolean cached) {
     when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
-    when(systemToken.containsClaim(JWT_SESSION_STATE_CLAIM)).thenReturn(false);
+    when(systemToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(false);
+    when(systemToken.containsClaim(JWT_SESSION_ID_CLAIM)).thenReturn(false);
     when(authTokenCache.getIfPresent(systemTokenCacheKey())).thenReturn(cached ? systemToken : null);
   }
 
@@ -357,7 +408,13 @@ class KeycloakAuthorizationFilterTest {
   }
 
   private static String userTokenCacheKey() {
-    return String.format("%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, SESSION_STATE, VALID_TOKEN_EXPIRATION_TIME);
+    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, USER_ID, SESSION_STATE,
+      VALID_TOKEN_EXPIRATION_TIME);
+  }
+
+  private static String userTokenCacheKey(String userId, String sid) {
+    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, userId, sid,
+      VALID_TOKEN_EXPIRATION_TIME);
   }
 
   private static String systemTokenCacheKey() {

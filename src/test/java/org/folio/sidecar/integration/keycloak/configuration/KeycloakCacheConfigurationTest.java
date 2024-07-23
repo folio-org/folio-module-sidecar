@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.keycloak.configuration;
 
+import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -23,13 +24,13 @@ class KeycloakCacheConfigurationTest {
   @Mock private KeycloakProperties keycloakProperties;
 
   @Test
-  void cacheExpirationCheck() {
+  void cacheExpirationCheck_positive_tokenIsExpired() {
     when(keycloakProperties.getAuthorizationCacheMaxSize()).thenReturn(50L);
-    when(keycloakProperties.getAuthorizationCacheTtlOffset()).thenReturn(1000L);
+    when(keycloakProperties.getAuthorizationCacheTtlOffset()).thenReturn(500L); //millis
     var jsonWebTokenCacheExpiry = new JsonWebTokenExpiry(keycloakProperties);
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(jsonWebToken.getExpirationTime()).thenReturn(MILLISECONDS.toSeconds(System.currentTimeMillis() + 2000));
+    when(jsonWebToken.getExpirationTime()).thenReturn(MILLISECONDS.toSeconds(currentTimeMillis() + 4000));
 
     var cache = keycloakCacheConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
 
@@ -37,8 +38,30 @@ class KeycloakCacheConfigurationTest {
     cache.put(cacheKey, jsonWebToken);
 
     await()
-      .atMost(Duration.ofMillis(1500))
-      .pollInterval(Duration.ofMillis(50))
+      .atMost(Duration.ofMillis(5000))
+      .pollDelay(Duration.ofMillis(100))
+      .pollInterval(Duration.ofMillis(200))
       .untilAsserted(() -> assertThat(cache.getIfPresent(cacheKey)).isNull());
+  }
+
+  @Test
+  void cacheExpirationCheck_positive_tokenIsPresented() {
+    when(keycloakProperties.getAuthorizationCacheMaxSize()).thenReturn(50L);
+    when(keycloakProperties.getAuthorizationCacheTtlOffset()).thenReturn(500L); //millis
+    var jsonWebTokenCacheExpiry = new JsonWebTokenExpiry(keycloakProperties);
+
+    var jsonWebToken = mock(JsonWebToken.class);
+    when(jsonWebToken.getExpirationTime()).thenReturn(MILLISECONDS.toSeconds(currentTimeMillis() + 4000));
+
+    var cache = keycloakCacheConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
+
+    var cacheKey = "test-key";
+    cache.put(cacheKey, jsonWebToken);
+
+    await()
+      .atMost(Duration.ofMillis(5000))
+      .pollDelay(Duration.ofMillis(1000))
+      .pollInterval(Duration.ofMillis(200))
+      .untilAsserted(() -> assertThat(cache.getIfPresent(cacheKey)).isNotNull());
   }
 }

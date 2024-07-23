@@ -5,6 +5,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -12,7 +13,8 @@ import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_STATE_CLAIM;
+import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
+import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.ForbiddenException;
@@ -22,19 +24,22 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
+import org.folio.sidecar.service.CacheInvalidatable;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
 @ApplicationScoped
 @RequiredArgsConstructor
-public class KeycloakAuthorizationFilter implements IngressRequestFilter {
+public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheInvalidatable {
 
   private static final String CACHE_KEY_DELIMITER = "#";
   private static final String KC_PERMISSION_NAME = "kcPermissionName";
@@ -71,6 +76,20 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
   @Override
   public int getOrder() {
     return 160;
+  }
+
+  @Override
+  public void invalidate(LogoutEvent event) {
+    authTokenCache.asMap().entrySet().removeIf(entry -> shouldRemove(event, entry));
+  }
+
+  private static boolean shouldRemove(LogoutEvent event, Entry<String, JsonWebToken> entry) {
+    var partToBeMatched = LOGOUT == event.getType() ? event.getSessionId() : event.getUserId();
+    if (entry.getKey().contains(partToBeMatched)) {
+      log.info("Invalidating authZ cached token: key = {}", entry.getKey());
+      return true;
+    }
+    return false;
   }
 
   private Optional<JsonWebToken> findCachedAccessToken(RoutingContext rc, String permission, String tenantName) {
@@ -166,8 +185,11 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter {
     var keyJoiner = new StringJoiner(CACHE_KEY_DELIMITER);
     keyJoiner.add(permission);
     keyJoiner.add(tenantName);
-    if (authToken.containsClaim(JWT_SESSION_STATE_CLAIM)) { // a client token does not have session_state claim
-      keyJoiner.add(authToken.getClaim(JWT_SESSION_STATE_CLAIM));
+    if (authToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)) {
+      keyJoiner.add(authToken.getClaim(JWT_OKAPI_USER_ID_CLAIM));
+    }
+    if (authToken.containsClaim(JWT_SESSION_ID_CLAIM)) { // a client token does not have session_state claim
+      keyJoiner.add(authToken.getClaim(JWT_SESSION_ID_CLAIM));
     }
     keyJoiner.add(Long.toString(authToken.getExpirationTime()));
     return keyJoiner.toString();

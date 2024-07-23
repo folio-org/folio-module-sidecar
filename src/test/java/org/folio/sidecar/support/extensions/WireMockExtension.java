@@ -43,7 +43,6 @@ public class WireMockExtension implements QuarkusTestResourceConfigurableLifecyc
       entry("KC_URL", wiremockUrl),
       entry("OKAPI_URL", wiremockUrl),
       entry("SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION", wiremockUrl),
-      entry("MOD_USERS_URL", wiremockUrl),
       entry("MOD_USERS_KEYCLOAK_URL", wiremockUrl)
     );
   }
