@@ -50,6 +50,8 @@ public class SecureStoreConfiguration {
   public AwsConfigProperties awsProperties() {
     return AwsConfigProperties.builder()
       .region(getRequiredValue(AWS_PREFIX, "region"))
+      .accessKey(getValue(AWS_PREFIX, "access-key"))
+      .secretKey(getValue(AWS_PREFIX, "secret-key"))
       .useIam(getRequiredValue(AWS_PREFIX, "use-iam", Boolean.class))
       .ecsCredentialsPath(getValue(AWS_PREFIX, "ecs-credentials-path"))
       .ecsCredentialsEndpoint(getValue(AWS_PREFIX, "ecs-credentials-endpoint"))
