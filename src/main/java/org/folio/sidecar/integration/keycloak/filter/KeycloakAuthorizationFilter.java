@@ -13,6 +13,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
+import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
 import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
 
@@ -70,7 +71,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc) || hasNoPermissionsRequired(rc) || isSelfRequest(rc);
+    return !isTimerRequest(rc) && (isSystemRequest(rc) || hasNoPermissionsRequired(rc)) || isSelfRequest(rc);
   }
 
   @Override
@@ -118,7 +119,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
-      .otherwise(error -> handleAuthorizationError(error));
+      .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
   }
 
   private Future<RoutingContext> authorizeAndCacheSystemToken(RoutingContext routingContext, Throwable error) {

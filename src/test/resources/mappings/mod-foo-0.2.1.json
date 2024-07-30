@@ -216,6 +216,26 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
+    }, {
+      "request": {
+        "method": "POST",
+        "urlPath": "/foo/expire/timer",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        }
+      }
     }
   ]
 }

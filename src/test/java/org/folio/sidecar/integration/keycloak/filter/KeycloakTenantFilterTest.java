@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
-import static org.folio.sidecar.support.TestConstants.MODULE_ID;
-import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -13,11 +11,9 @@ import static org.mockito.Mockito.when;
 
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.ext.web.RoutingContext;
-import java.util.List;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
-import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.support.types.UnitTest;
@@ -29,7 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class KeycloakTenantFilterTest {
+class KeycloakTenantFilterTest extends AbstractFilterTest {
 
   @InjectMocks private KeycloakTenantFilter keycloakTenantFilter;
   @Mock private SidecarProperties sidecarProperties;
@@ -197,9 +193,8 @@ class KeycloakTenantFilterTest {
 
   @Test
   void shouldSkip_positive_selfRequest() {
-    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"), rc -> {
-      when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(true);
-    });
+    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"),
+      rc -> when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(true));
 
     var actual = keycloakTenantFilter.shouldSkip(routingContext);
 
@@ -208,9 +203,8 @@ class KeycloakTenantFilterTest {
 
   @Test
   void shouldSkip_positive_notSelfRequest() {
-    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"), rc -> {
-      when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-    });
+    var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"),
+      rc -> when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false));
 
     var actual = keycloakTenantFilter.shouldSkip(routingContext);
 
@@ -223,21 +217,18 @@ class KeycloakTenantFilterTest {
     assertThat(result).isEqualTo(130);
   }
 
+  @Test
+  void shouldSkip_negative_timerEndpoint() {
+    var routingContext = routingContext(scRoutingEntryWithId("system", "_timer"), rc -> {});
+    var actual = keycloakTenantFilter.shouldSkip(routingContext);
+    assertThat(actual).isFalse();
+  }
+
   private static RoutingContext routingContext(ScRoutingEntry routingEntry, Consumer<RoutingContext> rcModifier) {
     var routingContext = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
     when(routingContext.get(RoutingUtils.SC_ROUTING_ENTRY_KEY)).thenReturn(routingEntry);
     rcModifier.accept(routingContext);
     return routingContext;
-  }
-
-  private static ScRoutingEntry scRoutingEntry() {
-    return scRoutingEntry(null, "foo.items.get");
-  }
-
-  private static ScRoutingEntry scRoutingEntry(String interfaceType, String... permissionRequired) {
-    var bootstrapEndpoint = new ModuleBootstrapEndpoint("/foo/items", "GET");
-    bootstrapEndpoint.setPermissionsRequired(List.of(permissionRequired));
-    return ScRoutingEntry.of(MODULE_ID, MODULE_URL, "mod-foo-api-1.0", interfaceType, bootstrapEndpoint);
   }
 
   private static String keycloakIssuer(String tenant) {

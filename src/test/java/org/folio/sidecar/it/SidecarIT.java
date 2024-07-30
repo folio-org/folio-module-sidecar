@@ -561,4 +561,37 @@ class SidecarIT {
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .contentType(is(APPLICATION_JSON));
   }
+
+  @Test
+  void authorizeTimerRequest_negative_expiredToken() {
+    authToken = TestJwtGenerator.generateExpiredJwtToken(keycloakUrl, TestConstants.TENANT_NAME);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .post("/foo/expire/timer")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("UnauthorizedException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Unauthorized")
+      );
+  }
+
+  @Test
+  void authorizeTimerRequest_positive_validToken() {
+    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .post("/foo/expire/timer")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .statusCode(is(SC_OK));
+  }
 }
