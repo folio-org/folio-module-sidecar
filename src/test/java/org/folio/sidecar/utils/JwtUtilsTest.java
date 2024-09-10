@@ -16,4 +16,18 @@ class JwtUtilsTest {
 
     assertThat(result).isEqualTo("token");
   }
+
+  @Test
+  void trimTokenBearer_positive_nullToken() {
+    var result = trimTokenBearer(null);
+
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void trimTokenBearer_positive_bearerTokenNotExists() {
+    var result = trimTokenBearer("token");
+
+    assertThat(result).isEqualTo("token");
+  }
 }
