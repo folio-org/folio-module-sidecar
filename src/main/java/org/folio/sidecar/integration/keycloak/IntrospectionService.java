@@ -47,19 +47,18 @@ public class IntrospectionService implements CacheInvalidatable {
   @Override
   public void invalidate(LogoutEvent event) {
     if (LOGOUT_ALL == event.getType()) {
-      tokenCache.asMap().forEach((key, value) -> {
+      tokenCache.asMap().keySet().forEach(key -> {
         if (key.contains(event.getUserId())) {
           tokenCache.put(key, INACTIVE_TOKEN);
         }
       });
-      return;
+    } else {
+      tokenCache.asMap().keySet().forEach(key -> {
+        if (key.contains(event.getUserId()) && key.contains(event.getSessionId())) {
+          tokenCache.put(key, INACTIVE_TOKEN);
+        }
+      });
     }
-
-    tokenCache.asMap().forEach((key, value) -> {
-      if (key.contains(event.getUserId()) && key.contains(event.getSessionId())) {
-        tokenCache.put(key, INACTIVE_TOKEN);
-      }
-    });
   }
 
   private Future<TokenIntrospectionResponse> introspectToken(RoutingContext ctx) {
@@ -92,7 +91,7 @@ public class IntrospectionService implements CacheInvalidatable {
   private Future<TokenIntrospectionResponse> handelAndCacheResponse(HttpResponse<Buffer> response, String key) {
     var statusCode = response.statusCode();
     if (statusCode != 200) {
-      log.warn("Failed to introspect user token: response = {}", response::bodyAsString);
+      log.warn("Failed to introspect user token: response = {}, status = {}", response::bodyAsString, () -> statusCode);
       return failedFuture(new UnauthorizedException("Failed to introspect user token"));
     }
     var introspectionResponse = response.bodyAsJson(TokenIntrospectionResponse.class);
