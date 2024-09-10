@@ -6,6 +6,9 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHORIZATION;
+import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -14,8 +17,6 @@ import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.ForbiddenException;
@@ -76,7 +77,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
   @Override
   public int getOrder() {
-    return 160;
+    return KEYCLOAK_AUTHORIZATION.getOrder();
   }
 
   @Override
@@ -186,11 +187,11 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var keyJoiner = new StringJoiner(CACHE_KEY_DELIMITER);
     keyJoiner.add(permission);
     keyJoiner.add(tenantName);
-    if (authToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)) {
-      keyJoiner.add(authToken.getClaim(JWT_OKAPI_USER_ID_CLAIM));
+    if (authToken.containsClaim(USER_ID_CLAIM)) {
+      keyJoiner.add(authToken.getClaim(USER_ID_CLAIM));
     }
-    if (authToken.containsClaim(JWT_SESSION_ID_CLAIM)) { // a client token does not have session_state claim
-      keyJoiner.add(authToken.getClaim(JWT_SESSION_ID_CLAIM));
+    if (authToken.containsClaim(SESSION_ID_CLAIM)) { // a client token does not have session_state claim
+      keyJoiner.add(authToken.getClaim(SESSION_ID_CLAIM));
     }
     keyJoiner.add(Long.toString(authToken.getExpirationTime()));
     return keyJoiner.toString();

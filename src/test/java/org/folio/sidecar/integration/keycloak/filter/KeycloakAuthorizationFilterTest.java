@@ -10,15 +10,15 @@ import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT_ALL;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
-import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.SYS_TOKEN;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
+import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
+import static org.folio.sidecar.utils.RoutingUtils.PARSED_TOKEN;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -107,7 +107,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     prepareUserTokenMocks(true);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> {
-      when(rc.get(TOKEN)).thenReturn(userToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(userToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemToken);
       when(rc.put(KC_PERMISSION_NAME_KEY, KC_PERMISSION)).thenReturn(rc);
       when(rc.remove(KC_PERMISSION_NAME_KEY)).thenReturn(KC_PERMISSION);
@@ -142,7 +142,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     prepareSystemTokenMocks(true);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> {
-      when(rc.get(TOKEN)).thenReturn(userToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(userToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemToken);
       when(rc.put(KC_PERMISSION_NAME_KEY, KC_PERMISSION)).thenReturn(rc);
       when(rc.remove(KC_PERMISSION_NAME_KEY)).thenReturn(KC_PERMISSION);
@@ -357,22 +357,22 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
   private void prepareUserTokenMocks(boolean cached) {
     when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
-    when(userToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(true);
-    when(userToken.getClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(USER_ID);
-    when(userToken.containsClaim(JWT_SESSION_ID_CLAIM)).thenReturn(true);
-    when(userToken.getClaim(JWT_SESSION_ID_CLAIM)).thenReturn(SESSION_STATE);
+    when(userToken.containsClaim(USER_ID_CLAIM)).thenReturn(true);
+    when(userToken.getClaim(USER_ID_CLAIM)).thenReturn(USER_ID);
+    when(userToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(true);
+    when(userToken.getClaim(SESSION_ID_CLAIM)).thenReturn(SESSION_STATE);
     when(authTokenCache.getIfPresent(userTokenCacheKey())).thenReturn(cached ? userToken : null);
   }
 
   private void prepareSystemTokenMocks(boolean cached) {
     when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
-    when(systemToken.containsClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(false);
-    when(systemToken.containsClaim(JWT_SESSION_ID_CLAIM)).thenReturn(false);
+    when(systemToken.containsClaim(USER_ID_CLAIM)).thenReturn(false);
+    when(systemToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(false);
     when(authTokenCache.getIfPresent(systemTokenCacheKey())).thenReturn(cached ? systemToken : null);
   }
 
   private static void prepareRoutingContextMocks(RoutingContext rc, JsonWebToken userToken, JsonWebToken systemToken) {
-    when(rc.get(TOKEN)).thenReturn(userToken);
+    when(rc.get(PARSED_TOKEN)).thenReturn(userToken);
     when(rc.get(SYSTEM_TOKEN)).thenReturn(systemToken);
     when(rc.put(KC_PERMISSION_NAME_KEY, KC_PERMISSION)).thenReturn(rc);
     when(rc.get(KC_PERMISSION_NAME_KEY)).thenReturn(KC_PERMISSION);

@@ -201,7 +201,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | TOKEN_CACHE_INITIAL_CAPACITY                 | 10                      |  false   | Token cache initial capacity.                                                                                                                                 |
 | TOKEN_CACHE_MAX_CAPACITY                     | 50                      |  false   | Token cache max capacity.                                                                                                                                     |
 | TOKEN_CACHE_REFRESH_PRIOR_EXPIRATION         | 25                      |  false   | Specifies the amount of seconds for a cache entry invalidation prior to the token expiration.                                                                 |
-| ALLOW_CROSS_TENANT_REQUESTS                  | false                   |  false   | Enable                                                                                                                                                        |
+| ALLOW_CROSS_TENANT_REQUESTS                  | false                   |  false   | Allows cross tenant interactions                                                                                                                              |
 | SC_SECURITY_PROVIDERS                        | SunRsaSign,SunJCE       |  false   | Security provider value                                                                                                                                       |
 | SC_TLS_KEYSTORE_PATH                         | -                       |  false   | Keystore file path for sidecar server side.                                                                                                                   |
 | SC_TLS_KEYSTORE_PASSWORD                     | -                       |  false   | Keystore password for sidecar server side.                                                                                                                    |
@@ -232,21 +232,23 @@ Default transaction/access log format:
 
 ### keycloak integration environment variables
 
-| Name                               | Default value                | Required | Description                                                                                                                          |
-|:-----------------------------------|:-----------------------------|:--------:|:-------------------------------------------------------------------------------------------------------------------------------------|
-| KC_URL                             | http://keycloak:8080         |  false   | Keycloak URL.                                                                                                                        |
-| KC_URI_VALIDATION_ENABLED          | true                         |  false   | Defines if JsonWebTokenParser compares URI from token with KC_URL value.                                                             |
-| KC_LOGIN_CLIENT_SUFFIX             | -login-application           |  false   | Suffix of a Keycloak client who owns the authorization resources. It is used as `audience` for keycloak when evaluating permissions. |
-| KC_SERVICE_CLIENT_ID               | sidecar-module-access-client |  false   | Tenant specific client id for authenticating egress requests.                                                                        |
-| KC_ADMIN_CLIENT_ID                 | folio-backend-admin-client   |  false   | Master realm specific client id for authenticating requests to manager components.                                                   |
-| KC_AUTHORIZATION_CACHE_MAX_SIZE    | 50                           |  false   | Maximum amount of entries for keycloak authorization cache.                                                                          |
-| KC_AUTHORIZATION_CACHE_TTL_OFFSET  | 5000                         |  false   | TTL Offset for cached authorization information, positive, in millis.                                                                |
-| KC_CLIENT_TLS_ENABLED              | -                            |  false   | Enables TLS for keycloak web client                                                                                                  |
-| KC_CLIENT_TLS_TRUSTSTORE_PATH      | -                            |  false   | Truststore file path for keycloak web client                                                                                         |
-| KC_CLIENT_TLS_TRUSTSTORE_PASSWORD  | -                            |  false   | Truststore password for keycloak web client                                                                                          |
-| KC_CLIENT_TLS_TRUSTSTORE_FILE_TYPE | -                            |  false   | Truststore file type for keycloak web client                                                                                         |
-| KC_CLIENT_TLS_TRUSTSTORE_PROVIDER  | -                            |  false   | Truststore provider for keycloak web client                                                                                          |
-| SIDECAR_IMPERSONATION_CLIENT_NAME  | impersonation-client         |  false   | Client name for impersonating users.                                                                                                 |
+| Name                                        | Default value                | Required | Description                                                                                                                          |
+|:--------------------------------------------|:-----------------------------|:--------:|:-------------------------------------------------------------------------------------------------------------------------------------|
+| KC_URL                                      | http://keycloak:8080         |  false   | Keycloak URL.                                                                                                                        |
+| KC_URI_VALIDATION_ENABLED                   | true                         |  false   | Defines if JsonWebTokenParser compares URI from token with KC_URL value.                                                             |
+| KC_LOGIN_CLIENT_SUFFIX                      | -login-application           |  false   | Suffix of a Keycloak client who owns the authorization resources. It is used as `audience` for keycloak when evaluating permissions. |
+| KC_SERVICE_CLIENT_ID                        | sidecar-module-access-client |  false   | Tenant specific client id for authenticating egress requests.                                                                        |
+| KC_ADMIN_CLIENT_ID                          | folio-backend-admin-client   |  false   | Master realm specific client id for authenticating requests to manager components.                                                   |
+| KC_AUTHORIZATION_CACHE_MAX_SIZE             | 50                           |  false   | Maximum amount of entries for keycloak authorization cache.                                                                          |
+| KC_AUTHORIZATION_CACHE_TTL_OFFSET           | 5000                         |  false   | TTL Offset for cached authorization information, positive, in millis.                                                                |
+| KC_CLIENT_TLS_ENABLED                       | -                            |  false   | Enables TLS for keycloak web client                                                                                                  |
+| KC_CLIENT_TLS_TRUSTSTORE_PATH               | -                            |  false   | Truststore file path for keycloak web client                                                                                         |
+| KC_CLIENT_TLS_TRUSTSTORE_PASSWORD           | -                            |  false   | Truststore password for keycloak web client                                                                                          |
+| KC_CLIENT_TLS_TRUSTSTORE_FILE_TYPE          | -                            |  false   | Truststore file type for keycloak web client                                                                                         |
+| KC_CLIENT_TLS_TRUSTSTORE_PROVIDER           | -                            |  false   | Truststore provider for keycloak web client                                                                                          |
+| SIDECAR_IMPERSONATION_CLIENT_NAME           | impersonation-client         |  false   | Client name for impersonating users.                                                                                                 |
+| KC_INTROSPECTION_TOKEN_CACHE_MAX_SIZE       | 250                          |  false   | Token introspection cache max size. It's used as `ALLOW_CROSS_TENANT_REQUESTS=true`.                                                 |
+| KC_INTROSPECTION_INACTIVE_TOKEN_TTL_IN_SEC  | 3000                         |  false   | Ttl for inactive tokens records in cache. It's used as `ALLOW_CROSS_TENANT_REQUESTS=true`.                                           |
 
 ### api-gateway integration environment variables
 

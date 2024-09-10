@@ -8,9 +8,12 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
+import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
+import static org.folio.sidecar.utils.RoutingUtils.ORIGIN_TENANT;
+import static org.folio.sidecar.utils.RoutingUtils.PARSED_TOKEN;
 import static org.folio.sidecar.utils.RoutingUtils.SC_ROUTING_ENTRY_KEY;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -68,13 +71,15 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
-    when(jsonWebToken.getClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
     assertThat(result.result()).isEqualTo(routingContext);
-    verify(routingContext).put(TOKEN, jsonWebToken);
+    verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
+    verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
 
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(USER_ID)).isEqualTo(TEST_USER_ID);
@@ -92,17 +97,19 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
     assertThat(result.result()).isEqualTo(routingContext);
-    verify(routingContext).put(TOKEN, jsonWebToken);
+    verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
+    verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
 
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(USER_ID)).isEqualTo(customUserId);
     assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
-    verifyNoInteractions(jsonWebToken);
+    verifyNoMoreInteractions(jsonWebToken);
   }
 
   @Test
@@ -115,13 +122,15 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
-    when(jsonWebToken.getClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
     assertThat(result.result()).isEqualTo(routingContext);
-    verify(routingContext).put(TOKEN, jsonWebToken);
+    verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
+    verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
 
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(USER_ID)).isEqualTo(TEST_USER_ID);
@@ -141,13 +150,15 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
-    when(jsonWebToken.getClaim(JWT_OKAPI_USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
     assertThat(result.result()).isEqualTo(routingContext);
-    verify(routingContext).put(TOKEN, jsonWebToken);
+    verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
+    verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
 
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(SYSTEM_TOKEN)).isEqualTo(systemToken);

@@ -109,6 +109,28 @@ class UserServiceTest {
   }
 
   @Test
+  void findUser_negative_non200StatusCodeResponse() {
+    var routingContext = routingContext(TARGET_TENANT);
+    var token = "service-token";
+    var key = USER_ID + "#" + TARGET_TENANT;
+
+    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
+    when(cache.getIfPresent(key)).thenReturn(null);
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(webClient.getAbs(anyString())).thenReturn(httpRequest);
+    when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
+    when(httpRequest.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(400);
+
+    var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
+
+    assertThat(future.succeeded()).isFalse();
+    verify(cache).getIfPresent(key);
+    verifyNoMoreInteractions(cache, webClient);
+  }
+
+  @Test
   void findUserPermissions_positive() {
     var permissions = List.of("perm1", "perm2");
     var routingContext = routingContext(TENANT_NAME);

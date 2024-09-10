@@ -4,6 +4,9 @@ import static io.restassured.filter.log.LogDetail.ALL;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
+import static org.folio.sidecar.support.TestJwtGenerator.generateJwtString;
+import static org.folio.sidecar.support.TestUtils.asJson;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -18,7 +21,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.it.CrossTenantIT.CrossTenantTestProfile;
 import org.folio.sidecar.support.TestConstants;
-import org.folio.sidecar.support.TestJwtGenerator;
 import org.folio.sidecar.support.TestUtils;
 import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.extensions.InjectWireMock;
@@ -41,7 +43,7 @@ class CrossTenantIT {
 
   @BeforeEach
   void init() {
-    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, "another-tenant", USER_ID);
+    authToken = generateJwtString(keycloakUrl, "another-tenant", USER_ID);
   }
 
   @Test
@@ -143,7 +145,7 @@ class CrossTenantIT {
   @Test
   void handleIngressRequest_negative_crossTenantEnabled_userNotExistForTargetTenant() {
     var userId = "12300000-0000-0000-0000-000000000123";
-    var userToken = TestJwtGenerator.generateJwtString(keycloakUrl, "another-tenant", userId);
+    var userToken = generateJwtString(keycloakUrl, "another-tenant", userId);
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.TOKEN, userToken)
@@ -153,36 +155,28 @@ class CrossTenantIT {
       .assertThat()
       .statusCode(is(SC_FORBIDDEN))
       .contentType(is(APPLICATION_JSON))
-      .body("total_records", is(1),
-        "errors[0].type", is("ForbiddenException"),
-        "errors[0].code", is("authorization_error"),
-        "errors[0].message", is("Access Denied")
-      );
+      .body(is(asJson("json/forbidden-error.json")));
   }
 
   @Test
   void handleIngressRequest_negative_crossTenantEnabledAndUserIdClaimIsNotFound() {
-    var userToken = TestJwtGenerator.generateJwtString(keycloakUrl, "another-tenant");
+    var userTokenWithoutUserIdClaim = generateJwtString(keycloakUrl, "another-tenant");
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
-      .header(OkapiHeaders.TOKEN, userToken)
+      .header(OkapiHeaders.TOKEN, userTokenWithoutUserIdClaim)
       .get("/foo/entities")
       .then()
       .log().ifValidationFails(ALL)
       .assertThat()
-      .statusCode(is(SC_FORBIDDEN))
+      .statusCode(is(SC_UNAUTHORIZED))
       .contentType(is(APPLICATION_JSON))
-      .body("total_records", is(1),
-        "errors[0].type", is("ForbiddenException"),
-        "errors[0].code", is("authorization_error"),
-        "errors[0].message", is("Access Denied")
-      );
+      .body(is(asJson("json/unauthorized-error.json")));
   }
 
   @Test
   void handleIngressRequest_positive_skipImpersonationIfSelfRequest() {
     var signature = TestUtils.getSignature();
-    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, "newtenant");
+    authToken = generateJwtString(keycloakUrl, "newtenant");
 
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
@@ -204,12 +198,27 @@ class CrossTenantIT {
       );
   }
 
+  @Test
+  void handleIngressRequest_negative_crossTenantEnabledAndUserTokenSessionTerminated() {
+    var tokenWithTerminatedSession = generateJwtString(keycloakUrl, "foo-tenant", USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, tokenWithTerminatedSession)
+      .get("/foo/entities")
+      .then()
+      .log().ifValidationFails(ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/unauthorized-error.json")));
+  }
+
   private UUID addObtainTokenRequestToWiremock() {
     var id = UUID.randomUUID();
     var sessionState = UUID.randomUUID();
-    var accessToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID, sessionState);
+    var accessToken = generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID, sessionState);
     var refreshToken =
-      TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID, sessionState);
+      generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID, sessionState);
     var mappingsTemplate = TestUtils.readString("/mappings-templates/keycloak/obtain-token-template.json");
 
     var obtainTokenRequestStubMappingJson = mappingsTemplate

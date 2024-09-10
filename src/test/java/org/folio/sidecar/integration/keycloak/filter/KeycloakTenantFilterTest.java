@@ -3,8 +3,8 @@ package org.folio.sidecar.integration.keycloak.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
-import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.folio.sidecar.utils.RoutingUtils.PARSED_TOKEN;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,7 +35,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var accessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
       when(rc.request().getHeader(TENANT)).thenReturn(TENANT_NAME);
@@ -55,7 +55,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var systemAccessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemAccessToken);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
       when(systemAccessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
@@ -75,7 +75,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var accessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
     });
@@ -92,7 +92,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
   void filter_negative_noResolvedTokens() {
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(null);
+      when(rc.get(PARSED_TOKEN)).thenReturn(null);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
     });
 
@@ -109,7 +109,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var accessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
       when(rc.request().getHeader(TENANT)).thenReturn(null);
@@ -129,7 +129,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var systemAccessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemAccessToken);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(tenant1));
       when(systemAccessToken.getIssuer()).thenReturn(keycloakIssuer(tenant2));
@@ -153,7 +153,7 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
     var systemAccessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
-      when(rc.get(TOKEN)).thenReturn(accessToken);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
       when(rc.get(SYSTEM_TOKEN)).thenReturn(systemAccessToken);
       when(accessToken.getIssuer()).thenReturn(keycloakIssuer(tenant1));
       when(systemAccessToken.getIssuer()).thenReturn(keycloakIssuer(tenant1));
