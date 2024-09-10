@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.filter;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.SIDECAR_SIGNATURE;
 
 import io.vertx.core.Future;
@@ -16,7 +17,7 @@ public class SidecarSignatureFilter implements IngressRequestFilter {
 
   @Override
   public Future<RoutingContext> filter(RoutingContext routingContext) {
-    return Future.succeededFuture(routingContext)
+    return succeededFuture(routingContext)
       .map(sidecarSignatureService::populateSignature);
   }
 

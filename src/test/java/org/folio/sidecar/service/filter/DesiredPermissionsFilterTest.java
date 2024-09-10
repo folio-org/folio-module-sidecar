@@ -3,6 +3,7 @@ package org.folio.sidecar.service.filter;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.MultiMap.caseInsensitiveMultiMap;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.DESIRED_PERMISSIONS;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.support.TestValues.routingContext;
@@ -90,5 +91,12 @@ class DesiredPermissionsFilterTest {
     assertThat(resultFuture.succeeded()).isTrue();
     assertThat(rc.request().headers().contains(OkapiHeaders.PERMISSIONS)).isFalse();
     verifyNoInteractions(userService);
+  }
+
+  @Test
+  void getOrder_positive() {
+    var order = filter.getOrder();
+
+    assertThat(order).isEqualTo(DESIRED_PERMISSIONS.getOrder());
   }
 }

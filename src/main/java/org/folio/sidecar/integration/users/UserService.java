@@ -86,7 +86,7 @@ public class UserService {
 
   private Future<User> processResponse(HttpResponse<Buffer> response) {
     if (response.statusCode() != 200) {
-      log.warn("User tenants not found: status = {}, body = {}", response.statusCode(), response.bodyAsString());
+      log.warn("User tenants not found: status = {}, body = {}", response::statusCode, response::bodyAsString);
       return failedFuture(new ForbiddenException("User tenants not found"));
     }
     return succeededFuture(response.bodyAsJson(User.class));
