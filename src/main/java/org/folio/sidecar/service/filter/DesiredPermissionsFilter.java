@@ -2,6 +2,7 @@ package org.folio.sidecar.service.filter;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.PERMISSIONS;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.DESIRED_PERMISSIONS;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.RoutingUtils.getPermissionsDesired;
 import static org.folio.sidecar.utils.RoutingUtils.getTenant;
@@ -26,7 +27,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 171;
+    return DESIRED_PERMISSIONS.getOrder();
   }
 
   @Override

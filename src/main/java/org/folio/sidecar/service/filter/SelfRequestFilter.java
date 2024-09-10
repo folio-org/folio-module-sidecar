@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.filter;
 
+import static org.folio.sidecar.service.filter.IngressFilterOrder.SELF_REQUEST;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 
 import io.vertx.core.Future;
@@ -31,6 +32,6 @@ public class SelfRequestFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 100;
+    return SELF_REQUEST.getOrder();
   }
 }

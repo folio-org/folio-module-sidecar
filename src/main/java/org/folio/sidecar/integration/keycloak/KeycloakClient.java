@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.keycloak;
 
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareClientRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareImpersonateRequestBody;
+import static org.folio.sidecar.utils.TokenRequestHelper.prepareIntrospectRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.preparePasswordRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareRefreshRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareRptRequestBody;
@@ -59,6 +60,12 @@ public class KeycloakClient {
     var requestBody = prepareImpersonateRequestBody(client, username);
     return webClient.postAbs(resolveTokenUrl(realm))
       .sendForm(requestBody);
+  }
+
+  public Future<HttpResponse<Buffer>> introspectToken(String realm, ClientCredentials client, String token) {
+    var requestBody = prepareIntrospectRequestBody(client, token);
+    var url = String.format("%s/realms/%s/protocol/openid-connect/token/introspect", properties.getUrl(), realm);
+    return webClient.postAbs(url).sendForm(requestBody);
   }
 
   private String resolveTokenUrl(String realm) {

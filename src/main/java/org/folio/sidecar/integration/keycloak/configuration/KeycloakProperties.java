@@ -30,4 +30,7 @@ public class KeycloakProperties {
   @ConfigProperty(name = "keycloak.client.tls.trust-store-password", defaultValue = " ") String trustStorePassword;
   @ConfigProperty(name = "keycloak.client.tls.trust-store-file-type", defaultValue = " ") String trustStoreFileType;
   @ConfigProperty(name = "keycloak.client.tls.trust-store-provider", defaultValue = " ") String trustStoreProvider;
+
+  @ConfigProperty(name = "keycloak.introspection.token-cache-max-size") long tokenIntrospectionCacheMaxSize;
+  @ConfigProperty(name = "keycloak.introspection.inactive-token-ttl-in-sec") long inactiveTokenIntrospectionTtl;
 }

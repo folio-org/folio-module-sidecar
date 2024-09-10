@@ -1,5 +1,7 @@
 package org.folio.sidecar.service.filter;
 
+import static org.folio.sidecar.service.filter.IngressFilterOrder.SIDECAR_SIGNATURE;
+
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,6 +22,6 @@ public class SidecarSignatureFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 170;
+    return SIDECAR_SIGNATURE.getOrder();
   }
 }

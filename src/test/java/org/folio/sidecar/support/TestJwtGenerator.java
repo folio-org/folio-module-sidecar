@@ -1,7 +1,7 @@
 package org.folio.sidecar.support;
 
-import static org.folio.sidecar.utils.SecurityUtils.JWT_OKAPI_USER_ID_CLAIM;
-import static org.folio.sidecar.utils.SecurityUtils.JWT_SESSION_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
 
 import io.jsonwebtoken.Jwts;
 import java.io.DataInputStream;
@@ -57,7 +57,7 @@ public class TestJwtGenerator {
       .issuer(keycloakUrl + "/realms/" + tenant)
       .issuedAt(now)
       .expiration(DateUtils.addDays(now, 1))
-      .claims(Map.of(JWT_OKAPI_USER_ID_CLAIM, userId, JWT_SESSION_ID_CLAIM, sessionState))
+      .claims(Map.of(USER_ID_CLAIM, userId, SESSION_ID_CLAIM, sessionState))
       .signWith(key)
       .compact();
   }
