@@ -46,19 +46,9 @@ public class IntrospectionService implements CacheInvalidatable {
 
   @Override
   public void invalidate(LogoutEvent event) {
-    if (LOGOUT_ALL == event.getType()) {
-      tokenCache.asMap().keySet().forEach(key -> {
-        if (key.contains(event.getUserId())) {
-          tokenCache.put(key, INACTIVE_TOKEN);
-        }
-      });
-    } else {
-      tokenCache.asMap().keySet().forEach(key -> {
-        if (key.contains(event.getUserId()) && key.contains(event.getSessionId())) {
-          tokenCache.put(key, INACTIVE_TOKEN);
-        }
-      });
-    }
+    tokenCache.asMap().keySet().stream()
+      .filter(key -> shouldInvalidate(event, key))
+      .forEach(key -> tokenCache.put(key, INACTIVE_TOKEN));
   }
 
   private Future<TokenIntrospectionResponse> introspectToken(RoutingContext ctx) {
@@ -105,6 +95,12 @@ public class IntrospectionService implements CacheInvalidatable {
     }
 
     return failedFuture(new UnauthorizedException("User token is not active"));
+  }
+
+  private static boolean shouldInvalidate(LogoutEvent event, String key) {
+    return LOGOUT_ALL == event.getType()
+      ? key.contains(event.getUserId())
+      : key.contains(event.getUserId()) && key.contains(event.getSessionId());
   }
 
   private static String cacheKey(String tenant, String userId, String tokenSessionId) {
