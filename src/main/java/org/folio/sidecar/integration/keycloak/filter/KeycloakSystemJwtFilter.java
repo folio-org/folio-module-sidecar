@@ -17,7 +17,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
+import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
