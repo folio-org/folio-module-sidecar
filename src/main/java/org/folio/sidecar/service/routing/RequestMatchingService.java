@@ -93,7 +93,7 @@ public class RequestMatchingService {
     if (sidecarProperties.isForwardUnknownRequests() && entry.isEmpty()) {
       var moduleIdHeader = request.getHeader(OkapiHeaders.MODULE_ID);
       var unknownRequestsDestination = sidecarProperties.getUnknownRequestsDestination();
-      log.warn("Egress routing entry was not found for the request's path. Forwarding request to the Gateway:"
+      log.warn("Egress routing entry was not found for the request's path. Forwarding request to the Gateway: "
           + "moduleId = {}, path = {}, destination = {}, x-okapi-module-id = {}",
         sidecarProperties.getName(), path, unknownRequestsDestination, moduleIdHeader);
       entry = StringUtils.isBlank(moduleIdHeader)
