@@ -18,9 +18,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class KeycloakCacheConfigurationTest {
+class KeycloakSidecarConfigurationTest {
 
-  @InjectMocks private KeycloakCacheConfiguration keycloakCacheConfiguration;
+  @InjectMocks private KeycloakSidecarConfiguration keycloakSidecarConfiguration;
   @Mock private KeycloakProperties keycloakProperties;
 
   @Test
@@ -32,7 +32,7 @@ class KeycloakCacheConfigurationTest {
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebToken.getExpirationTime()).thenReturn(MILLISECONDS.toSeconds(currentTimeMillis() + 4000));
 
-    var cache = keycloakCacheConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
+    var cache = keycloakSidecarConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
 
     var cacheKey = "test-key";
     cache.put(cacheKey, jsonWebToken);
@@ -53,7 +53,7 @@ class KeycloakCacheConfigurationTest {
     var jsonWebToken = mock(JsonWebToken.class);
     when(jsonWebToken.getExpirationTime()).thenReturn(MILLISECONDS.toSeconds(currentTimeMillis() + 4000));
 
-    var cache = keycloakCacheConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
+    var cache = keycloakSidecarConfiguration.kcAuthorizationCache(keycloakProperties, jsonWebTokenCacheExpiry);
 
     var cacheKey = "test-key";
     cache.put(cacheKey, jsonWebToken);

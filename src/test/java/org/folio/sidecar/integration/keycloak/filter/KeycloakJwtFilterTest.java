@@ -2,7 +2,7 @@ package org.folio.sidecar.integration.keycloak.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.folio.sidecar.integration.keycloak.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
+import static org.folio.jwt.openid.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.AUTHORIZATION;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
+import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;

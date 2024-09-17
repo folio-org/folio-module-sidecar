@@ -3,7 +3,7 @@ package org.folio.sidecar.integration.keycloak.filter;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Optional.ofNullable;
-import static org.folio.sidecar.integration.keycloak.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
+import static org.folio.jwt.openid.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.AUTHORIZATION;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_JWT;
@@ -30,7 +30,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
+import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
