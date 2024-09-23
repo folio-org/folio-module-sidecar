@@ -47,7 +47,7 @@
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
     <maven-failsafe-plugin.version>3.5.0</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.0.1</folio-java-checkstyle.version>
-    <aws-crt.version>0.30.11</aws-crt.version>
+    <aws-crt.version>0.31.1</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
