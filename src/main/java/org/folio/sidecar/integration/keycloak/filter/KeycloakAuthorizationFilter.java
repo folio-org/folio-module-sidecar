@@ -9,7 +9,6 @@ import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHORIZATION;
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
-import static org.folio.sidecar.utils.RoutingUtils.getOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -64,7 +63,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var tenantName = getTenant(routingContext);
     log.info("Authorizing request to: {} for tenant: {}", permission, tenantName);
 
-    log.debug("Tenant: {}, OriginalTenant {}, token {}, system-token {}", tenantName, getOriginTenant(routingContext),
+    log.debug("Tenant: {}, token {}, system-token {}", tenantName,
       getParsedToken(routingContext), getParsedSystemToken(routingContext)); //todo remove
     log.debug("Request headers: {}", routingContext.request().headers()); //todo remove
 
@@ -123,7 +122,8 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
 
-    log.debug("Evaluating permissions for tenant: {} and permission: {}, token: {}", tenant, permission, jwt); //todo remove
+    //todo remove
+    log.debug("Evaluating permissions for tenant: {} and permission: {}, token: {}", tenant, permission, jwt);
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
