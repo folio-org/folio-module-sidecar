@@ -63,9 +63,9 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var tenantName = getTenant(routingContext);
     log.info("Authorizing request to: {} for tenant: {}", permission, tenantName);
 
-    log.debug("Tenant: {}, token {}, system-token {}", tenantName,
+    log.info("Tenant: {}, token {}, system-token {}", tenantName,
       getParsedToken(routingContext), getParsedSystemToken(routingContext)); //todo remove
-    log.debug("Request headers: {}", routingContext.request().headers()); //todo remove
+    log.info("Request headers: {}", routingContext.request().headers()); //todo remove
 
     return findCachedAccessToken(routingContext, permission, tenantName)
       .map(jwt -> succeededFuture(routingContext))
@@ -123,7 +123,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var permission = getKeycloakPermissionName(rc);
 
     //todo remove
-    log.debug("Evaluating permissions for tenant: {} and permission: {}, token: {}", tenant, permission, jwt);
+    log.info("Evaluating permissions for tenant: {} and permission: {}, token: {}", tenant, permission, jwt);
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
