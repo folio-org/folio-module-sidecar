@@ -66,6 +66,8 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
     log.debug("Tenant: {}, OriginalTenant {}, token {}, system-token {}", tenantName, getOriginTenant(routingContext),
       getParsedToken(routingContext), getParsedSystemToken(routingContext)); //todo remove
+    log.debug("Request headers: {}", routingContext.request().headers()); //todo remove
+
     return findCachedAccessToken(routingContext, permission, tenantName)
       .map(jwt -> succeededFuture(routingContext))
       .orElseGet(() -> authorizeAndCacheToken(routingContext))
