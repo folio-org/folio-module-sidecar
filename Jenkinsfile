@@ -10,6 +10,7 @@ buildMvn {
   doDocker = {
     buildJavaDocker {
       publishMaster = true
+      publishPreview = true
     }
   }
 }
