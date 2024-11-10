@@ -22,7 +22,7 @@
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.16.1</quarkus.platform.version>
+    <quarkus.platform.version>3.16.2</quarkus.platform.version>
     <applications-poc-tools.version>2.1.0-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.0.7</bcpkix-fips.version>
@@ -40,7 +40,7 @@
     <!-- Plugin properties-->
     <surefire-plugin.version>3.5.2</surefire-plugin.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
-    <maven-checkstyle.version>10.20.0</maven-checkstyle.version>
+    <maven-checkstyle.version>10.20.1</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>
