@@ -37,7 +37,10 @@ public class WebClientConfiguration {
   @Named("webClient")
   @ApplicationScoped
   public WebClient webClient(Vertx vertx) {
-    return WebClient.create(vertx);
+    var options = new WebClientOptions()
+      .setMaxPoolSize(150)
+      .setPoolCleanerPeriod(5000);
+    return WebClient.create(vertx, options);
   }
 
   /**
@@ -61,7 +64,7 @@ public class WebClientConfiguration {
         .setType(keycloakProperties.getTrustStoreFileType())
         .setProvider(keycloakProperties.getTrustStoreProvider())));
     }
-    return webClient(vertx);
+    return WebClient.create(vertx);
   }
 
   /**
@@ -84,7 +87,11 @@ public class WebClientConfiguration {
         .setType(sidecarProperties.getTrustStoreFileType())
         .setProvider(sidecarProperties.getTrustStoreProvider())));
     }
-    return webClient(vertx);
+
+    var options = new WebClientOptions()
+      .setMaxPoolSize(150)
+      .setPoolCleanerPeriod(5000);
+    return WebClient.create(vertx, options);
   }
 
   /**
@@ -108,7 +115,7 @@ public class WebClientConfiguration {
         .setType(gatewayProperties.getTrustStoreFileType())
         .setProvider(gatewayProperties.getTrustStoreProvider())));
     }
-    return webClient(vertx);
+    return WebClient.create(vertx);
   }
 
   private WebClient getPublicTrustedCertWebClient(Vertx vertx) {
