@@ -38,7 +38,7 @@ public class WebClientConfiguration {
   @ApplicationScoped
   public WebClient webClient(Vertx vertx) {
     var options = new WebClientOptions()
-      .setMaxPoolSize(150)
+      .setMaxPoolSize(500)
       .setPoolCleanerPeriod(5000);
     return WebClient.create(vertx, options);
   }
@@ -89,7 +89,7 @@ public class WebClientConfiguration {
     }
 
     var options = new WebClientOptions()
-      .setMaxPoolSize(150)
+      .setMaxPoolSize(500)
       .setPoolCleanerPeriod(5000);
     return WebClient.create(vertx, options);
   }
