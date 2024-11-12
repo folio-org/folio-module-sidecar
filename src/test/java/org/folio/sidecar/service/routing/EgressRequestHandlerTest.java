@@ -80,6 +80,7 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
     when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
     when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
@@ -117,6 +118,7 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
     when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
     when(systemUserService.getToken(anyString())).thenReturn(failedFuture("not found"));
@@ -148,6 +150,7 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
     when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
     when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));

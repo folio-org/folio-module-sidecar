@@ -99,7 +99,7 @@ public class WebClientConfiguration {
       .setPoolCleanerPeriod(settings.pool().cleanerPeriod())
       .setPoolEventLoopSize(settings.pool().eventLoopSize())
       .setMaxWaitQueueSize(settings.pool().maxWaitQueueSize());
-    log.debug("Creating web client with options: clientName = {}, options = {}", settings::name,
+    log.info("Creating web client with options: clientName = {}, options = {}", settings::name,
       () -> optionsToString(result));
 
     var tls = settings.tls();

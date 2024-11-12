@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.routing;
 
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 
 import io.vertx.core.AsyncResult;
@@ -61,7 +62,8 @@ public class EgressRequestHandler implements RequestHandler {
   @Override
   public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
-    log.info("Handling egress request [method: {}, path: {}]", rq.method(), rq.path());
+    log.info("Handling egress request [method: {}, path: {}, requestId: {}]",
+      rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
 
     requestFilters.forEach(filter -> filter.filter(rc));
     if (rc.response().ended()) {
@@ -91,6 +93,8 @@ public class EgressRequestHandler implements RequestHandler {
    * @param routingEntry entry for request forwarding
    */
   private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry) {
+    log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}]",
+      rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
     tokenProvider.getServiceToken(rc)
       .onSuccess(serviceToken -> {
