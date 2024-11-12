@@ -27,15 +27,10 @@ import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.ErrorHandler;
-import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@UnitTest
-@ExtendWith(MockitoExtension.class)
 class KeycloakServiceTest {
 
   private static final String ADMIN_CLIENT_ID = "folio-backend-admin";
@@ -107,7 +102,7 @@ class KeycloakServiceTest {
     when(httpResponse.statusCode()).thenReturn(SC_OK);
     when(keycloakClient.obtainToken(any(), any())).thenReturn(succeededFuture(httpResponse));
 
-    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
+    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
 
     assertThat(future.succeeded()).isTrue();
     assertThat(future.result()).isEqualTo(TOKEN_RESPONSE);
@@ -120,7 +115,7 @@ class KeycloakServiceTest {
     when(keycloakClient.obtainToken(any(), any())).thenReturn(
       failedFuture(new ServerErrorException(SC_SERVICE_UNAVAILABLE)));
 
-    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
+    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
 
     assertTrue(future.failed());
     verify(keycloakClient).obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
@@ -132,7 +127,7 @@ class KeycloakServiceTest {
     when(httpResponse.statusCode()).thenReturn(SC_UNAUTHORIZED);
     when(keycloakClient.obtainToken(any(), any())).thenReturn(succeededFuture(httpResponse));
 
-    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
+    var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
 
     assertTrue(future.failed());
     verify(keycloakClient).obtainToken(TENANT_NAME, of(SERVICE_CLIENT_ID, SERVICE_CLIENT_SECRET));

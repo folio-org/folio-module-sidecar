@@ -51,12 +51,12 @@ public class SystemUserTokenProvider {
    * @param tenant tenant name
    * @return {@link Future} containing the access token.
    */
-  public Future<String> getToken(String tenant) {
+  public String getToken(String tenant) {
     var cachedValue = tokenCache.getIfPresent(tenant);
     if (cachedValue != null) {
-      return Future.succeededFuture(cachedValue.getAccessToken());
+      return cachedValue.getAccessToken();
     }
-    return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken);
+    throw new IllegalStateException("Token is not cached for tenant: " + tenant);
   }
 
   private Future<TokenResponse> obtainAndCacheToken(String tenant) {
@@ -99,7 +99,7 @@ public class SystemUserTokenProvider {
       });
   }
 
-  private void syncTenantCache(Set<String> tenants) {
+  public void syncTenantCache(Set<String> tenants) {
     log.info("Synchronizing system users cache");
     var cachedTenants = tokenCache.asMap().keySet();
     cachedTenants.stream().filter(cached -> !tenants.contains(cached)).forEach(tokenCache::invalidate);

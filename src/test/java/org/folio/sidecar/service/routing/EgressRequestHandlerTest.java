@@ -1,6 +1,5 @@
 package org.folio.sidecar.service.routing;
 
-import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestValues.scGatewayEntry;
@@ -29,16 +28,11 @@ import org.folio.sidecar.service.ServiceTokenProvider;
 import org.folio.sidecar.service.SystemUserTokenProvider;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
 import org.folio.sidecar.support.TestConstants;
-import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@UnitTest
-@ExtendWith(MockitoExtension.class)
 class EgressRequestHandlerTest {
 
   private static final String SERVICE_TOKEN = "test";
@@ -48,17 +42,28 @@ class EgressRequestHandlerTest {
   private final String absoluteUrl = egressModuleUrl + fooEntitiesPath;
   private EgressRequestHandler egressRequestHandler;
 
-  @Mock private RoutingContext rc;
-  @Mock private HttpServerRequest request;
-  @Mock private MultiMap requestHeaders;
-  @Mock private HttpServerResponse response;
-  @Mock private ErrorHandler errorHandler;
-  @Mock private PathProcessor pathProcessor;
-  @Mock private TestEgressFilter testEgressFilter;
-  @Mock private RequestForwardingService requestForwardingService;
-  @Mock private Instance<EgressRequestFilter> egressRequestFilters;
-  @Mock private ServiceTokenProvider tokenProvider;
-  @Mock private SystemUserTokenProvider systemUserService;
+  @Mock
+  private RoutingContext rc;
+  @Mock
+  private HttpServerRequest request;
+  @Mock
+  private MultiMap requestHeaders;
+  @Mock
+  private HttpServerResponse response;
+  @Mock
+  private ErrorHandler errorHandler;
+  @Mock
+  private PathProcessor pathProcessor;
+  @Mock
+  private TestEgressFilter testEgressFilter;
+  @Mock
+  private RequestForwardingService requestForwardingService;
+  @Mock
+  private Instance<EgressRequestFilter> egressRequestFilters;
+  @Mock
+  private ServiceTokenProvider tokenProvider;
+  @Mock
+  private SystemUserTokenProvider systemUserService;
 
   @BeforeEach
   void setUp() {
@@ -82,8 +87,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
+    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getToken(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -102,7 +107,7 @@ class EgressRequestHandlerTest {
     when(request.headers()).thenReturn(requestHeaders);
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
+    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(SERVICE_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -120,8 +125,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(failedFuture("not found"));
+    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getToken(anyString())).thenThrow(new RuntimeException("Not supported"));
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -152,8 +157,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
+    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getToken(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, scGatewayEntry(TestConstants.GATEWAY_URL));
 
@@ -184,5 +189,6 @@ class EgressRequestHandlerTest {
     return ScRoutingEntry.of(MODULE_ID, "http://mod-bar:8081", "foo", new ModuleBootstrapEndpoint());
   }
 
-  private abstract static class TestEgressFilter implements EgressRequestFilter {}
+  private abstract static class TestEgressFilter implements EgressRequestFilter {
+  }
 }

@@ -44,8 +44,8 @@ public class UserService {
     if (userTenant != null) {
       return succeededFuture(userTenant);
     }
-    return serviceTokenProvider.getServiceToken(rc)
-      .flatMap(serviceToken -> findUserById(targetTenant, userId, serviceToken))
+    var serviceToken = serviceTokenProvider.getServiceToken(rc);
+    return findUserById(targetTenant, userId, serviceToken)
       .onSuccess(user -> {
         log.debug("User tenants found: user = {}, targetTenant = {}", userId, targetTenant);
         userCache.put(cacheKey, user);
@@ -55,14 +55,14 @@ public class UserService {
   }
 
   public Future<List<String>> findUserPermissions(RoutingContext rc, List<String> permissions, String userId,
-    String tenant) {
+                                                  String tenant) {
     requireNonNull(permissions, "Permissions must not be null");
 
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
-    return serviceTokenProvider.getServiceToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
+    var serviceToken = serviceTokenProvider.getServiceToken(rc);
+    return findPermissionsByQuery(userId, tenant, queryParams, serviceToken);
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,

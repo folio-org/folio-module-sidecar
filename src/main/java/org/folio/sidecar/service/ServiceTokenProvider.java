@@ -9,7 +9,6 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
-import java.util.function.Supplier;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
@@ -32,7 +31,7 @@ public class ServiceTokenProvider {
 
   @Inject
   ServiceTokenProvider(KeycloakService keycloakService, KeycloakProperties properties,
-    AsyncSecureStore secureStore, TokenCacheFactory cacheFactory) {
+                       AsyncSecureStore secureStore, TokenCacheFactory cacheFactory) {
     this.keycloakService = keycloakService;
     this.properties = properties;
     this.secureStore = secureStore;
@@ -52,7 +51,7 @@ public class ServiceTokenProvider {
    * @return {@link Future} containing the access token.
    */
   public Future<String> getAdminToken() {
-    return getToken(SUPER_TENANT, this::obtainAdminToken);
+    return getToken(SUPER_TENANT);
   }
 
   /**
@@ -61,12 +60,12 @@ public class ServiceTokenProvider {
    * @param rc {@link RoutingContext} object to analyze
    * @return {@link Future} containing the access token.
    */
-  public Future<String> getServiceToken(RoutingContext rc) {
+  public String getServiceToken(RoutingContext rc) {
     var tenantName = RoutingUtils.getTenant(rc);
-    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
+    return getToken(tenantName, rc);
   }
 
-  private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
+  private String getToken(String tenantName, RoutingContext rc) {
     var rq = rc.request();
     log.info("Getting service token [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
@@ -76,39 +75,25 @@ public class ServiceTokenProvider {
       log.info("Token found in cache [requestId: {}, sc-request-id: {}]",
         rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
-      return Future.succeededFuture(cachedValue.getAccessToken());
+      return cachedValue.getAccessToken();
     }
 
     log.info("Token not found in cache, obtaining new token [requestId: {}, sc-request-id: {}]",
       rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
-    return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
+    throw new RuntimeException("Token is not cached for tenant: " + tenantName);
   }
 
-  private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader) {
+  private Future<String> getToken(String tenantName) {
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {
       return Future.succeededFuture(cachedValue.getAccessToken());
     }
-    return obtainAndCacheToken(tenantName, tokenLoader).map(TokenResponse::getAccessToken);
+    return obtainAndCacheToken(tenantName).map(TokenResponse::getAccessToken);
   }
 
-  private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider,
-    RoutingContext rc) {
-    log.info("Authenticating service client for tenant: {}. [requestId: {}, sc-request-id: {}]", tenantName,
-      rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
-    
-    return tokenProvider.get().onSuccess(token -> {
-      tokenCache.put(tenantName, token);
-
-      log.info("Token obtained and cached for tenant: {}. [requestId: {}, sc-request-id: {}]",
-        tenantName, rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
-    })
-    .onFailure(e -> log.warn("Failed to obtain service token", e));
-  }
-
-  private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider) {
+  private Future<TokenResponse> obtainAndCacheToken(String tenantName) {
     log.info("Authenticating service client for tenant: {}", tenantName);
-    return tokenProvider.get().onSuccess(token -> tokenCache.put(tenantName, token))
+    return obtainServiceToken(tenantName).onSuccess(token -> tokenCache.put(tenantName, token))
       .onFailure(e -> log.warn("Failed to obtain service token", e));
   }
 
@@ -117,9 +102,9 @@ public class ServiceTokenProvider {
       .compose(credentials -> keycloakService.obtainToken(SUPER_TENANT, credentials));
   }
 
-  private Future<TokenResponse> obtainServiceToken(String tenantName, RoutingContext rc) {
-    return getServiceClientCredentials(tenantName, rc)
-      .compose(credentials -> keycloakService.obtainToken(tenantName, credentials, rc));
+  private Future<TokenResponse> obtainServiceToken(String tenantName) {
+    return getServiceClientCredentials(tenantName)
+      .compose(credentials -> keycloakService.obtainToken(tenantName, credentials));
   }
 
   private Future<ClientCredentials> getAdminClientCredentials() {
@@ -130,9 +115,14 @@ public class ServiceTokenProvider {
       .map(secret -> ClientCredentials.of(clientId, secret));
   }
 
-  private Future<ClientCredentials> getServiceClientCredentials(String tenantName, RoutingContext rc) {
-    log.info("Retrieving service client credentials from secret store [requestId: {}, sc-request-id: {}]",
-      rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
+  public void syncTenantCache(Set<String> tenants) {
+    log.info("Synchronizing system token cache");
+    var cachedTenants = tokenCache.asMap().keySet();
+    cachedTenants.stream().filter(cached -> !tenants.contains(cached)).forEach(tokenCache::invalidate);
+    tenants.stream().filter(t -> !cachedTenants.contains(t)).forEach(this::obtainAndCacheToken);
+  }
+
+  private Future<ClientCredentials> getServiceClientCredentials(String tenantName) {
 
     var clientId = properties.getServiceClientId();
     return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))

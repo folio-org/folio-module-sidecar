@@ -96,24 +96,21 @@ public class EgressRequestHandler implements RequestHandler {
     log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
-    tokenProvider.getServiceToken(rc)
-      .onSuccess(serviceToken -> {
+    var serviceToken = tokenProvider.getServiceToken(rc);
 
-        RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
+    RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
-        if (requireSystemUserToken(rc)) {
-          log.info("System user token branch entered [requestId: {}, sc-request-id: {}]",
-            rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
+    if (requireSystemUserToken(rc)) {
+      log.info("System user token branch entered [requestId: {}, sc-request-id: {}]",
+        rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
-          var tenantName = RoutingUtils.getTenant(rc);
-          systemUserService.getToken(tenantName)
-            .onComplete(token -> setSysUserTokenIfAvailable(rc, token))
-            .andThen(token -> forwardRequest(rc, rq, routingEntry, updatedPath));
-          return;
-        }
+      var tenantName = RoutingUtils.getTenant(rc);
+      var sysUserToken = systemUserService.getToken(tenantName);
+      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, sysUserToken);
+      rc.request().headers().remove(OkapiHeaders.USER_ID);
+    }
 
-        forwardRequest(rc, rq, routingEntry, updatedPath);
-      });
+    forwardRequest(rc, rq, routingEntry, updatedPath);
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {

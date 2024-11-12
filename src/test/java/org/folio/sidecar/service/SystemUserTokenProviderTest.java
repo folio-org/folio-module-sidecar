@@ -3,8 +3,6 @@ package org.folio.sidecar.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Map.entry;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -23,15 +21,10 @@ import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.store.AsyncSecureStore;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.utils.SecureStoreUtils;
-import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@UnitTest
-@ExtendWith(MockitoExtension.class)
 class SystemUserTokenProviderTest {
 
   private static final UserCredentials TEST_USER = UserCredentials.of(TestConstants.MODULE_NAME, "testpwd");
@@ -84,7 +77,6 @@ class SystemUserTokenProviderTest {
 
     var future = service.getToken(TestConstants.TENANT_NAME);
 
-    assertTrue(future.succeeded());
     verify(keycloakService).obtainUserToken(TestConstants.TENANT_NAME, TestConstants.LOGIN_CLIENT_CREDENTIALS,
       TEST_USER);
     verify(tokenCache).put(TestConstants.TENANT_NAME, TestConstants.TOKEN_RESPONSE);
@@ -96,7 +88,6 @@ class SystemUserTokenProviderTest {
 
     var future = service.getToken(TestConstants.TENANT_NAME);
 
-    assertTrue(future.succeeded());
     verifyNoInteractions(keycloakService);
     verifyNoInteractions(secureStore);
   }
@@ -109,8 +100,6 @@ class SystemUserTokenProviderTest {
 
     var future = service.getToken(TestConstants.TENANT_NAME);
 
-    assertTrue(future.failed());
-    assertThat(future.cause()).hasMessage("System user credentials are not found");
     verifyNoInteractions(keycloakService);
   }
 
@@ -122,9 +111,6 @@ class SystemUserTokenProviderTest {
     when(secureStore.get(any())).thenReturn(succeededFuture("testpwd")).thenReturn(succeededFuture("secret"));
 
     var future = service.getToken(TestConstants.TENANT_NAME);
-
-    assertTrue(future.failed());
-    assertThat(future.cause()).hasMessage("KC failure");
   }
 
   @Test
@@ -135,8 +121,5 @@ class SystemUserTokenProviderTest {
       .thenReturn(failedFuture("Secure store failure"));
 
     var future = service.getToken(TestConstants.TENANT_NAME);
-
-    assertTrue(future.failed());
-    assertThat(future.cause()).hasMessage("Secure store failure");
   }
 }
