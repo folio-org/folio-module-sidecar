@@ -5,8 +5,10 @@ import io.vertx.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import lombok.extern.log4j.Log4j2;
 import org.folio.tools.store.SecureStore;
 
+@Log4j2
 @ApplicationScoped
 public class AsyncSecureStoreProxy implements AsyncSecureStore {
 
@@ -25,7 +27,14 @@ public class AsyncSecureStoreProxy implements AsyncSecureStore {
 
   @Override
   public Future<String> get(String key) {
-    return vertx.executeBlocking(() -> secureStore.get(key));
+    return vertx.executeBlocking(() -> {
+      log.info("Getting secure store key: {}", key);
+
+      var result = secureStore.get(key);
+
+      log.info("Secure store key retrieved: {}", key);
+      return result;
+    });
   }
 
   @Override
