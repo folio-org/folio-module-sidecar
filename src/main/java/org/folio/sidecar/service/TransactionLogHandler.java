@@ -33,6 +33,7 @@ public class TransactionLogHandler {
     ThreadContext.put("x-okapi-tenant", request.getHeader(OkapiHeaders.TENANT));
     ThreadContext.put("x-okapi-user-id", request.getHeader(OkapiHeaders.USER_ID));
     ThreadContext.put("x-okapi-request-id", req.headers().get(OkapiHeaders.REQUEST_ID));
+    ThreadContext.put("sc-request-id", rc.get("sc-req-id"));
     ThreadContext.put("rt", calculateValue(rc, end, "rt"));
     ThreadContext.put("uct", calculateValue(rc, end, "uct"));
     ThreadContext.put("uht", calculateValue(rc, end, "uht"));
