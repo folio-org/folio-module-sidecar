@@ -28,6 +28,13 @@ class RoutingUtilsTest {
     assertThat(actual).isNotNull().matches("111111/users;\\d{6}/foo");
   }
 
+  @Test
+  void hasHeaderWithValue_positive_nullcheck() {
+    var routingContext = routingContext("111111/users");
+    var actual = RoutingUtils.getRequestId(routingContext);
+    assertThat(actual).isNotNull().matches("111111/users;\\d{6}/foo");
+  }
+
   private static RoutingContext routingContext(String requestId) {
     var routingContext = mock(RoutingContext.class);
     var request = mock(HttpServerRequest.class);

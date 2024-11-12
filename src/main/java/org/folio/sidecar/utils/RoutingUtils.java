@@ -161,6 +161,15 @@ public class RoutingUtils {
     return rc.request().headers().contains(header);
   }
 
+  public static boolean hasHeaderWithValue(RoutingContext rc, String header, boolean ensureNonNullValue) {
+    if (!hasHeader(rc, header)) {
+      return false;
+    }
+    var headerValue = rc.request().headers().get(header);
+    return headerValue != null && !StringUtils.isBlank(headerValue) && (!ensureNonNullValue
+      || !headerValue.trim().equalsIgnoreCase("null"));
+  }
+
   public static void setUserIdHeader(RoutingContext rc, String userId) {
     rc.request().headers().set(USER_ID, userId);
   }
