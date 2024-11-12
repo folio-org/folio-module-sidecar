@@ -104,8 +104,8 @@ public class RequestForwardingService {
   private void forwardRequest(RoutingContext rc, String absUri, WebClient webClient) {
     var request = rc.request();
 
-    log.info("Forwarding request [method: {}, uri: {}, requestId: {}]", request.method(), absUri,
-      request.getHeader(REQUEST_ID));
+    log.info("Forwarding request [method: {}, uri: {}, requestId: {}, sc-request-id: {}]", request.method(), absUri,
+      request.getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
     var bufferHttpRequest = webClient
       .requestAbs(request.method(), absUri)
