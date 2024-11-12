@@ -20,13 +20,4 @@ public class SidecarProperties {
   @ConfigProperty(name = "sidecar.forward-unknown-requests") boolean forwardUnknownRequests;
   @ConfigProperty(name = "sidecar.forward-unknown-requests.destination") String unknownRequestsDestination;
   @ConfigProperty(name = "sidecar.cross-tenant.enabled") boolean crossTenantEnabled;
-
-  @ConfigProperty(name = "sidecar.client.tls.enabled", defaultValue = "false") boolean clientTlsEnabled;
-  // replace String with Optional<String> for the next 4 properties
-  // to support missing property values instead of using " " as a default value
-  // see also https://quarkus.io/guides/config-reference#inject
-  @ConfigProperty(name = "sidecar.client.tls.trust-store-path", defaultValue = " ") String trustStorePath;
-  @ConfigProperty(name = "sidecar.client.tls.trust-store-password", defaultValue = " ") String trustStorePassword;
-  @ConfigProperty(name = "sidecar.client.tls.trust-store-file-type", defaultValue = " ") String trustStoreFileType;
-  @ConfigProperty(name = "sidecar.client.tls.trust-store-provider", defaultValue = " ") String trustStoreProvider;
 }

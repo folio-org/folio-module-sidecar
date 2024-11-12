@@ -10,8 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 @NoArgsConstructor
 @AllArgsConstructor
-public class WebClientProperties {
+public class HttpProperties {
 
   @ConfigProperty(name = "http.request.timeout") Long timeout;
-  @ConfigProperty(name = "web.client.tls.verify.hostname") boolean tlsHostnameVerified;
 }

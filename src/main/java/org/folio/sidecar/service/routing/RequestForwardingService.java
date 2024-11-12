@@ -19,9 +19,8 @@ import java.net.URI;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.configuration.properties.GatewayProperties;
-import org.folio.sidecar.configuration.properties.SidecarProperties;
-import org.folio.sidecar.configuration.properties.WebClientProperties;
+import org.folio.sidecar.configuration.properties.HttpProperties;
+import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
@@ -45,24 +44,21 @@ public class RequestForwardingService {
   private final WebClient webClientGateway;
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
-  private final WebClientProperties webClientProperties;
-  private final SidecarProperties sidecarProperties;
-  private final GatewayProperties gatewayProperties;
+  private final HttpProperties httpProperties;
+  private final WebClientConfig webClientConfig;
   private final TransactionLogHandler transactionLogHandler;
 
   public RequestForwardingService(@Named("webClient") WebClient webClient,
     @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
-    ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, WebClientProperties webClientProperties,
-    SidecarProperties sidecarProperties, GatewayProperties gatewayProperties,
-    TransactionLogHandler transactionLogHandler) {
+    ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
+    WebClientConfig webClientConfig, TransactionLogHandler transactionLogHandler) {
     this.webClient = webClient;
     this.webClientEgress = webClientEgress;
     this.webClientGateway = webClientGateway;
     this.errorHandler = errorHandler;
     this.sidecarSignatureService = sidecarSignatureService;
-    this.webClientProperties = webClientProperties;
-    this.sidecarProperties = sidecarProperties;
-    this.gatewayProperties = gatewayProperties;
+    this.httpProperties = httpProperties;
+    this.webClientConfig = webClientConfig;
     this.transactionLogHandler = transactionLogHandler;
   }
 
@@ -85,7 +81,7 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forwardEgress(RoutingContext rc, String absUri) {
-    if (sidecarProperties.isClientTlsEnabled()) {
+    if (webClientConfig.egress().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
     forwardRequest(rc, absUri, webClientEgress);
@@ -99,7 +95,7 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forwardToGateway(RoutingContext rc, String absUri) {
-    if (gatewayProperties.isClientTlsEnabled()) {
+    if (webClientConfig.gateway().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
     forwardRequest(rc, absUri, webClientGateway);
@@ -110,7 +106,7 @@ public class RequestForwardingService {
 
     var bufferHttpRequest = webClient
       .requestAbs(request.method(), absUri)
-      .timeout(webClientProperties.getTimeout())
+      .timeout(httpProperties.getTimeout())
       .putHeaders(filterHeaders(request))
       .putHeader(REQUEST_ID, getRequestId(rc));
 
