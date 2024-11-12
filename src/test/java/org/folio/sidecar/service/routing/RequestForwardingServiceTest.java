@@ -28,9 +28,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.ws.rs.InternalServerErrorException;
 import java.util.function.Consumer;
-import org.folio.sidecar.configuration.properties.GatewayProperties;
-import org.folio.sidecar.configuration.properties.SidecarProperties;
-import org.folio.sidecar.configuration.properties.WebClientProperties;
+import org.folio.sidecar.configuration.properties.HttpProperties;
+import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
@@ -61,9 +60,8 @@ class RequestForwardingServiceTest {
   @Mock private Buffer buffer;
   @Mock private MultiMap headers;
   @Mock private SidecarSignatureService sidecarSignatureService;
-  @Mock private WebClientProperties webClientProperties;
-  @Mock private SidecarProperties sidecarProperties;
-  @Mock private GatewayProperties gatewayProperties;
+  @Mock private HttpProperties httpProperties;
+  @Mock private WebClientConfig webClientConfig;
   @Mock private TransactionLogHandler transactionLogHandler;
 
   @Captor private ArgumentCaptor<MultiMap> requestHeadersMapCaptor;
@@ -107,10 +105,15 @@ class RequestForwardingServiceTest {
 
   @Test
   void forwardEgress_positive() {
-    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+    var egressSettingsMock = mock(WebClientConfig.WebClientSettings.class);
+    when(webClientConfig.egress()).thenReturn(egressSettingsMock);
 
-    when(sidecarProperties.isClientTlsEnabled()).thenReturn(true);
+    var egressTlsMock = mock(WebClientConfig.TlsSettings.class);
+    when(egressSettingsMock.tls()).thenReturn(egressTlsMock);
+    when(egressTlsMock.enabled()).thenReturn(true);
+
     when(webClient.requestAbs(GET, MODULE_URL_TLS + PATH)).thenReturn(httpRequest);
+    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
     prepareHttpRequestMocks(routingContext);
     prepareHttpResponseMocks(buffer);
 
@@ -178,7 +181,7 @@ class RequestForwardingServiceTest {
     var error = new TimeoutException();
 
     when(webClient.requestAbs(GET, absoluteUrl)).thenReturn(httpRequest);
-    when(webClientProperties.getTimeout()).thenReturn(TIMEOUT);
+    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpRequest.timeout(TIMEOUT)).thenReturn(httpRequest);
     when(httpRequest.putHeaders(any(MultiMap.class))).thenReturn(httpRequest);
     when(httpRequest.addQueryParam(anyString(), anyString())).thenReturn(httpRequest);
@@ -197,7 +200,7 @@ class RequestForwardingServiceTest {
   }
 
   private void prepareHttpRequestMocks(RoutingContext routingContext) {
-    when(webClientProperties.getTimeout()).thenReturn(TIMEOUT);
+    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpRequest.timeout(TIMEOUT)).thenReturn(httpRequest);
     when(httpRequest.putHeaders(requestHeadersMapCaptor.capture())).thenReturn(httpRequest);
     when(httpRequest.addQueryParam(queryParamCaptor.capture(), queryParamCaptor.capture())).thenReturn(httpRequest);
