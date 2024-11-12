@@ -89,7 +89,7 @@ public class ServiceTokenProvider {
   }
 
   private Future<ClientCredentials> getAdminClientCredentials() {
-    log.debug("Retrieving admin client credentials from secret store");
+    log.info("Retrieving admin client credentials from secret store");
 
     var clientId = properties.getAdminClientId();
     return secureStore.get(SecureStoreUtils.globalStoreKey(clientId))
@@ -97,7 +97,7 @@ public class ServiceTokenProvider {
   }
 
   private Future<ClientCredentials> getServiceClientCredentials(String tenantName) {
-    log.debug("Retrieving service client credentials from secret store");
+    log.info("Retrieving service client credentials from secret store");
 
     var clientId = properties.getServiceClientId();
     return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))

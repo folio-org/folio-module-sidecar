@@ -96,21 +96,7 @@ public class EgressRequestHandler implements RequestHandler {
     log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
-    tokenProvider.getServiceToken(rc)
-      .onSuccess(serviceToken -> {
-
-        RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
-
-        if (requireSystemUserToken(rc)) {
-          var tenantName = RoutingUtils.getTenant(rc);
-          systemUserService.getToken(tenantName)
-            .onComplete(token -> setSysUserTokenIfAvailable(rc, token))
-            .andThen(token -> forwardRequest(rc, rq, routingEntry, updatedPath));
-          return;
-        }
-
-        forwardRequest(rc, rq, routingEntry, updatedPath);
-      });
+    forwardRequest(rc, rq, routingEntry, updatedPath);
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
