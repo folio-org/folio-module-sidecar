@@ -110,9 +110,9 @@ class ForwardUnknownEgressIT {
       var result = new HashMap<>(super.getConfigOverrides());
 
       result.put("sidecar.forward-unknown-requests", "true");
-      result.put("keycloak.client.tls.enabled", "false");
-      result.put("gateway.client.tls.enabled", "false");
-      result.put("sidecar.client.tls.enabled", "false");
+      result.put("web-client.keycloak.tls.enabled", "false");
+      result.put("web-client.gateway.tls.enabled", "false");
+      result.put("web-client.egress.tls.enabled", "false");
 
       return result;
     }
