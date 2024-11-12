@@ -64,8 +64,9 @@ public class RequestMatchingService {
   public Optional<ScRoutingEntry> lookupForIngressRequest(RoutingContext rc) {
     var request = rc.request();
     var reqId = request.getHeader(REQUEST_ID);
-    log.info("Searching routing entries for ingress request: method [{}], path [{}], requestId [{}]",
-      request.method(), request.path(), reqId);
+    log.info("Searching routing entries for ingress request: method [{}], path [{}], "
+        + "requestId [{}], sc-request-id: [{}]",
+      request.method(), request.path(), reqId, rc.get("sc-req-id"));
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, ingressRequestCache, false);
@@ -87,8 +88,8 @@ public class RequestMatchingService {
   public Optional<ScRoutingEntry> lookupForEgressRequest(RoutingContext rc) {
     var request = rc.request();
     var reqId = request.getHeader(REQUEST_ID);
-    log.info("Searching routing entries for egress request: method [{}], path [{}], requestId [{}]",
-      request.method(), request.path(), reqId);
+    log.info("Searching routing entries for egress request: method [{}], path [{}], requestId [{}], sc-request-id [{}]",
+      request.method(), request.path(), reqId, rc.get("sc-req-id"));
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, egressRequestCache, true);
@@ -106,7 +107,8 @@ public class RequestMatchingService {
 
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
-    log.info("Egress entry found: [{}], requestId [{}]", entry, reqId);
+    log.info("Egress entry found: [{}], requestId [{}], sc-request-id: [{}]",
+      entry, reqId, rc.get("sc-req-id"));
 
     return entry;
   }
