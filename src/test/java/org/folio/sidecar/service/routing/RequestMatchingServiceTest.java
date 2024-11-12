@@ -149,6 +149,7 @@ class RequestMatchingServiceTest {
 
     when(pathProcessor.cleanIngressRequestPath(path)).thenReturn(path);
     when(routingContext.request().getHeader(OkapiHeaders.MODULE_ID)).thenReturn("mod-foo-1.1.1");
+    when(routingContext.request().getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
 
     var actual = requestMatchingService.lookupForEgressRequest(routingContext);
 
@@ -171,6 +172,7 @@ class RequestMatchingServiceTest {
 
     when(pathProcessor.cleanIngressRequestPath(path)).thenReturn(path);
     when(routingContext.request().getHeader(OkapiHeaders.MODULE_ID)).thenReturn(null);
+    when(routingContext.request().getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
 
     var actual = requestMatchingService.lookupForEgressRequest(routingContext);
 

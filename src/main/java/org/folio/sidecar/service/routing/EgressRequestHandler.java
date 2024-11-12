@@ -3,8 +3,6 @@ package org.folio.sidecar.service.routing;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
-import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
-import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;

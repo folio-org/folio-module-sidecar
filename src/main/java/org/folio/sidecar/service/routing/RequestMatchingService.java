@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.routing;
 
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.gatewayRoutingEntry;
 
 import io.vertx.core.http.HttpServerRequest;
@@ -62,14 +63,15 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForIngressRequest(RoutingContext rc) {
     var request = rc.request();
-    log.debug("Searching routing entries for ingress request: method [{}], path [{}]",
-      request.method(), request.path());
+    var reqId = request.getHeader(REQUEST_ID);
+    log.info("Searching routing entries for ingress request: method [{}], path [{}], requestId [{}]",
+      request.method(), request.path(), reqId);
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, ingressRequestCache, false);
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
-    log.debug("Ingress entry found: {}", entry);
+    log.info("Ingress entry found: [{}], requestId [{}]", entry, reqId);
 
     return entry;
   }
@@ -84,8 +86,9 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForEgressRequest(RoutingContext rc) {
     var request = rc.request();
-    log.debug("Searching routing entries for egress request: method [{}], path [{}]",
-      request.method(), request.path());
+    var reqId = request.getHeader(REQUEST_ID);
+    log.info("Searching routing entries for egress request: method [{}], path [{}], requestId [{}]",
+      request.method(), request.path(), reqId);
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, egressRequestCache, true);
@@ -103,7 +106,7 @@ public class RequestMatchingService {
 
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
-    log.debug("Egress entry found: {}", entry);
+    log.info("Egress entry found: [{}], requestId [{}]", entry, reqId);
 
     return entry;
   }
