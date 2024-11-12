@@ -1,5 +1,7 @@
 package org.folio.sidecar.service;
 
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
@@ -61,7 +63,25 @@ public class ServiceTokenProvider {
    */
   public Future<String> getServiceToken(RoutingContext rc) {
     var tenantName = RoutingUtils.getTenant(rc);
-    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc));
+    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
+  }
+
+  private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
+    var rq = rc.request();
+    log.info("Getting service token [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
+      rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
+
+    var cachedValue = tokenCache.getIfPresent(tenantName);
+    if (cachedValue != null) {
+      log.info("Token found in cache [requestId: {}, sc-request-id: {}]",
+        rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
+
+      return Future.succeededFuture(cachedValue.getAccessToken());
+    }
+
+    log.info("Token not found in cache, obtaining new token [requestId: {}, sc-request-id: {}]",
+      rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
+    return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
   }
 
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader) {
@@ -70,6 +90,20 @@ public class ServiceTokenProvider {
       return Future.succeededFuture(cachedValue.getAccessToken());
     }
     return obtainAndCacheToken(tenantName, tokenLoader).map(TokenResponse::getAccessToken);
+  }
+
+  private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider,
+    RoutingContext rc) {
+    log.info("Authenticating service client for tenant: {}. [requestId: {}, sc-request-id: {}]", tenantName,
+      rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
+    
+    return tokenProvider.get().onSuccess(token -> {
+      tokenCache.put(tenantName, token);
+
+      log.info("Token obtained and cached for tenant: {}. [requestId: {}, sc-request-id: {}]",
+        tenantName, rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
+    })
+    .onFailure(e -> log.warn("Failed to obtain service token", e));
   }
 
   private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider) {
@@ -84,7 +118,7 @@ public class ServiceTokenProvider {
   }
 
   private Future<TokenResponse> obtainServiceToken(String tenantName, RoutingContext rc) {
-    return getServiceClientCredentials(tenantName)
+    return getServiceClientCredentials(tenantName, rc)
       .compose(credentials -> keycloakService.obtainToken(tenantName, credentials, rc));
   }
 
@@ -96,8 +130,9 @@ public class ServiceTokenProvider {
       .map(secret -> ClientCredentials.of(clientId, secret));
   }
 
-  private Future<ClientCredentials> getServiceClientCredentials(String tenantName) {
-    log.info("Retrieving service client credentials from secret store");
+  private Future<ClientCredentials> getServiceClientCredentials(String tenantName, RoutingContext rc) {
+    log.info("Retrieving service client credentials from secret store [requestId: {}, sc-request-id: {}]",
+      rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
     var clientId = properties.getServiceClientId();
     return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))
