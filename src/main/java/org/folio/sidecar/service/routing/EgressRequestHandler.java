@@ -1,6 +1,8 @@
 package org.folio.sidecar.service.routing;
 
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
+import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
+import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.http.HttpServerRequest;
@@ -110,7 +112,7 @@ public class EgressRequestHandler implements RequestHandler {
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
-    return !RoutingUtils.hasUserIdHeader(rc) || !RoutingUtils.hasHeader(rc, OkapiHeaders.TOKEN);
+    return !hasUserIdHeader(rc) || !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
   }
 
   private void forwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry,
