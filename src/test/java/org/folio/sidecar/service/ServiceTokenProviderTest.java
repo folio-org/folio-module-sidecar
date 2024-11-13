@@ -22,10 +22,15 @@ import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.service.store.AsyncSecureStore;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.utils.SecureStoreUtils;
+import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@UnitTest
+@ExtendWith(MockitoExtension.class)
 class ServiceTokenProviderTest {
 
   private static final String SERVICE_CLIENT_ID = "sidecar-module-access-client";
@@ -83,12 +88,13 @@ class ServiceTokenProviderTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(properties.getServiceClientId()).thenReturn(SERVICE_CLIENT_ID);
     when(secureStore.get(SERVICE_CLIENT_STORE_KEY)).thenReturn(succeededFuture(SERVICE_CLIENT_SECRET));
-    when(keycloakService.obtainToken(any(), any())).thenReturn(succeededFuture(TestConstants.TOKEN_RESPONSE));
+    when(keycloakService.obtainToken(any(), any(), any())).thenReturn(succeededFuture(TestConstants.TOKEN_RESPONSE));
 
     var future = service.getServiceToken(rc);
 
+    assertTrue(future.succeeded());
     verify(keycloakService).obtainToken(
-      TestConstants.TENANT_NAME, ClientCredentials.of(SERVICE_CLIENT_ID, SERVICE_CLIENT_SECRET));
+      TestConstants.TENANT_NAME, ClientCredentials.of(SERVICE_CLIENT_ID, SERVICE_CLIENT_SECRET), rc);
   }
 
   @Test
@@ -99,6 +105,7 @@ class ServiceTokenProviderTest {
 
     var future = service.getServiceToken(rc);
 
+    assertTrue(future.succeeded());
     verifyNoInteractions(keycloakService);
   }
 }

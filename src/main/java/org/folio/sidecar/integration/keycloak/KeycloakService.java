@@ -6,6 +6,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.WebApplicationException;
@@ -35,6 +36,12 @@ public class KeycloakService {
 
   public Future<TokenResponse> obtainToken(String realm, ClientCredentials client) {
     return obtainToken(() -> keycloakClient.obtainToken(realm, client));
+  }
+
+  public Future<TokenResponse> obtainToken(String realm, ClientCredentials client, RoutingContext rc) {
+    return obtainToken(() -> keycloakClient.obtainToken(realm, client),
+      authError -> errorHandler.sendErrorResponse(rc, authError),
+      clientError -> errorHandler.sendErrorResponse(rc, clientError));
   }
 
   private Future<TokenResponse> obtainToken(Supplier<Future<HttpResponse<Buffer>>> tokenLoader,
