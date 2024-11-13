@@ -31,7 +31,7 @@ class RoutingUtilsTest {
   }
 
   @Test
-  void hasHeaderWithValue_positive_nullcheck() {
+  void hasHeaderWithValue_positive_nullCheck() {
     var routingContext = routingContext("111111/users", Map.of("X-Okapi-Token", "null"));
     assertThat(RoutingUtils.hasHeaderWithValue(routingContext, "X-Okapi-Token", false)).isTrue();
     assertThat(RoutingUtils.hasHeaderWithValue(routingContext, "X-Okapi-Token", true)).isFalse();
