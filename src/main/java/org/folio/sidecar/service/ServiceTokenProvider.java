@@ -17,6 +17,7 @@ import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.utils.CollectionUtils;
 import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.sidecar.utils.SecureStoreUtils;
 
@@ -44,6 +45,17 @@ public class ServiceTokenProvider {
   public void syncCache(EntitlementsEvent entitlementsEvent) {
     var tenants = entitlementsEvent.getTenants();
     invalidateRemovedTenantCache(tenants);
+    syncTenantCache(tenants);
+  }
+
+  public void syncTenantCache(Set<String> tenants) {
+    if (CollectionUtils.isNotEmpty(tenants)) {
+      log.info("Synchronizing service token cache");
+      var cachedTenants = tokenCache.asMap().keySet();
+      cachedTenants.stream().filter(cached -> !tenants.contains(cached)).forEach(tokenCache::invalidate);
+      tenants.stream().filter(t -> !cachedTenants.contains(t))
+        .forEach(t -> obtainAndCacheToken(t, () -> obtainServiceToken(t)));
+    }
   }
 
   /**
@@ -64,6 +76,14 @@ public class ServiceTokenProvider {
   public Future<String> getServiceToken(RoutingContext rc) {
     var tenantName = RoutingUtils.getTenant(rc);
     return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
+  }
+
+  public String getServiceTokenFromCache(String tenantName) {
+    var cachedValue = tokenCache.getIfPresent(tenantName);
+    if (cachedValue != null) {
+      return cachedValue.getAccessToken();
+    }
+    throw new IllegalStateException("Token not found in cache");
   }
 
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
@@ -96,7 +116,7 @@ public class ServiceTokenProvider {
     RoutingContext rc) {
     log.info("Authenticating service client for tenant: {}. [requestId: {}, sc-request-id: {}]", tenantName,
       rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
-    
+
     return tokenProvider.get().onSuccess(token -> {
       tokenCache.put(tenantName, token);
 
@@ -122,6 +142,11 @@ public class ServiceTokenProvider {
       .compose(credentials -> keycloakService.obtainToken(tenantName, credentials, rc));
   }
 
+  private Future<TokenResponse> obtainServiceToken(String tenantName) {
+    return getServiceClientCredentials(tenantName)
+      .compose(credentials -> keycloakService.loadToken(tenantName, credentials));
+  }
+
   private Future<ClientCredentials> getAdminClientCredentials() {
     log.info("Retrieving admin client credentials from secret store");
 
@@ -134,6 +159,12 @@ public class ServiceTokenProvider {
     log.info("Retrieving service client credentials from secret store [requestId: {}, sc-request-id: {}]",
       rc.request().getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
+    var clientId = properties.getServiceClientId();
+    return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))
+      .map(secret -> ClientCredentials.of(clientId, secret));
+  }
+
+  private Future<ClientCredentials> getServiceClientCredentials(String tenantName) {
     var clientId = properties.getServiceClientId();
     return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))
       .map(secret -> ClientCredentials.of(clientId, secret));
