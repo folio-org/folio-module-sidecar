@@ -16,6 +16,7 @@ import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.utils.CollectionUtils;
 import org.folio.sidecar.utils.SecureStoreUtils;
 
 @Log4j2
@@ -59,6 +60,14 @@ public class SystemUserTokenProvider {
     return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken);
   }
 
+  public String getTokenFromCache(String tenant) {
+    var cachedValue = tokenCache.getIfPresent(tenant);
+    if (cachedValue != null) {
+      return cachedValue.getAccessToken();
+    }
+    return null;
+  }
+
   private Future<TokenResponse> obtainAndCacheToken(String tenant) {
     try {
       var username = moduleProperties.getName();
@@ -99,11 +108,13 @@ public class SystemUserTokenProvider {
       });
   }
 
-  private void syncTenantCache(Set<String> tenants) {
-    log.info("Synchronizing system users cache");
-    var cachedTenants = tokenCache.asMap().keySet();
-    cachedTenants.stream().filter(cached -> !tenants.contains(cached)).forEach(tokenCache::invalidate);
-    tenants.stream().filter(t -> !cachedTenants.contains(t)).forEach(this::obtainAndCacheToken);
+  public void syncTenantCache(Set<String> tenants) {
+    if (CollectionUtils.isNotEmpty(tenants)) {
+      log.info("Synchronizing system users cache");
+      var cachedTenants = tokenCache.asMap().keySet();
+      cachedTenants.stream().filter(cached -> !tenants.contains(cached)).forEach(tokenCache::invalidate);
+      tenants.stream().filter(t -> !cachedTenants.contains(t)).forEach(this::obtainAndCacheToken);
+    }
   }
 
   private Function<TokenResponse, TokenResponse> cacheToken(String tenant) {

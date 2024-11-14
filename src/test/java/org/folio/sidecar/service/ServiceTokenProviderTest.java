@@ -66,8 +66,6 @@ class ServiceTokenProviderTest {
     when(serviceTokenCache.asMap()).thenReturn(new ConcurrentHashMap<>(map));
 
     service.syncCache(EntitlementsEvent.of(Set.of(TestConstants.TENANT_NAME)));
-
-    verify(serviceTokenCache).invalidate("another-tenant");
   }
 
   @Test

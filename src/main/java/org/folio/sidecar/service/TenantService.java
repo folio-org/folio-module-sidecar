@@ -8,6 +8,7 @@ import jakarta.enterprise.event.Observes;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
@@ -29,6 +30,7 @@ public class TenantService {
   private final TenantEntitlementClient tenantEntitlementClient;
   private final ModuleProperties moduleProperties;
   private final EventBus eventBus;
+  @Getter
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
 
   public void init(@Observes StartupEvent event) {
