@@ -1,8 +1,8 @@
 package org.folio.sidecar.service.routing;
 
-import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
+import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestValues.scGatewayEntry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,6 +29,7 @@ import org.folio.sidecar.service.ServiceTokenProvider;
 import org.folio.sidecar.service.SystemUserTokenProvider;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
 import org.folio.sidecar.support.TestConstants;
+import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,31 +81,10 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
-
-    egressRequestHandler.handle(rc, routingEntry());
-
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
-    verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
-    verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
-    verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
-  }
-
-  @Test
-  void handle_positive_okapiToken_null() {
-    prepareHttpRequest(false);
-    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
-    when(request.headers()).thenReturn(requestHeaders);
-    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
-    when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
-    when(requestHeaders.get(OkapiHeaders.TOKEN)).thenReturn("null");
-    when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
+    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -121,15 +101,41 @@ class EgressRequestHandlerTest {
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
+    when(request.getHeader("X-Okapi-Tenant")).thenReturn(TENANT_NAME);
+    when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
+    when(request.getHeader("X-Okapi-Token")).thenReturn("token");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
-    when(requestHeaders.get(OkapiHeaders.TOKEN)).thenReturn("test");
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
+    when(RoutingUtils.getTenant(rc)).thenReturn(TENANT_NAME);
+    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
     verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
+    verify(requestHeaders).contains(OkapiHeaders.USER_ID);
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+  }
+
+  @Test
+  void handle_positive_okapiToken_null() {
+    prepareHttpRequest(false);
+    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
+    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    when(request.headers()).thenReturn(requestHeaders);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
+    when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
+    when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
+    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
+
+    egressRequestHandler.handle(rc, routingEntry());
+
+    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
+    verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
+    verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
+    verify(requestHeaders).remove(OkapiHeaders.USER_ID);
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
@@ -140,9 +146,10 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(failedFuture("not found"));
+    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenFromCache(anyString())).thenReturn(null);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -171,9 +178,10 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
-    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
+    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, scGatewayEntry(TestConstants.GATEWAY_URL));
 

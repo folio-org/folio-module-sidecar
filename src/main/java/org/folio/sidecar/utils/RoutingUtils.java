@@ -165,7 +165,7 @@ public class RoutingUtils {
     if (!hasHeader(rc, header)) {
       return false;
     }
-    var headerValue = rc.request().headers().get(header);
+    var headerValue = rc.request().getHeader(header);
     return !StringUtils.isBlank(headerValue) && (!ensureNonNullValue || !headerValue.trim().equalsIgnoreCase("null"));
   }
 
