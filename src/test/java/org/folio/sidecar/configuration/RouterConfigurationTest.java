@@ -5,6 +5,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import io.vertx.ext.web.Router;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
+import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.SystemUserTokenProvider;
+import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.RoutingService;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +26,9 @@ class RouterConfigurationTest {
   @Mock private Router router;
   @Mock private RoutingService routingService;
   @Mock private SidecarProperties sidecarProperties;
+  @Mock private SystemUserTokenProvider systemUserTokenProvider;
+  @Mock private ServiceTokenProvider serviceTokenProvider;
+  @Mock private TenantService tenantService;
 
   @AfterEach
   void tearDown() {

@@ -62,7 +62,8 @@ public class EgressRequestHandler implements RequestHandler {
   @Override
   public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
-    log.info("Handling egress request [method: {}, path: {}]", rq.method(), rq.path());
+    log.info("Handling egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
+      rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
     requestFilters.forEach(filter -> filter.filter(rc));
     if (rc.response().ended()) {
@@ -92,8 +93,8 @@ public class EgressRequestHandler implements RequestHandler {
    * @param routingEntry entry for request forwarding
    */
   private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry) {
-    log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}]",
-      rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
+    log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
+      rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var tenantName = RoutingUtils.getTenant(rc);
 
@@ -101,6 +102,9 @@ public class EgressRequestHandler implements RequestHandler {
     RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
     if (requireSystemUserToken(rc)) {
+      log.info("System user token branch entered [requestId: {}, sc-request-id: {}]",
+        rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
+
       var systemUserToken = systemUserService.getTokenFromCache(tenantName);
       setSysUserTokenIfAvailable(rc, systemUserToken);
     }
@@ -108,7 +112,7 @@ public class EgressRequestHandler implements RequestHandler {
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
-    return !hasUserIdHeader(rc) || !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
+    return !RoutingUtils.hasUserIdHeader(rc) || !RoutingUtils.hasHeader(rc, OkapiHeaders.TOKEN);
   }
 
   private void forwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry,

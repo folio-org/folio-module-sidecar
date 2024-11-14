@@ -103,7 +103,6 @@ class EgressRequestHandlerTest {
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader("X-Okapi-Tenant")).thenReturn(TENANT_NAME);
     when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
-    when(request.getHeader("X-Okapi-Token")).thenReturn("token");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
     when(RoutingUtils.getTenant(rc)).thenReturn(TENANT_NAME);
@@ -113,29 +112,6 @@ class EgressRequestHandlerTest {
 
     verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
-    verify(requestHeaders).contains(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
-  }
-
-  @Test
-  void handle_positive_okapiToken_null() {
-    prepareHttpRequest(false);
-    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
-    when(request.headers()).thenReturn(requestHeaders);
-    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
-    when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
-    when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
-    when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
-    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
-
-    egressRequestHandler.handle(rc, routingEntry());
-
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
-    verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
-    verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
-    verify(requestHeaders).remove(OkapiHeaders.USER_ID);
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
