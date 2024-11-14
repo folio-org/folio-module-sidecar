@@ -237,7 +237,7 @@ public class RequestMatchingService {
   }
 
   private static boolean matchModuleIdForMultipleInterface(ScRoutingEntry candidate, HttpServerRequest request,
-                                                           boolean isSupportMultipleInterface) {
+    boolean isSupportMultipleInterface) {
     if (!isSupportMultipleInterface) {
       return true;
     }
@@ -252,7 +252,7 @@ public class RequestMatchingService {
   }
 
   private static boolean match(ScRoutingEntry candidate, HttpServerRequest request, String uri,
-                               boolean isSupportMultipleInterface) {
+    boolean isSupportMultipleInterface) {
     var requestMethod = request.method();
     var methods = CollectionUtils.toList(candidate.getRoutingEntry().getMethods());
     for (var method : methods) {

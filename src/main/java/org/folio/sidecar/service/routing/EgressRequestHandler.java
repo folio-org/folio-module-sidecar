@@ -46,8 +46,8 @@ public class EgressRequestHandler implements RequestHandler {
    */
   @Inject
   public EgressRequestHandler(ErrorHandler errorHandler, PathProcessor pathProcessor,
-                              RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
-                              ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
+    RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
+    ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
     this.errorHandler = errorHandler;
     this.pathProcessor = pathProcessor;
     this.requestForwardingService = requestForwardingService;
@@ -114,7 +114,7 @@ public class EgressRequestHandler implements RequestHandler {
   }
 
   private void forwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry,
-                              String updatedPath) {
+    String updatedPath) {
     log.info("Forwarding egress request to module: [method: {}, path: {}, moduleId: {}, url: {}]",
       rq.method(), updatedPath, routingEntry.getModuleId(), routingEntry.getLocation());
     if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
