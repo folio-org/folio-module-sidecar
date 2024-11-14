@@ -7,7 +7,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.NotFoundException;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +30,6 @@ public class ScRequestHandler implements Handler<RoutingContext> {
   @Override
   public void handle(RoutingContext rc) {
     try {
-      rc.put("sc-req-id", UUID.randomUUID().toString());
       rc.put("rt", System.currentTimeMillis());
       handler.handle(rc);
     } catch (Exception error) {

@@ -7,9 +7,6 @@ import jakarta.enterprise.event.Observes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
-import org.folio.sidecar.service.ServiceTokenProvider;
-import org.folio.sidecar.service.SystemUserTokenProvider;
-import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.RoutingService;
 
 @Log4j2
@@ -20,9 +17,6 @@ public class RouterConfiguration {
 
   private final RoutingService routingService;
   private final SidecarProperties sidecarProperties;
-  private final SystemUserTokenProvider systemUserTokenProvider;
-  private final ServiceTokenProvider serviceTokenProvider;
-  private final TenantService tenantService;
 
   /**
    * Configures vertx {@link Router} on sidecar startup.
@@ -34,9 +28,5 @@ public class RouterConfiguration {
   public void onStart(@Observes Router router) {
     log.info("Initializing sidecar: {}", sidecarProperties::getName);
     routingService.initRoutes(router);
-
-    var tenants = tenantService.getEnabledTenants();
-    systemUserTokenProvider.syncTenantCache(tenants);
-    serviceTokenProvider.syncTenantCache(tenants);
   }
 }

@@ -1,6 +1,5 @@
 package org.folio.sidecar.service.routing;
 
-import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.gatewayRoutingEntry;
 
 import io.vertx.core.http.HttpServerRequest;
@@ -63,16 +62,14 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForIngressRequest(RoutingContext rc) {
     var request = rc.request();
-    var reqId = request.getHeader(REQUEST_ID);
-    log.info("Searching routing entries for ingress request: method [{}], path [{}], "
-        + "requestId [{}], sc-request-id: [{}]",
-      request.method(), request.path(), reqId, rc.get("sc-req-id"));
+    log.debug("Searching routing entries for ingress request: method [{}], path [{}]",
+      request.method(), request.path());
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, ingressRequestCache, false);
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
-    log.info("Ingress entry found: [{}], requestId [{}]", entry, reqId);
+    log.debug("Ingress entry found: {}", entry);
 
     return entry;
   }
@@ -87,9 +84,8 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForEgressRequest(RoutingContext rc) {
     var request = rc.request();
-    var reqId = request.getHeader(REQUEST_ID);
-    log.info("Searching routing entries for egress request: method [{}], path [{}], requestId [{}], sc-request-id [{}]",
-      request.method(), request.path(), reqId, rc.get("sc-req-id"));
+    log.debug("Searching routing entries for egress request: method [{}], path [{}]",
+      request.method(), request.path());
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, egressRequestCache, true);
@@ -107,8 +103,7 @@ public class RequestMatchingService {
 
     entry.ifPresent(scRoutingEntry -> RoutingUtils.putScRoutingEntry(rc, scRoutingEntry));
 
-    log.info("Egress entry found: [{}], requestId [{}], sc-request-id: [{}]",
-      entry, reqId, rc.get("sc-req-id"));
+    log.debug("Egress entry found: {}", entry);
 
     return entry;
   }
@@ -242,7 +237,7 @@ public class RequestMatchingService {
   }
 
   private static boolean matchModuleIdForMultipleInterface(ScRoutingEntry candidate, HttpServerRequest request,
-    boolean isSupportMultipleInterface) {
+                                                           boolean isSupportMultipleInterface) {
     if (!isSupportMultipleInterface) {
       return true;
     }
@@ -257,7 +252,7 @@ public class RequestMatchingService {
   }
 
   private static boolean match(ScRoutingEntry candidate, HttpServerRequest request, String uri,
-    boolean isSupportMultipleInterface) {
+                               boolean isSupportMultipleInterface) {
     var requestMethod = request.method();
     var methods = CollectionUtils.toList(candidate.getRoutingEntry().getMethods());
     for (var method : methods) {
