@@ -83,8 +83,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
-    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
+    when(tokenProvider.getServiceTokenSync(any())).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenSync(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -107,7 +107,7 @@ class EgressRequestHandlerTest {
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
     when(RoutingUtils.getTenant(rc)).thenReturn(TENANT_NAME);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
+    when(tokenProvider.getServiceTokenSync(any())).thenReturn(SERVICE_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -127,8 +127,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
-    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
+    when(tokenProvider.getServiceTokenSync(any())).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenSync(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -148,8 +148,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
-    when(systemUserService.getTokenFromCache(anyString())).thenReturn(null);
+    when(tokenProvider.getServiceTokenSync(any())).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenSync(anyString())).thenReturn(null);
 
     egressRequestHandler.handle(rc, routingEntry());
 
@@ -180,8 +180,8 @@ class EgressRequestHandlerTest {
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(false);
-    when(tokenProvider.getServiceTokenFromCache(TENANT_NAME)).thenReturn(SERVICE_TOKEN);
-    when(systemUserService.getTokenFromCache(anyString())).thenReturn(USER_TOKEN);
+    when(tokenProvider.getServiceTokenSync(any())).thenReturn(SERVICE_TOKEN);
+    when(systemUserService.getTokenSync(anyString())).thenReturn(USER_TOKEN);
 
     egressRequestHandler.handle(rc, scGatewayEntry(TestConstants.GATEWAY_URL));
 

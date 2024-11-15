@@ -78,12 +78,9 @@ public class ServiceTokenProvider {
     return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
   }
 
-  public String getServiceTokenFromCache(String tenantName) {
-    var cachedValue = tokenCache.getIfPresent(tenantName);
-    if (cachedValue != null) {
-      return cachedValue.getAccessToken();
-    }
-    throw new IllegalStateException("Token not found in cache");
+  public String getServiceTokenSync(RoutingContext rc) {
+    var tenantName = RoutingUtils.getTenant(rc);
+    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc).result();
   }
 
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
