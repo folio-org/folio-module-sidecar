@@ -39,7 +39,7 @@ public class RequestFilterService {
     var filterFuture = filter.applyFilter(rc);
     for (int i = 1; i < filters.size(); i++) {
       var currentFilter = filters.get(i);
-      filterFuture = filterFuture.compose(currentFilter::applyFilter);
+      filterFuture = filterFuture.flatMap(currentFilter::applyFilter);
     }
 
     return filterFuture;

@@ -60,6 +60,14 @@ public class SystemUserTokenProvider {
     return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken);
   }
 
+  public String getTokenSync(String tenant) {
+    var cachedValue = tokenCache.getIfPresent(tenant);
+    if (cachedValue != null) {
+      return cachedValue.getAccessToken();
+    }
+    return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken).result();
+  }
+
   private Future<TokenResponse> obtainAndCacheToken(String tenant) {
     try {
       var username = moduleProperties.getName();

@@ -78,6 +78,11 @@ public class ServiceTokenProvider {
     return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
   }
 
+  public String getServiceTokenSync(RoutingContext rc) {
+    var tenantName = RoutingUtils.getTenant(rc);
+    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc).result();
+  }
+
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
     var rq = rc.request();
     log.info("Getting service token [method: {}, path: {}, requestId: {}]",
@@ -85,12 +90,14 @@ public class ServiceTokenProvider {
 
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {
-      log.info("Token found in cache [requestId: {}]", rq.getHeader(REQUEST_ID));
+      log.info("Token found in cache [requestId: {}]",
+        rq.getHeader(REQUEST_ID));
 
       return Future.succeededFuture(cachedValue.getAccessToken());
     }
 
-    log.info("Token not found in cache, obtaining new token [requestId: {}]", rq.getHeader(REQUEST_ID));
+    log.info("Token not found in cache, obtaining new token [requestId: {}]",
+      rq.getHeader(REQUEST_ID));
     return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
   }
 
