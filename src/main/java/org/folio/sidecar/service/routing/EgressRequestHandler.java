@@ -2,7 +2,6 @@ package org.folio.sidecar.service.routing;
 
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 
 import io.vertx.core.http.HttpServerRequest;

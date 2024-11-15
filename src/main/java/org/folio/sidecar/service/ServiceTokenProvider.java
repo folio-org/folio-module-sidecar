@@ -78,14 +78,6 @@ public class ServiceTokenProvider {
     return getToken(tenantName, () -> obtainServiceToken(tenantName, rc), rc);
   }
 
-  public String getServiceTokenFromCache(String tenantName) {
-    var cachedValue = tokenCache.getIfPresent(tenantName);
-    if (cachedValue != null) {
-      return cachedValue.getAccessToken();
-    }
-    throw new IllegalStateException("Token not found in cache");
-  }
-
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
     var rq = rc.request();
     log.info("Getting service token [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
@@ -104,17 +96,17 @@ public class ServiceTokenProvider {
     return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
   }
 
-  public String getServiceTokenSync(RoutingContext rc) {
-    var tenantName = RoutingUtils.getTenant(rc);
-    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc)).result();
-  }
-
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader) {
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {
       return Future.succeededFuture(cachedValue.getAccessToken());
     }
     return obtainAndCacheToken(tenantName, tokenLoader).map(TokenResponse::getAccessToken);
+  }
+
+  public String getServiceTokenSync(RoutingContext rc) {
+    var tenantName = RoutingUtils.getTenant(rc);
+    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc)).result();
   }
 
   private Future<TokenResponse> obtainAndCacheToken(String tenantName, Supplier<Future<TokenResponse>> tokenProvider,
