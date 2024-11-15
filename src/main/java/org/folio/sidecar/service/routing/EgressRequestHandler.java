@@ -2,15 +2,17 @@ package org.folio.sidecar.service.routing;
 
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
+import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
+import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 
-import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -18,41 +20,20 @@ import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.ServiceTokenProvider;
 import org.folio.sidecar.service.SystemUserTokenProvider;
-import org.folio.sidecar.service.filter.EgressRequestFilter;
-import org.folio.sidecar.utils.CollectionUtils;
+import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
+@RequiredArgsConstructor
 public class EgressRequestHandler implements RequestHandler {
 
   private final ErrorHandler errorHandler;
   private final PathProcessor pathProcessor;
-  private final List<EgressRequestFilter> requestFilters;
+  private final RequestFilterService requestFilterService;
   private final RequestForwardingService requestForwardingService;
   private final ServiceTokenProvider tokenProvider;
   private final SystemUserTokenProvider systemUserService;
-
-  /**
-   * Injects dependencies from quarkus context.
-   *
-   * @param errorHandler - {@link ErrorHandler} component
-   * @param requestForwardingService - {@link RequestForwardingService} component
-   * @param filters - iterable {@link Instance} of {@link EgressRequestFilter} components
-   * @param tokenProvider - Keycloak system token provider
-   * @param systemUserService - System user service
-   */
-  @Inject
-  public EgressRequestHandler(ErrorHandler errorHandler, PathProcessor pathProcessor,
-    RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
-    ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
-    this.errorHandler = errorHandler;
-    this.pathProcessor = pathProcessor;
-    this.requestForwardingService = requestForwardingService;
-    this.requestFilters = CollectionUtils.sortByOrder(filters);
-    this.tokenProvider = tokenProvider;
-    this.systemUserService = systemUserService;
-  }
 
   /**
    * Handles outgoing (egress) request.
@@ -65,22 +46,26 @@ public class EgressRequestHandler implements RequestHandler {
     log.info("Handling egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
 
-    requestFilters.forEach(filter -> filter.filter(rc));
-    if (rc.response().ended()) {
-      log.debug("Filter validation failed, error has been sent [method: {}, path: {}]", rq.method(), rq.path());
-      return;
+    requestFilterService.filterEgressRequest(rc)
+      .compose(v -> populateModuleIdHeader(rc, routingEntry))
+      .compose(v -> populateSystemToken(rc))
+      .compose(v -> populateSystemUserToken(rc))
+      .onSuccess(v -> forwardEgressRequest(rc, routingEntry))
+      .onFailure(error -> errorHandler.sendErrorResponse(rc, error));
+  }
+
+  private Future<Void> populateSystemUserToken(RoutingContext routingContext) {
+    if (!requireSystemUserToken(routingContext)) {
+      return succeededFuture();
     }
 
-    var moduleId = routingEntry.getModuleId();
-    if (routingEntry.getLocation() == null) {
-      var errorMessage = "Module location is not found for moduleId: " + moduleId;
-      errorHandler.sendErrorResponse(rc, new BadRequestException(errorMessage));
-      return;
-    }
+    var tenantName = RoutingUtils.getTenant(routingContext);
 
-    RoutingUtils.setHeader(rc, OkapiHeaders.MODULE_ID, moduleId);
-
-    authenticateAndForwardRequest(rc, rq, routingEntry);
+    return systemUserService.getToken(tenantName)
+      .compose(token -> {
+        setSysUserTokenIfAvailable(routingContext, token);
+        return succeededFuture();
+      }, error -> succeededFuture()); // any errors are ignored
   }
 
   /**
@@ -108,12 +93,10 @@ public class EgressRequestHandler implements RequestHandler {
     forwardRequest(rc, rq, routingEntry, updatedPath);
   }
 
-  private boolean requireSystemUserToken(RoutingContext rc) {
-    return !RoutingUtils.hasUserIdHeader(rc) || !RoutingUtils.hasHeader(rc, OkapiHeaders.TOKEN);
-  }
+  private void forwardEgressRequest(RoutingContext rc, ScRoutingEntry routingEntry) {
+    var rq = rc.request();
+    var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
-  private void forwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry,
-    String updatedPath) {
     log.info("Forwarding egress request to module: [method: {}, path: {}, moduleId: {}, url: {}]",
       rq.method(), updatedPath, routingEntry.getModuleId(), routingEntry.getLocation());
     if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
@@ -123,9 +106,13 @@ public class EgressRequestHandler implements RequestHandler {
     }
   }
 
-  private static void setSysUserTokenIfAvailable(RoutingContext rc, String tokenResult) {
-    if (isNotBlank(tokenResult)) {
-      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, tokenResult);
+  private boolean requireSystemUserToken(RoutingContext rc) {
+    return !hasUserIdHeader(rc) || !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
+  }
+
+  private static void setSysUserTokenIfAvailable(RoutingContext rc, String token) {
+    if (isNotBlank(token)) {
+      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
       // appropriate user id will be put from token by a sidecar when handling ingress request
       rc.request().headers().remove(OkapiHeaders.USER_ID);
     }

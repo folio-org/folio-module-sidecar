@@ -8,6 +8,7 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.quarkus.security.ForbiddenException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
@@ -51,7 +52,8 @@ public class UserService {
         userCache.put(cacheKey, user);
       })
       .onFailure(error ->
-        log.warn("Failed to get user tenants: user = {}, targetTenant = {}", userId, targetTenant, error));
+        log.warn("Failed to get user tenants: user = {}, targetTenant = {}", userId, targetTenant, error)
+      );
   }
 
   public Future<List<String>> findUserPermissions(RoutingContext rc, List<String> permissions, String userId,
@@ -84,8 +86,8 @@ public class UserService {
 
   private Future<User> processResponse(HttpResponse<Buffer> response) {
     if (response.statusCode() != 200) {
-      log.warn("User tenants not found: status = {}, body = {}", response.statusCode(), response.bodyAsString());
-      return failedFuture("User tenants not found");
+      log.warn("User tenants not found: status = {}, body = {}", response::statusCode, response::bodyAsString);
+      return failedFuture(new ForbiddenException("User tenants not found"));
     }
     return succeededFuture(response.bodyAsJson(User.class));
   }

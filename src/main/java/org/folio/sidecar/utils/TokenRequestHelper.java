@@ -22,6 +22,7 @@ public class TokenRequestHelper {
   private static final String AUDIENCE_FORM_FIELD = "audience";
   private static final String REFRESH_TOKEN_FORM_FIELD = "refresh_token";
   private static final String REQUESTED_SUBJECT_FORM_FIELD = "requested_subject";
+  private static final String TOKEN = "token";
 
   public static MultiMap preparePasswordRequestBody(ClientCredentials client, UserCredentials user) {
     return MultiMap.caseInsensitiveMultiMap()
@@ -60,5 +61,14 @@ public class TokenRequestHelper {
       .set(CLIENT_ID_FORM_FIELD, client.getClientId())
       .set(CLIENT_SECRET_FORM_FIELD, client.getClientSecret())
       .set(REQUESTED_SUBJECT_FORM_FIELD, username);
+  }
+
+  public static MultiMap prepareIntrospectRequestBody(ClientCredentials client, String token) {
+    return MultiMap.caseInsensitiveMultiMap()
+      .set(GRANT_TYPE_FORM_FIELD, CLIENT_CREDENTIALS_GRANT_TYPE)
+      .set(CLIENT_ID_FORM_FIELD, client.getClientId())
+      .set(CLIENT_SECRET_FORM_FIELD, client.getClientSecret())
+      .set("token_type_hint", "requesting_party_token")
+      .set(TOKEN, token);
   }
 }

@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>folio-module-sidecar</artifactId>
-  <version>1.0.0</version>
+  <version>2.1.0-SNAPSHOT</version>
   <description>A sidecar application responsible for Folio modules</description>
   <packaging>jar</packaging>
 
@@ -22,32 +22,32 @@
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.12.3</quarkus.platform.version>
-    <applications-poc-tools.version>1.5.5</applications-poc-tools.version>
+    <quarkus.platform.version>3.16.2</quarkus.platform.version>
+    <applications-poc-tools.version>2.1.0-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
-    <bcpkix-fips.version>1.0.7</bcpkix-fips.version>
+    <bcpkix-fips.version>2.0.7</bcpkix-fips.version>
 
     <lombok.version>1.18.34</lombok.version>
 
     <!-- Test properties -->
     <jjwt.version>0.12.6</jjwt.version>
-    <wiremock.version>3.9.1</wiremock.version>
+    <wiremock.version>3.9.2</wiremock.version>
     <assertj-core.version>3.26.3</assertj-core.version>
     <mockito-core.version>5.8.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
-    <surefire-plugin.version>3.3.1</surefire-plugin.version>
+    <surefire-plugin.version>3.5.2</surefire-plugin.version>
     <compiler-plugin.version>3.13.0</compiler-plugin.version>
-    <maven-checkstyle.version>10.17.0</maven-checkstyle.version>
+    <maven-checkstyle.version>10.20.1</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
-    <maven-checkstyle-plugin.version>3.4.0</maven-checkstyle-plugin.version>
+    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
-    <maven-failsafe-plugin.version>3.3.1</maven-failsafe-plugin.version>
+    <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.0.1</folio-java-checkstyle.version>
-    <aws-crt.version>0.30.0</aws-crt.version>
+    <aws-crt.version>0.33.0</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
@@ -82,6 +82,12 @@
           <artifactId>bc-fips</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-auth-openid</artifactId>
+      <version>${applications-poc-tools.version}</version>
     </dependency>
 
     <dependency>

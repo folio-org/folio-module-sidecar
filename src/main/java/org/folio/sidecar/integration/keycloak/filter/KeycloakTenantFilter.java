@@ -3,6 +3,7 @@ package org.folio.sidecar.integration.keycloak.filter;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.stream.Collectors.toSet;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_TENANT;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getTenant;
@@ -60,14 +61,14 @@ public class KeycloakTenantFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 130;
+    return KEYCLOAK_TENANT.getOrder();
   }
 
   private static Set<String> resolveTokenTenants(RoutingContext rc) {
     return Stream.of(getParsedToken(rc), getParsedSystemToken(rc))
       .filter(Optional::isPresent)
       .map(Optional::get)
-      .map(JwtUtils::extractTokenIssuer)
+      .map(JwtUtils::getOriginTenant)
       .collect(toSet());
   }
 }

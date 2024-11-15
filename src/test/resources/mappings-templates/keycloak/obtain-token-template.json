@@ -22,7 +22,7 @@
       "refresh_token": "{{refreshToken}}",
       "token_type": "Bearer",
       "not-before-policy": 0,
-      "session_state": "{{sessionState}}",
+      "sid": "{{sessionState}}",
       "scope": "email profile"
     }
   }

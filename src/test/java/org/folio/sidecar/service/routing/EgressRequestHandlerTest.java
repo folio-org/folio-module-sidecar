@@ -14,11 +14,8 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.enterprise.inject.Instance;
 import jakarta.ws.rs.BadRequestException;
-import java.util.stream.Stream;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -26,11 +23,12 @@ import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.ServiceTokenProvider;
 import org.folio.sidecar.service.SystemUserTokenProvider;
-import org.folio.sidecar.service.filter.EgressRequestFilter;
+import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -50,33 +48,30 @@ class EgressRequestHandlerTest {
   @Mock private RoutingContext rc;
   @Mock private HttpServerRequest request;
   @Mock private MultiMap requestHeaders;
-  @Mock private HttpServerResponse response;
   @Mock private ErrorHandler errorHandler;
   @Mock private PathProcessor pathProcessor;
-  @Mock private TestEgressFilter testEgressFilter;
+  @Mock private RequestFilterService requestFilterService;
   @Mock private RequestForwardingService requestForwardingService;
-  @Mock private Instance<EgressRequestFilter> egressRequestFilters;
   @Mock private ServiceTokenProvider tokenProvider;
   @Mock private SystemUserTokenProvider systemUserService;
 
   @BeforeEach
   void setUp() {
-    when(egressRequestFilters.stream()).thenReturn(Stream.of(testEgressFilter));
     egressRequestHandler = new EgressRequestHandler(
-      errorHandler, pathProcessor, requestForwardingService, egressRequestFilters, tokenProvider, systemUserService);
+      errorHandler, pathProcessor, requestFilterService, requestForwardingService, tokenProvider, systemUserService);
   }
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(errorHandler, testEgressFilter, requestForwardingService,
-      egressRequestFilters, requestHeaders, systemUserService);
+    verifyNoMoreInteractions(errorHandler, requestForwardingService, requestFilterService, requestHeaders,
+      systemUserService);
   }
 
   @Test
   void handle_positive() {
-    prepareHttpRequest(false);
+    prepareHttpRequest();
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
@@ -94,10 +89,31 @@ class EgressRequestHandlerTest {
   }
 
   @Test
-  void handle_positive_hasUserId_and_token() {
-    prepareHttpRequest(false);
+  @Disabled
+  void handle_positive_okapiToken_null() {
+    prepareHttpRequest();
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
+    when(request.headers()).thenReturn(requestHeaders);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
+    when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
+    when(requestHeaders.get(OkapiHeaders.TOKEN)).thenReturn("null");
+    when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
+    when(tokenProvider.getServiceToken(any(RoutingContext.class))).thenReturn(succeededFuture(SERVICE_TOKEN));
+    when(systemUserService.getToken(anyString())).thenReturn(succeededFuture(USER_TOKEN));
+
+    egressRequestHandler.handle(rc, routingEntry());
+
+    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
+    verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
+    // verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+  }
+
+  @Test
+  void handle_positive_hasUserId_and_token() {
+    prepareHttpRequest();
+    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader("X-Okapi-Request-Id")).thenReturn("reqId");
     when(requestHeaders.contains(OkapiHeaders.USER_ID)).thenReturn(true);
@@ -113,9 +129,9 @@ class EgressRequestHandlerTest {
 
   @Test
   void handle_positive_sysUserNotSupported() {
-    prepareHttpRequest(false);
+    prepareHttpRequest();
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
@@ -125,7 +141,6 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(rc, routingEntry());
 
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
     verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
@@ -133,8 +148,8 @@ class EgressRequestHandlerTest {
 
   @Test
   void handle_negative_sidecarLocationNotFound() {
-    prepareHttpRequest(false);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    prepareHttpRequest();
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
 
     var routingEntry = ScRoutingEntry.of(MODULE_ID, null, "foo", new ModuleBootstrapEndpoint());
     egressRequestHandler.handle(rc, routingEntry);
@@ -145,9 +160,9 @@ class EgressRequestHandlerTest {
 
   @Test
   void handle_positive_forwardUnknown() {
-    prepareHttpRequest(false);
+    prepareHttpRequest();
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(request.headers()).thenReturn(requestHeaders);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn("reqId");
@@ -166,23 +181,23 @@ class EgressRequestHandlerTest {
 
   @Test
   void handle_negative_filterValidationFailed() {
-    prepareHttpRequest(true);
-    when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
+    prepareHttpRequest();
+    var filterErr = new BadRequestException("filter error");
+    when(requestFilterService.filterEgressRequest(rc)).thenReturn(failedFuture(filterErr));
+
     egressRequestHandler.handle(rc, routingEntry());
+
+    verify(errorHandler).sendErrorResponse(rc, filterErr);
     verifyNoInteractions(requestForwardingService);
   }
 
-  private void prepareHttpRequest(boolean isEnded) {
+  private void prepareHttpRequest() {
     when(rc.request()).thenReturn(request);
-    when(rc.response()).thenReturn(response);
     when(request.path()).thenReturn(fooEntitiesPath);
     when(request.method()).thenReturn(HttpMethod.GET);
-    when(response.ended()).thenReturn(isEnded);
   }
 
   private static ScRoutingEntry routingEntry() {
     return ScRoutingEntry.of(MODULE_ID, "http://mod-bar:8081", "foo", new ModuleBootstrapEndpoint());
   }
-
-  private abstract static class TestEgressFilter implements EgressRequestFilter {}
 }

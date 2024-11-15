@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.keycloak.filter;
 
 import static io.vertx.core.Future.failedFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_SYSTEM_JWT;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasSystemAccessToken;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
@@ -16,7 +17,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
+import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
@@ -48,7 +49,7 @@ public class KeycloakSystemJwtFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 110;
+    return KEYCLOAK_SYSTEM_JWT.getOrder();
   }
 
   private JsonWebToken parseJsonWebToken(String systemAccessToken) {

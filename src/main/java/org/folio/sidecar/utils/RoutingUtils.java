@@ -1,9 +1,9 @@
 package org.folio.sidecar.utils;
 
+import static java.util.Optional.ofNullable;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
-import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
@@ -32,6 +32,8 @@ public class RoutingUtils {
    */
   public static final String SC_ROUTING_ENTRY_KEY = "scRoutingEntry";
   public static final String SELF_REQUEST_KEY = "selfRequest";
+  public static final String ORIGIN_TENANT = "originTenant";
+  public static final String PARSED_TOKEN = "parsedToken";
 
   /**
    * Generates request id for ingress request.
@@ -73,24 +75,6 @@ public class RoutingUtils {
   }
 
   /**
-   * Updates path removing {@code "/$moduleName"} prefix if it is present.
-   *
-   * @param rc - routing context for path extraction
-   * @param modulePrefixEnabled - configuration that defines if module prefix is enabled or not
-   * @param moduleName - module name from configuration
-   * @return updated path value without module name prefix
-   */
-  public static String updatePath(RoutingContext rc, boolean modulePrefixEnabled, String moduleName) {
-    var path = rc.request().path();
-    if (modulePrefixEnabled) {
-      var modulePathPrefix = '/' + moduleName;
-      return path.startsWith(modulePathPrefix) ? path.substring(modulePathPrefix.length()) : path;
-    }
-
-    return path;
-  }
-
-  /**
    * Builds path with {@code "/$moduleName"} prefix if it is not present.
    *
    * @param context - routing context for path extraction
@@ -119,11 +103,11 @@ public class RoutingUtils {
   }
 
   public static Optional<JsonWebToken> getParsedToken(RoutingContext rc) {
-    return Optional.ofNullable(rc.get(TOKEN));
+    return ofNullable(rc.get(PARSED_TOKEN));
   }
 
   public static void putParsedToken(RoutingContext rc, JsonWebToken token) {
-    rc.put(TOKEN, token);
+    rc.put(PARSED_TOKEN, token);
   }
 
   public static RoutingContext putParsedSystemToken(RoutingContext routingContext, JsonWebToken systemToken) {
@@ -132,7 +116,7 @@ public class RoutingUtils {
   }
 
   public static Optional<JsonWebToken> getParsedSystemToken(RoutingContext rc) {
-    return Optional.ofNullable(rc.get(SYSTEM_TOKEN));
+    return ofNullable(rc.get(SYSTEM_TOKEN));
   }
 
   public static void setHeader(RoutingContext rc, String header, String value) {
@@ -177,12 +161,20 @@ public class RoutingUtils {
     return rc.request().headers().contains(header);
   }
 
+  public static boolean hasHeaderWithValue(RoutingContext rc, String header, boolean ensureNonNullValue) {
+    if (!hasHeader(rc, header)) {
+      return false;
+    }
+    var headerValue = rc.request().getHeader(header);
+    return !StringUtils.isBlank(headerValue) && (!ensureNonNullValue || !headerValue.trim().equalsIgnoreCase("null"));
+  }
+
   public static void setUserIdHeader(RoutingContext rc, String userId) {
     rc.request().headers().set(USER_ID, userId);
   }
 
   public static Optional<String> getUserIdHeader(RoutingContext rc) {
-    return Optional.ofNullable(rc.request().headers().get(USER_ID));
+    return ofNullable(rc.request().headers().get(USER_ID));
   }
 
   public static boolean hasPermissionsDesired(RoutingContext rc) {
@@ -193,5 +185,13 @@ public class RoutingUtils {
     var scRoutingEntry = getScRoutingEntry(rc);
     var endpoint = scRoutingEntry.getRoutingEntry();
     return endpoint.getPermissionsDesired();
+  }
+
+  public static void putOriginTenant(RoutingContext rc, JsonWebToken token) {
+    rc.put(ORIGIN_TENANT, JwtUtils.getOriginTenant(token));
+  }
+
+  public static String getOriginTenant(RoutingContext rc) {
+    return rc.get(ORIGIN_TENANT);
   }
 }

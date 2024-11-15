@@ -3,19 +3,21 @@ package org.folio.sidecar.integration.keycloak.filter;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Optional.ofNullable;
-import static org.folio.sidecar.integration.keycloak.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
+import static org.folio.jwt.openid.JsonWebTokenParser.INVALID_SEGMENTS_JWT_ERROR_MSG;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.AUTHORIZATION;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
+import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_JWT;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
+import static org.folio.sidecar.utils.JwtUtils.trimTokenBearer;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
+import static org.folio.sidecar.utils.RoutingUtils.putOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
-import static org.folio.sidecar.utils.SecurityUtils.trimTokenBearer;
 
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
@@ -28,7 +30,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.sidecar.integration.keycloak.JsonWebTokenParser;
+import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
@@ -63,7 +65,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   @Override
   public int getOrder() {
-    return 120;
+    return KEYCLOAK_JWT.getOrder();
   }
 
   private Future<RoutingContext> authenticateRequest(RoutingContext routingContext) {
@@ -152,6 +154,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   private static RoutingContext populateContextAndHeaders(RoutingContext rc, JsonWebToken parsedToken) {
     putParsedToken(rc, parsedToken);
+    putOriginTenant(rc, parsedToken);
     if (!hasUserIdHeader(rc)) {
       getUserIdClaim(parsedToken).ifPresent(userId -> setUserIdHeader(rc, userId));
     }
