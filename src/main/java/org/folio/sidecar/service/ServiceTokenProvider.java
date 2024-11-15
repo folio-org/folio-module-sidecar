@@ -104,6 +104,11 @@ public class ServiceTokenProvider {
     return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
   }
 
+  public String getServiceTokenSync(RoutingContext rc) {
+    var tenantName = RoutingUtils.getTenant(rc);
+    return getToken(tenantName, () -> obtainServiceToken(tenantName, rc)).result();
+  }
+
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader) {
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {

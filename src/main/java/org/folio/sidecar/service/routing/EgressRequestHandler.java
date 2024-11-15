@@ -2,6 +2,7 @@ package org.folio.sidecar.service.routing;
 
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 
 import io.vertx.core.http.HttpServerRequest;
@@ -96,18 +97,15 @@ public class EgressRequestHandler implements RequestHandler {
     log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}, sc-request-id: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
-    var tenantName = RoutingUtils.getTenant(rc);
-
-    var serviceToken = tokenProvider.getServiceTokenFromCache(tenantName);
+    var serviceToken = tokenProvider.getServiceTokenSync(rc);
     RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
     if (requireSystemUserToken(rc)) {
-      log.info("System user token branch entered [requestId: {}, sc-request-id: {}]",
-        rq.getHeader(REQUEST_ID), rc.get("sc-req-id"));
-
-      var systemUserToken = systemUserService.getTokenFromCache(tenantName);
+      var tenantName = RoutingUtils.getTenant(rc);
+      var systemUserToken = systemUserService.getTokenSync(tenantName);
       setSysUserTokenIfAvailable(rc, systemUserToken);
     }
+
     forwardRequest(rc, rq, routingEntry, updatedPath);
   }
 
