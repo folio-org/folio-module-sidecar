@@ -63,7 +63,7 @@ public class EgressRequestHandler implements RequestHandler {
       .compose(token -> {
         setSysUserTokenIfAvailable(routingContext, token);
         return succeededFuture();
-      });
+      }, error -> succeededFuture()); // any errors are ignored
   }
 
   private Future<Void> populateModuleIdHeader(RoutingContext routingContext, ScRoutingEntry routingEntry) {
