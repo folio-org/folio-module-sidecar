@@ -83,6 +83,30 @@ class ForwardUnknownEgressIT {
   }
 
   @Test
+  void handleEgressRequest_positive_multipleInterfaceType_forwardUnknown() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.MODULE_ID, "mod-qux-0.0.1")
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .statusCode(is(SC_OK))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(2),
+        "entities[0].id", is("d22c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[0].name", is("Test entity 1"),
+        "entities[0].description", is("A Test entity 1 description"),
+        "entities[1].id", is("d23c8c0c-d387-4bd5-9ad6-c02b41abe4ec"),
+        "entities[1].name", is("Test entity 2"),
+        "entities[1].description", is("A Test entity 2 description")
+      );
+  }
+
+  @Test
   void handleEgressRequest_positive_forwardUnknown() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
@@ -101,6 +125,20 @@ class ForwardUnknownEgressIT {
         "entities[0].name", is("Test entity 3"),
         "entities[0].description", is("A Test entity 3 description")
       );
+  }
+
+  @Test
+  void handleEgressRequest_positive_noModuleIdHeader() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/bar/no-module-id-header")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .statusCode(is(SC_OK))
+      .contentType(is(APPLICATION_JSON));
   }
 
   public static final class ForwardUnknownTestProfile extends CommonIntegrationTestProfile {

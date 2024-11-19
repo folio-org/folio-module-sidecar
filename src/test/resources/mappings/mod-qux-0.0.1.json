@@ -12,7 +12,7 @@
             "equalTo": "testtenant"
           },
           "X-Okapi-Module-Id": {
-            "equalTo": "mod-qux-0.0.2"
+            "equalTo": "mod-qux-0.0.1"
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/entities"

@@ -43,7 +43,6 @@ public class IngressRequestHandler implements RequestHandler {
 
     var headers = request.headers();
     headers.set(OkapiHeaders.URL, sidecarProperties.getUrl());
-    headers.set(OkapiHeaders.MODULE_ID, moduleProperties.getId());
     rc.put("uct", System.currentTimeMillis());
 
     var path = pathProcessor.getModulePath(rc.request().path());

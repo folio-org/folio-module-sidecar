@@ -79,8 +79,6 @@ public class EgressRequestHandler implements RequestHandler {
       return;
     }
 
-    RoutingUtils.setHeader(rc, OkapiHeaders.MODULE_ID, moduleId);
-
     authenticateAndForwardRequest(rc, rq, routingEntry);
   }
 
