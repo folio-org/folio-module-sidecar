@@ -594,4 +594,18 @@ class SidecarIT {
       .log().ifValidationFails(LogDetail.ALL)
       .statusCode(is(SC_OK));
   }
+
+  @Test
+  void handleIngressRequest_positive_noModuleIdHeader() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/no-module-id-header")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .statusCode(is(SC_OK))
+      .contentType(is(APPLICATION_JSON));
+  }
 }

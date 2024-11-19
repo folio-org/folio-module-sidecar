@@ -88,7 +88,6 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(rc, routingEntry());
 
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
@@ -111,7 +110,6 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(rc, routingEntry());
 
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).contains(OkapiHeaders.USER_ID);
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
@@ -132,7 +130,6 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(rc, routingEntry());
 
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
@@ -154,7 +151,6 @@ class EgressRequestHandlerTest {
     egressRequestHandler.handle(rc, routingEntry());
 
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, MODULE_ID);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
@@ -185,7 +181,6 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(rc, scGatewayEntry(TestConstants.GATEWAY_URL));
 
-    verify(requestHeaders).set(OkapiHeaders.MODULE_ID, "NONE");
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);

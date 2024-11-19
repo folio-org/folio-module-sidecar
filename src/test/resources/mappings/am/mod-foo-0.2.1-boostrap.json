@@ -65,6 +65,11 @@
                 "methods": [ "POST" ],
                 "pathPattern": "/foo/expire/timer",
                 "permissionsRequired": []
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/no-module-id-header",
+                "permissionsRequired": ["foo.no-module-id-header.get"]
               }
             ]
           },
@@ -101,6 +106,15 @@
                   "pathPattern": "/bar/entities",
                   "permissionsRequired": [
                     "item.post"
+                  ]
+                },
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "pathPattern": "/bar/no-module-id-header",
+                  "permissionsRequired": [
+                    "bar.no-module-id-header.get"
                   ]
                 }
               ]

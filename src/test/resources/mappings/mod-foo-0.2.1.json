@@ -236,6 +236,29 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
+    }, {
+      "request": {
+        "method": "GET",
+        "urlPath": "/foo/no-module-id-header",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Module-Id": {
+            "absent": true
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        }
+      }
     }
   ]
 }

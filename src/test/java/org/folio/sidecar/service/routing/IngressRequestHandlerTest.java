@@ -73,9 +73,8 @@ class IngressRequestHandlerTest {
     verify(moduleProperties).getUrl();
     verify(requestForwardingService).forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath);
 
-    assertThat(headers).hasSize(2);
+    assertThat(headers).hasSize(1);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
-    assertThat(headers.get(OkapiHeaders.MODULE_ID)).isEqualTo(TestConstants.MODULE_ID);
     assertThat(headers.get(OkapiHeaders.PERMISSIONS_REQUIRED)).isNull();
   }
 
