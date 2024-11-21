@@ -3,6 +3,7 @@ package org.folio.sidecar.service.routing;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
+import static org.folio.sidecar.service.token.TokenUtils.tokenHash;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 
@@ -18,9 +19,9 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
-import org.folio.sidecar.service.ServiceTokenProvider;
-import org.folio.sidecar.service.SystemUserTokenProvider;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
+import org.folio.sidecar.service.token.SystemUserTokenProvider;
 import org.folio.sidecar.utils.CollectionUtils;
 import org.folio.sidecar.utils.RoutingUtils;
 
@@ -95,13 +96,12 @@ public class EgressRequestHandler implements RequestHandler {
     log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
-    var tenantName = RoutingUtils.getTenant(rc);
 
     var serviceToken = tokenProvider.getServiceTokenSync(rc);
     RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
     if (requireSystemUserToken(rc)) {
-      var systemUserToken = systemUserService.getTokenSync(tenantName);
+      var systemUserToken = systemUserService.getTokenSync(rc);
       setSysUserTokenIfAvailable(rc, systemUserToken);
     }
     forwardRequest(rc, rq, routingEntry, updatedPath);
@@ -122,11 +122,17 @@ public class EgressRequestHandler implements RequestHandler {
     }
   }
 
-  private static void setSysUserTokenIfAvailable(RoutingContext rc, String tokenResult) {
-    if (isNotBlank(tokenResult)) {
-      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, tokenResult);
+  private static void setSysUserTokenIfAvailable(RoutingContext rc, String token) {
+    String requestId = rc.request().getHeader(REQUEST_ID);
+    if (isNotBlank(token)) {
+      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
+      log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
+        () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
+
       // appropriate user id will be put from token by a sidecar when handling ingress request
       rc.request().headers().remove(OkapiHeaders.USER_ID);
+    } else {
+      log.debug("System user token is not available [requestId: {}]", requestId);
     }
   }
 }

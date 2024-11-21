@@ -13,7 +13,7 @@ import io.vertx.core.Future;
 import java.util.function.Supplier;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.RetryTemplate;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -23,7 +23,7 @@ import java.util.List;
 import org.folio.sidecar.integration.users.UserService.PermissionContainer;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

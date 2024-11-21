@@ -17,6 +17,7 @@ import org.folio.sidecar.integration.tm.TenantManagerClient;
 import org.folio.sidecar.integration.tm.model.Tenant;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.ResultList;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped

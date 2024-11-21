@@ -21,6 +21,8 @@ import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.service.token.SystemUserTokenProvider;
+import org.folio.sidecar.service.token.TokenCacheFactory;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.utils.SecureStoreUtils;
 import org.folio.support.types.UnitTest;

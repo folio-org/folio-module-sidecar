@@ -1,12 +1,17 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
+
+import static io.vertx.core.Future.succeededFuture;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
-import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
@@ -17,6 +22,7 @@ import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.store.AsyncSecureStore;
 import org.folio.sidecar.utils.CollectionUtils;
+import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.sidecar.utils.SecureStoreUtils;
 
 @Log4j2
@@ -49,23 +55,29 @@ public class SystemUserTokenProvider {
   /**
    * Obtains a system user token.
    *
-   * @param tenant tenant name
+   * @param rc - {@link RoutingContext} object to handle
    * @return {@link Future} containing the access token.
    */
-  public Future<String> getToken(String tenant) {
+  public Future<String> getToken(RoutingContext rc) {
+    var tenant = RoutingUtils.getTenant(rc);
+    var rq = rc.request();
+    var requestId = rq.getHeader(REQUEST_ID);
+    log.info("Getting system user token [method: {}, path: {}, requestId: {}, tenant: {}]",
+      rq.method(), rq.path(), requestId, tenant);
+
     var cachedValue = tokenCache.getIfPresent(tenant);
     if (cachedValue != null) {
-      return Future.succeededFuture(cachedValue.getAccessToken());
+      log.info("System user token found in cache [requestId: {}]", requestId);
+
+      return succeededFuture(cachedValue.getAccessToken());
     }
+
+    log.info("System user token not found in cache, obtaining a new token [requestId: {}]", requestId);
     return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken);
   }
 
-  public String getTokenSync(String tenant) {
-    var cachedValue = tokenCache.getIfPresent(tenant);
-    if (cachedValue != null) {
-      return cachedValue.getAccessToken();
-    }
-    return obtainAndCacheToken(tenant).map(TokenResponse::getAccessToken).result();
+  public String getTokenSync(RoutingContext rc) {
+    return getToken(rc).result();
   }
 
   private Future<TokenResponse> obtainAndCacheToken(String tenant) {
@@ -81,34 +93,32 @@ public class SystemUserTokenProvider {
   private Future<TokenResponse> obtainAndCacheToken(String tenant, UserCredentials user, String username) {
     return getClientCredentials(tenant)
       .compose(client -> authUser(tenant, user, username, client))
-      .map(cacheToken(tenant))
+      .onSuccess(cacheToken(tenant))
       .onFailure(e -> log.warn("Cannot obtain token: message = {}", e.getMessage(), e));
   }
 
   private Future<TokenResponse> authUser(String tenant, UserCredentials user, String username,
     ClientCredentials client) {
-    log.info("Authenticating system user {} on tenant: {}", username, tenant);
+    log.info("Authenticating system user: user = {}, tenant = {}", username, tenant);
     return keycloakService.obtainUserToken(tenant, client, user);
   }
 
   private void refreshAndCacheToken(String tenant, TokenResponse token) {
     var username = moduleProperties.getName();
     var refreshToken = token.getRefreshToken();
-    log.debug("Refreshing system user {} token on tenant: {}", username, tenant);
-    getClientCredentials(tenant)
-      .onSuccess(client -> refreshAndCacheToken(tenant, client, refreshToken));
-  }
+    log.debug("Refreshing system user token: user = {}, tenant = {}, token = {}",
+      () -> username, () -> tenant, () -> tokenResponseAsString(token));
 
-  private Future<TokenResponse> refreshAndCacheToken(String tenant, ClientCredentials client, String refreshToken) {
-    return keycloakService.refreshUserToken(tenant, client, refreshToken)
-      .map(cacheToken(tenant))
+    getClientCredentials(tenant)
+      .compose(client -> keycloakService.refreshUserToken(tenant, client, refreshToken))
+      .onSuccess(cacheToken(tenant))
       .onFailure(e -> {
         log.warn("Failed to refresh system user token. Trying to obtain a new one...");
         obtainAndCacheToken(tenant);
       });
   }
 
-  public void syncTenantCache(Set<String> tenants) {
+  private void syncTenantCache(Set<String> tenants) {
     if (CollectionUtils.isNotEmpty(tenants)) {
       log.info("Synchronizing system users cache");
       var cachedTenants = tokenCache.asMap().keySet();
@@ -117,10 +127,11 @@ public class SystemUserTokenProvider {
     }
   }
 
-  private Function<TokenResponse, TokenResponse> cacheToken(String tenant) {
-    return token -> {
-      tokenCache.put(tenant, token);
-      return token;
+  private Handler<TokenResponse> cacheToken(String tenant) {
+    return tokenResponse -> {
+      tokenCache.put(tenant, tokenResponse);
+      log.debug("System user token obtained and cached: token = {}, tenant = {}",
+        () -> tokenResponseAsString(tokenResponse), () -> tenant);
     };
   }
 

@@ -1,5 +1,6 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -85,26 +86,25 @@ public class ServiceTokenProvider {
 
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader, RoutingContext rc) {
     var rq = rc.request();
-    log.info("Getting service token [method: {}, path: {}, requestId: {}]",
-      rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
+    var requestId = rq.getHeader(REQUEST_ID);
+    log.info("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
+      rq.method(), rq.path(), requestId, tenantName);
 
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {
-      log.info("Token found in cache [requestId: {}]",
-        rq.getHeader(REQUEST_ID));
+      log.info("Service token found in cache [requestId: {}]", requestId);
 
-      return Future.succeededFuture(cachedValue.getAccessToken());
+      return succeededFuture(cachedValue.getAccessToken());
     }
 
-    log.info("Token not found in cache, obtaining new token [requestId: {}]",
-      rq.getHeader(REQUEST_ID));
+    log.info("Service token not found in cache, obtaining a new token [requestId: {}]", requestId);
     return obtainAndCacheToken(tenantName, tokenLoader, rc).map(TokenResponse::getAccessToken);
   }
 
   private Future<String> getToken(String tenantName, Supplier<Future<TokenResponse>> tokenLoader) {
     var cachedValue = tokenCache.getIfPresent(tenantName);
     if (cachedValue != null) {
-      return Future.succeededFuture(cachedValue.getAccessToken());
+      return succeededFuture(cachedValue.getAccessToken());
     }
     return obtainAndCacheToken(tenantName, tokenLoader).map(TokenResponse::getAccessToken);
   }

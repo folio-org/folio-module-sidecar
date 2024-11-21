@@ -20,7 +20,7 @@ import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped
