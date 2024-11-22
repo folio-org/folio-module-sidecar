@@ -1,4 +1,4 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import java.util.function.BiConsumer;
 import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
-import org.folio.sidecar.service.token.TokenCacheFactory;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

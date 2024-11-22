@@ -1,4 +1,4 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,11 +20,10 @@ import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
+import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.store.AsyncSecureStore;
-import org.folio.sidecar.service.token.SystemUserTokenProvider;
-import org.folio.sidecar.service.token.TokenCacheFactory;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.utils.SecureStoreUtils;
 import org.folio.support.types.UnitTest;
@@ -45,6 +46,8 @@ class SystemUserTokenProviderTest {
   @Mock private KeycloakProperties keycloakProperties;
   @Mock private ModuleProperties moduleProperties;
   @Mock private TokenCacheFactory cacheFactory;
+  @Mock private RoutingContext rc;
+  @Mock private HttpServerRequest request;
 
   @Mock private Cache<String, TokenResponse> tokenCache;
   private SystemUserTokenProvider service;
@@ -78,13 +81,15 @@ class SystemUserTokenProviderTest {
 
   @Test
   void getToken_positive() {
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(keycloakService.obtainUserToken(any(), any(), any())).thenReturn(
       succeededFuture(TestConstants.TOKEN_RESPONSE));
     when(moduleProperties.getName()).thenReturn(TestConstants.MODULE_NAME);
     when(keycloakProperties.getLoginClientSuffix()).thenReturn("-login-app");
     when(secureStore.get(any())).thenReturn(succeededFuture("testpwd")).thenReturn(succeededFuture("secret"));
 
-    var future = service.getToken(TestConstants.TENANT_NAME);
+    var future = service.getToken(rc);
 
     assertTrue(future.succeeded());
     verify(keycloakService).obtainUserToken(TestConstants.TENANT_NAME, TestConstants.LOGIN_CLIENT_CREDENTIALS,
@@ -94,9 +99,11 @@ class SystemUserTokenProviderTest {
 
   @Test
   void getToken_positive_cachedValue() {
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(tokenCache.getIfPresent(TestConstants.TENANT_NAME)).thenReturn(TestConstants.TOKEN_RESPONSE);
 
-    var future = service.getToken(TestConstants.TENANT_NAME);
+    var future = service.getToken(rc);
 
     assertTrue(future.succeeded());
     verifyNoInteractions(keycloakService);
@@ -105,11 +112,13 @@ class SystemUserTokenProviderTest {
 
   @Test
   void getToken_negative_sysUserSecretIsNotFound() {
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(moduleProperties.getName()).thenReturn(TestConstants.MODULE_NAME);
     when(secureStore.get(SYS_USER_STORE_KEY)).thenReturn(
       failedFuture("System user credentials are not found"));
 
-    var future = service.getToken(TestConstants.TENANT_NAME);
+    var future = service.getToken(rc);
 
     assertTrue(future.failed());
     assertThat(future.cause()).hasMessage("System user credentials are not found");
@@ -118,12 +127,14 @@ class SystemUserTokenProviderTest {
 
   @Test
   void getToken_negative_kcError() {
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(keycloakService.obtainUserToken(any(), any(), any())).thenReturn(failedFuture("KC failure"));
     when(moduleProperties.getName()).thenReturn(TestConstants.MODULE_NAME);
     when(keycloakProperties.getLoginClientSuffix()).thenReturn("-login-app");
     when(secureStore.get(any())).thenReturn(succeededFuture("testpwd")).thenReturn(succeededFuture("secret"));
 
-    var future = service.getToken(TestConstants.TENANT_NAME);
+    var future = service.getToken(rc);
 
     assertTrue(future.failed());
     assertThat(future.cause()).hasMessage("KC failure");
@@ -131,12 +142,14 @@ class SystemUserTokenProviderTest {
 
   @Test
   void getToken_negative_secureStoreError() {
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
     when(moduleProperties.getName()).thenReturn(TestConstants.MODULE_NAME);
     when(keycloakProperties.getLoginClientSuffix()).thenReturn("-login-app");
     when(secureStore.get(any())).thenReturn(succeededFuture("testpwd"))
       .thenReturn(failedFuture("Secure store failure"));
 
-    var future = service.getToken(TestConstants.TENANT_NAME);
+    var future = service.getToken(rc);
 
     assertTrue(future.failed());
     assertThat(future.cause()).hasMessage("Secure store failure");

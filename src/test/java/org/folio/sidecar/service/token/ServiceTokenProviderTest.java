@@ -1,4 +1,4 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,8 +20,6 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.service.store.AsyncSecureStore;
-import org.folio.sidecar.service.token.ServiceTokenProvider;
-import org.folio.sidecar.service.token.TokenCacheFactory;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.utils.SecureStoreUtils;
 import org.folio.support.types.UnitTest;
