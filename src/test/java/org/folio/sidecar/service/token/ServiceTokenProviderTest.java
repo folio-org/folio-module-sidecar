@@ -1,13 +1,14 @@
 package org.folio.sidecar.service.token;
 
 import static io.vertx.core.Future.succeededFuture;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Map;
@@ -26,6 +27,7 @@ import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,22 +49,22 @@ class ServiceTokenProviderTest {
   @Mock private RoutingContext rc;
   @Mock private HttpServerRequest request;
   @Mock private AsyncSecureStore secureStore;
-  @Mock private TokenCacheFactory cacheFactory;
-  @Mock private Cache<String, TokenResponse> serviceTokenCache;
+  @Mock private AsyncTokenCacheFactory cacheFactory;
+  @Mock private AsyncLoadingCache<String, TokenResponse> serviceTokenCache;
 
   private ServiceTokenProvider service;
 
   @BeforeEach
   void setup() {
-    when(cacheFactory.createCache()).thenReturn(serviceTokenCache);
+    when(cacheFactory.createCache(ArgumentMatchers.any())).thenReturn(serviceTokenCache);
     service = new ServiceTokenProvider(keycloakService, properties, secureStore, cacheFactory);
   }
 
   @Test
   void syncCache_positive() {
     var map = Map.of(
-      "another-tenant", new TokenResponse(),
-      TestConstants.TENANT_NAME, new TokenResponse());
+      "another-tenant", completedFuture(new TokenResponse()),
+      TestConstants.TENANT_NAME, completedFuture(new TokenResponse()));
     when(serviceTokenCache.asMap()).thenReturn(new ConcurrentHashMap<>(map));
 
     service.syncCache(EntitlementsEvent.of(Set.of(TestConstants.TENANT_NAME)));
@@ -88,7 +90,7 @@ class ServiceTokenProviderTest {
     when(secureStore.get(SERVICE_CLIENT_STORE_KEY)).thenReturn(succeededFuture(SERVICE_CLIENT_SECRET));
     when(keycloakService.obtainToken(any(), any(), any())).thenReturn(succeededFuture(TestConstants.TOKEN_RESPONSE));
 
-    var future = service.getServiceToken(rc);
+    var future = service.getToken(rc);
 
     assertTrue(future.succeeded());
     verify(keycloakService).obtainToken(
@@ -99,9 +101,9 @@ class ServiceTokenProviderTest {
   void getServiceToken_positive_cachedToken() {
     when(rc.request()).thenReturn(request);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
-    when(serviceTokenCache.getIfPresent(any())).thenReturn(TestConstants.TOKEN_RESPONSE);
+    when(serviceTokenCache.get(any())).thenReturn(completedFuture(TestConstants.TOKEN_RESPONSE));
 
-    var future = service.getServiceToken(rc);
+    var future = service.getToken(rc);
 
     assertTrue(future.succeeded());
     verifyNoInteractions(keycloakService);

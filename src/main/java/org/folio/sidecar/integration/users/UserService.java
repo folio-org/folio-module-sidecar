@@ -45,7 +45,7 @@ public class UserService {
     if (userTenant != null) {
       return succeededFuture(userTenant);
     }
-    return serviceTokenProvider.getServiceToken(rc)
+    return serviceTokenProvider.getToken(rc)
       .flatMap(serviceToken -> findUserById(targetTenant, userId, serviceToken))
       .onSuccess(user -> {
         log.debug("User tenants found: user = {}, targetTenant = {}", userId, targetTenant);
@@ -63,7 +63,7 @@ public class UserService {
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
-    return serviceTokenProvider.getServiceToken(rc)
+    return serviceTokenProvider.getToken(rc)
       .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
   }
 

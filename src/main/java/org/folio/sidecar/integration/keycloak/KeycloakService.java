@@ -58,19 +58,6 @@ public class KeycloakService {
     return obtainToken(tokenLoader, log::warn, log::warn);
   }
 
-  public Future<TokenResponse> loadToken(String realm, ClientCredentials client) {
-    return keycloakClient.obtainToken(realm, client).compose(response -> {
-      if (response.statusCode() == HttpResponseStatus.OK.code()) {
-        var token = parseToken(response);
-        return Future.succeededFuture(token);
-      } else {
-        var error = new UnauthorizedException("Authentication error: " + response.bodyAsString());
-        log.warn(error.getMessage());
-        return Future.failedFuture(error);
-      }
-    });
-  }
-
   private Handler<HttpResponse<Buffer>> handleResponse(
     Handler<UnauthorizedException> authErrorHandler, Promise<TokenResponse> promise) {
     return response -> {

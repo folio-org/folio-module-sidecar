@@ -47,8 +47,8 @@ public class EgressRequestHandler implements RequestHandler {
    */
   @Inject
   public EgressRequestHandler(ErrorHandler errorHandler, PathProcessor pathProcessor,
-    RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
-    ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
+                              RequestForwardingService requestForwardingService, Instance<EgressRequestFilter> filters,
+                              ServiceTokenProvider tokenProvider, SystemUserTokenProvider systemUserService) {
     this.errorHandler = errorHandler;
     this.pathProcessor = pathProcessor;
     this.requestForwardingService = requestForwardingService;
@@ -95,15 +95,18 @@ public class EgressRequestHandler implements RequestHandler {
   private void authenticateAndForwardRequest(RoutingContext rc, HttpServerRequest rq, ScRoutingEntry routingEntry) {
     log.info("Authenticating and forwarding egress request [method: {}, path: {}, requestId: {}]",
       rq.method(), rq.path(), rq.getHeader(REQUEST_ID));
-    var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
-    var serviceToken = tokenProvider.getServiceTokenSync(rc);
+    var serviceToken = tokenProvider.getTokenSync(rc);
     RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
+    log.debug("Service token assigned to {} header: token = {} [requestId: {}]",
+      () -> OkapiHeaders.SYSTEM_TOKEN, () -> tokenHash(serviceToken), () -> rq.getHeader(REQUEST_ID));
 
     if (requireSystemUserToken(rc)) {
       var systemUserToken = systemUserService.getTokenSync(rc);
       setSysUserTokenIfAvailable(rc, systemUserToken);
     }
+
+    var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
     forwardRequest(rc, rq, routingEntry, updatedPath);
   }
 
