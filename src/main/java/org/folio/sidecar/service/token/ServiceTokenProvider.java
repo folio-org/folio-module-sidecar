@@ -4,6 +4,7 @@ import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
+import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.vertx.ConsumeEvent;
@@ -91,14 +92,17 @@ public class ServiceTokenProvider {
       ? getAdminClientCredentials()
       : getServiceClientCredentials(tenant);
 
-    return cred.compose(credentials -> keycloakService.obtainToken(tenant, credentials))
+    var tokenFuture = cred.compose(credentials -> keycloakService.obtainToken(tenant, credentials))
       .map(tokenResponse -> {
         log.debug("Service token obtained: token = {}, tenant = {}",
           () -> tokenResponseAsString(tokenResponse), () -> tenant);
         return tokenResponse;
-      })
-      .onFailure(e -> log.warn("Failed to obtain service token", e))
-      .result();
+      });
+
+    return executeAndGet(tokenFuture, throwable -> {
+      log.warn("Failed to obtain service token: message = {}", throwable.getMessage(), throwable);
+      return null;
+    });
   }
 
   private Future<ClientCredentials> getAdminClientCredentials() {

@@ -4,6 +4,7 @@ import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
+import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.vertx.ConsumeEvent;
@@ -74,16 +75,19 @@ public class SystemUserTokenProvider {
 
   private TokenResponse retrieveToken(String tenant) {
     var username = moduleProperties.getName();
-    return getUserCredentials(tenant, username)
-      .compose(user -> obtainAndCacheToken(tenant, user, username))
-      .result();
+    var tokenFuture = getUserCredentials(tenant, username)
+      .compose(user -> obtainAndCacheToken(tenant, user, username));
+
+    return executeAndGet(tokenFuture, throwable -> {
+      log.warn("Failed to obtain system user token: message = {}", throwable.getMessage(), throwable);
+      return null;
+    });
   }
 
   private Future<TokenResponse> obtainAndCacheToken(String tenant, UserCredentials user, String username) {
     return getClientCredentials(tenant)
       .compose(client -> authUser(tenant, user, username, client))
-      .map(cacheToken(tenant))
-      .onFailure(e -> log.warn("Cannot obtain token: message = {}", e.getMessage(), e));
+      .map(cacheToken(tenant));
   }
 
   private Future<TokenResponse> authUser(String tenant, UserCredentials user, String username,
