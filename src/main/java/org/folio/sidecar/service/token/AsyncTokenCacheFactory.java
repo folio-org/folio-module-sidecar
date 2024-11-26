@@ -1,7 +1,9 @@
 package org.folio.sidecar.service.token;
 
+import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
+import static org.apache.commons.lang3.math.NumberUtils.max;
 import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -49,10 +51,18 @@ public class AsyncTokenCacheFactory {
 
     // invalidating a cache entry prior to the token expiration.
     var earlyExpiresIn = expiresIn - refreshBeforeExpiry;
-    var duration = earlyExpiresIn > MIN_EARLY_EXPIRATION_SEC ? ofSeconds(earlyExpiresIn) : ofSeconds(expiresIn);
-    log.debug("Token TTL calculated: duration = {} secs, token = {}",
-      duration::toSeconds, () -> tokenResponseAsString(token));
+    var duration = earlyExpiresIn > MIN_EARLY_EXPIRATION_SEC
+      ? ofSeconds(earlyExpiresIn)
+      : ofMillis(minusTenPercent(expiresIn * 1000));
+    log.debug("Token TTL calculated: duration = {} mls, token = {}",
+      duration::toMillis, () -> tokenResponseAsString(token));
 
     return duration.toNanos();
+  }
+
+  private long minusTenPercent(Long expiresInMillis) {
+    var fraction = expiresInMillis / 10;
+    var result = expiresInMillis - max(fraction, 1);
+    return max(result, 1);
   }
 }
