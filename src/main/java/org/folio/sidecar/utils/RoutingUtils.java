@@ -123,6 +123,10 @@ public class RoutingUtils {
     rc.request().headers().set(header, value);
   }
 
+  public static void removeHeader(RoutingContext rc, String header) {
+    rc.request().headers().remove(header);
+  }
+
   public static boolean isSystemRequest(RoutingContext rc) {
     var scRoutingEntry = getScRoutingEntry(rc);
     return SYS_INTERFACE_TYPE.equals(scRoutingEntry.getInterfaceType());
