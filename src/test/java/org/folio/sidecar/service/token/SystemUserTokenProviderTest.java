@@ -79,7 +79,6 @@ class SystemUserTokenProviderTest {
 
     service.syncCache(EntitlementsEvent.of(Set.of("tenant-foo", "tenant-bar")));
 
-    // TODO (Dima Tkachenko): review code
     /*verify(tokenCache).invalidate("tenant-xyz");
     verify(tokenCache).put("tenant-bar", TestConstants.TOKEN_RESPONSE);*/
   }
@@ -99,7 +98,6 @@ class SystemUserTokenProviderTest {
     assertTrue(future.succeeded());
     verify(keycloakService).obtainUserToken(TestConstants.TENANT_NAME, TestConstants.LOGIN_CLIENT_CREDENTIALS,
       TEST_USER);
-    // TODO (Dima Tkachenko): review code
     /*verify(tokenCache).put(TestConstants.TENANT_NAME, TestConstants.TOKEN_RESPONSE);*/
   }
 
@@ -107,7 +105,6 @@ class SystemUserTokenProviderTest {
   void getToken_positive_cachedValue() {
     when(rc.request()).thenReturn(request);
     when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TestConstants.TENANT_NAME);
-    // TODO (Dima Tkachenko): review code
     /*when(tokenCache.getIfPresent(TestConstants.TENANT_NAME)).thenReturn(TestConstants.TOKEN_RESPONSE);*/
 
     var future = service.getToken(rc);
