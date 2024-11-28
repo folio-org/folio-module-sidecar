@@ -18,17 +18,17 @@ public class TokenIntrospectionExpiry implements Expiry<String, TokenIntrospecti
 
   private static final long EXPIRE_OFFSET = 500L;
 
-  private final long inactivTokenTtl;
+  private final long inactiveTokenTtl;
 
   @Inject
   public TokenIntrospectionExpiry(KeycloakProperties keycloakProperties) {
-    this.inactivTokenTtl = keycloakProperties.getInactiveTokenIntrospectionTtl();
+    this.inactiveTokenTtl = keycloakProperties.getInactiveTokenIntrospectionTtl();
   }
 
   @Override
   public long expireAfterCreate(String key, TokenIntrospectionResponse value, long currentTime) {
     if (value.getExpirationTime() == null) {
-      return SECONDS.toNanos(inactivTokenTtl);
+      return SECONDS.toNanos(inactiveTokenTtl);
     }
     return SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis()) - EXPIRE_OFFSET;
   }
@@ -36,7 +36,7 @@ public class TokenIntrospectionExpiry implements Expiry<String, TokenIntrospecti
   @Override
   public long expireAfterUpdate(String key, TokenIntrospectionResponse value, long currentTime, long currentDuration) {
     if (value.getExpirationTime() == null) {
-      return SECONDS.toNanos(inactivTokenTtl);
+      return SECONDS.toNanos(inactiveTokenTtl);
     }
     return SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis()) - EXPIRE_OFFSET;
   }

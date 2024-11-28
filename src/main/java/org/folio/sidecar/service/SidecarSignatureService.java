@@ -2,6 +2,8 @@ package org.folio.sidecar.service;
 
 import static java.lang.System.currentTimeMillis;
 import static java.security.MessageDigest.getInstance;
+import static org.folio.sidecar.utils.RoutingUtils.removeHeader;
+import static org.folio.sidecar.utils.RoutingUtils.setHeader;
 
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
@@ -24,7 +26,7 @@ public class SidecarSignatureService {
   }
 
   public void removeSignature(RoutingContext context) {
-    context.request().headers().remove(SIGNATURE_HEADER);
+    removeHeader(context, SIGNATURE_HEADER);
   }
 
   public void removeSignature(HttpServerResponse response) {
@@ -32,7 +34,7 @@ public class SidecarSignatureService {
   }
 
   public RoutingContext populateSignature(RoutingContext rc) {
-    rc.request().headers().set(SIGNATURE_HEADER, SIGNATURE);
+    setHeader(rc, SIGNATURE_HEADER, SIGNATURE);
     return rc;
   }
 

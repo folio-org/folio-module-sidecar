@@ -25,6 +25,7 @@ import org.folio.sidecar.integration.tm.TenantManagerClient;
 import org.folio.sidecar.integration.tm.model.Tenant;
 import org.folio.sidecar.model.EntitlementsEvent;
 import org.folio.sidecar.model.ResultList;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Assertions;

@@ -20,7 +20,7 @@ import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped
@@ -45,7 +45,7 @@ public class UserService {
     if (userTenant != null) {
       return succeededFuture(userTenant);
     }
-    return serviceTokenProvider.getServiceToken(rc)
+    return serviceTokenProvider.getToken(rc)
       .flatMap(serviceToken -> findUserById(targetTenant, userId, serviceToken))
       .onSuccess(user -> {
         log.debug("User tenants found: user = {}, targetTenant = {}", userId, targetTenant);
@@ -63,7 +63,7 @@ public class UserService {
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
-    return serviceTokenProvider.getServiceToken(rc)
+    return serviceTokenProvider.getToken(rc)
       .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
   }
 

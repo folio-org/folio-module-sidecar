@@ -1,4 +1,4 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

@@ -23,7 +23,7 @@ import java.util.List;
 import org.folio.sidecar.integration.users.UserService.PermissionContainer;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,7 +69,7 @@ class UserServiceTest {
     var token = "service-token";
     var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
@@ -93,7 +93,7 @@ class UserServiceTest {
     var token = "service-token";
     var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
@@ -114,7 +114,7 @@ class UserServiceTest {
     var token = "service-token";
     var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture(token));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
@@ -137,7 +137,7 @@ class UserServiceTest {
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
@@ -160,7 +160,7 @@ class UserServiceTest {
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
@@ -182,7 +182,7 @@ class UserServiceTest {
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
-    when(serviceTokenProvider.getServiceToken(routingContext)).thenReturn(succeededFuture("service-token"));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);

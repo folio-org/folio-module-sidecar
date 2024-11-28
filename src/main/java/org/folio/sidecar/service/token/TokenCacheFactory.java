@@ -1,7 +1,8 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.service.token;
 
 import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
+import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -28,6 +29,7 @@ public class TokenCacheFactory {
     requireNonNull(cacheProperties.getInitialCapacity(), "Token cache initial capacity must be set");
     requireNonNull(cacheProperties.getMaxCapacity(), "Token cache max capacity must be set");
     requireNonNull(cacheProperties.getRefreshBeforeExpirySeconds(), "Token cache refresh before expiry must be set");
+    log.debug("Token cache factory initialized: cacheProperties = {}", cacheProperties);
   }
 
   /**
@@ -66,16 +68,25 @@ public class TokenCacheFactory {
   private long calculateTtl(TokenResponse token) {
     var expiresIn = token.getExpiresIn();
     var refreshBeforeExpiry = cacheProperties.getRefreshBeforeExpirySeconds();
+
+    log.debug("Calculating token TTL: tokenExpiresIn = {} secs, refreshBeforeExpiry = {} secs",
+      expiresIn, refreshBeforeExpiry);
+
     // invalidating a cache entry prior to the token expiration.
     var earlyExpiresIn = expiresIn - refreshBeforeExpiry;
     var duration = earlyExpiresIn > MIN_EARLY_EXPIRATION_SEC ? ofSeconds(earlyExpiresIn) : ofSeconds(expiresIn);
+    log.debug("Token TTL calculated: duration = {} secs, token = {}",
+      duration::toSeconds, () -> tokenResponseAsString(token));
+
     return duration.toNanos();
   }
 
   private static RemovalListener<String, TokenResponse> refreshOnExpiration(
     BiConsumer<String, TokenResponse> refreshFunction) {
     return (key, token, cause) -> {
-      log.debug("Cached token removed: key={}, cause={}", key, cause);
+      log.debug("Cached token removed: key = {}, cause = {}, token = {}",
+        () -> key, () -> cause, () -> tokenResponseAsString(token));
+
       if (cause == RemovalCause.EXPIRED) {
         refreshFunction.accept(key, token);
       }

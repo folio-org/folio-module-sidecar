@@ -7,7 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.RetryTemplate;
-import org.folio.sidecar.service.ServiceTokenProvider;
+import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped

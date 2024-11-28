@@ -17,8 +17,8 @@ import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.integration.users.model.User;
 import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.service.CacheInvalidatable;
-import org.folio.sidecar.service.TokenCacheFactory;
 import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.service.token.TokenCacheFactory;
 
 @Log4j2
 @ApplicationScoped

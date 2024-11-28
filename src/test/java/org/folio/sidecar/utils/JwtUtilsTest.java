@@ -26,8 +26,8 @@ class JwtUtilsTest {
 
   @Test
   void trimTokenBearer_positive_bearerTokenNotExists() {
-    var result = trimTokenBearer("token");
+    var result = trimTokenBearer("org/folio/sidecar/service/token");
 
-    assertThat(result).isEqualTo("token");
+    assertThat(result).isEqualTo("org/folio/sidecar/service/token");
   }
 }
