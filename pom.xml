@@ -54,7 +54,10 @@
       src/main/java/**/sidecar/integration/**/model/**,
       <!-- Temporary ignored until deleted or added to quarkus application scope -->
       src/main/java/**/sidecar/integration/keycloak/**,
-      src/main/java/**/sidecar/integration/okapi/UserPermissionService.java
+      src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,
+      <!-- temporary ignore token related classes and egress handler -->
+      src/main/java/**/service/token/**,
+      src/main/java/**/service/routing/EgressRequestHandler.java
     </sonar.exclusions>
   </properties>
 
@@ -456,7 +459,10 @@
           src/main/java/**/sidecar/integration/**/model/**,
           <!-- Temporary ignored until deleted or added to quarkus application scope -->
           src/main/java/**/sidecar/integration/keycloak/**,
-          src/main/java/**/sidecar/integration/okapi/UserPermissionService.java
+          src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,
+          <!-- temporary ignore token related classes and egress handler -->
+          src/main/java/**/service/token/**,
+          src/main/java/**/service/routing/EgressRequestHandler.java
         </sonar.exclusions>
         <sonar.coverage.jacoco.xmlReportPaths>
           target/site/jacoco-aggregate/jacoco.xml

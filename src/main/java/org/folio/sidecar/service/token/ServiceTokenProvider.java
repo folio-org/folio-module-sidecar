@@ -128,13 +128,13 @@ public class ServiceTokenProvider {
 
     if (isNotEmpty(cachedTenants)) {
       var toInvalidate = cachedTenants.stream().filter(cached -> !enabledTenants.contains(cached)).toList();
-      log.info("Invalidating service token cache fo tenants: tenants = {}", toInvalidate);
+      log.info("Invalidating service token cache for tenants: tenants = {}", toInvalidate);
       tokenCache.synchronous().invalidateAll(toInvalidate);
     }
 
     if (isNotEmpty(tenants)) {
       var toLoad = tenants.stream().filter(t -> !cachedTenants.contains(t)).toList();
-      log.info("Retrieving service token cache fo tenants: tenants = {}", toLoad);
+      log.info("Retrieving service token cache for tenants: tenants = {}", toLoad);
       tokenCache.getAll(toLoad);
     }
   }
