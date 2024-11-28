@@ -23,8 +23,7 @@ public class FutureUtils {
   public static <T> T executeAndGet(Future<T> future, Function<Throwable, T> onFailure, long timeout, TimeUnit unit) {
     var cf = future.toCompletionStage().toCompletableFuture();
     try {
-      T result = cf.get(timeout, unit);
-      return result;
+      return cf.get(timeout, unit);
     } catch (Exception e) {
       return onFailure.apply(e);
     }
