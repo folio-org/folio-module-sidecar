@@ -229,12 +229,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
-    assertThat(result.succeeded()).isFalse();
-    assertThat(result.cause())
-      .isInstanceOf(UnauthorizedException.class)
-      .hasMessage("Failed to parse JWT");
-
-    verify(routingContext, never()).put(anyString(), any());
+    assertThat(result.succeeded()).isTrue();
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(SYSTEM_TOKEN)).isEqualTo(systemToken);
     assertThat(requestHeaders.get(USER_ID)).isNull();

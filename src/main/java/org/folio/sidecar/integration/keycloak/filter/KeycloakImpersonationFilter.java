@@ -7,6 +7,7 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_IMPERSONATION;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getOriginTenant;
+import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
@@ -59,6 +60,13 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
     if (isSelfRequest(routingContext)) {
       return true;
     }
+    //Disabling impersonation if service token is present.
+    //This is to avoid impersonation of user token cause it can be expired
+    var serviceToken = getParsedSystemToken(routingContext);
+    if (serviceToken.isPresent()) {
+      return true;
+    }
+
     var targetTenant = getTenant(routingContext);
     var parsedToken = getParsedToken(routingContext);
     if (parsedToken.isEmpty() || isBlank(targetTenant)) {
