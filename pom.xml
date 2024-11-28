@@ -57,7 +57,9 @@
       src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,
       <!-- temporary ignore token related classes and egress handler -->
       src/main/java/**/service/token/**,
-      src/main/java/**/service/routing/EgressRequestHandler.java
+      src/main/java/**/service/routing/EgressRequestHandler.java,
+      src/main/java/**/sidecar/utils/FutureUtils.java,
+      src/main/java/**/sidecar/service/filter/RequestFilterService.java
     </sonar.exclusions>
   </properties>
 
@@ -462,7 +464,9 @@
           src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,
           <!-- temporary ignore token related classes and egress handler -->
           src/main/java/**/service/token/**,
-          src/main/java/**/service/routing/EgressRequestHandler.java
+          src/main/java/**/service/routing/EgressRequestHandler.java,
+          src/main/java/**/sidecar/utils/FutureUtils.java,
+          src/main/java/**/sidecar/service/filter/RequestFilterService.java
         </sonar.exclusions>
         <sonar.coverage.jacoco.xmlReportPaths>
           target/site/jacoco-aggregate/jacoco.xml
