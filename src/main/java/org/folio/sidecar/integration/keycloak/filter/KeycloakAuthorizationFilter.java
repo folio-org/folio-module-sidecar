@@ -29,7 +29,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.StringJoiner;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
@@ -95,11 +94,16 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   }
 
   private Optional<JsonWebToken> findCachedAccessToken(RoutingContext rc, String permission, String tenantName) {
-    return Stream.of(getParsedToken(rc), getParsedSystemToken(rc))
-      .filter(Optional::isPresent)
-      .map(Optional::get)
-      .filter(token -> isCachedToken(permission, tenantName, token))
-      .findAny();
+    var parsedToken = getParsedToken(rc);
+    var parsedSystemToken = getParsedSystemToken(rc);
+
+    if (parsedSystemToken.isPresent() && isCachedToken(permission, tenantName, parsedSystemToken.get())) {
+      return parsedSystemToken;
+    }
+    if (parsedToken.isPresent() && isCachedToken(permission, tenantName, parsedToken.get())) {
+      return parsedToken;
+    }
+    return Optional.empty();
   }
 
   private boolean isCachedToken(String permission, String tenantName, JsonWebToken token) {
@@ -108,10 +112,10 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(RoutingContext rc) {
-    return getParsedToken(rc)
-      .map(accessToken -> authorizeAndCacheToken(accessToken, rc)
-        .recover(error -> authorizeAndCacheSystemToken(rc, error)))
-      .orElseGet(() -> authorizeAndCacheSystemToken(rc, null));
+    return authorizeAndCacheSystemToken(rc)
+      .recover(error -> getParsedToken(rc)
+        .map(accessToken -> authorizeAndCacheToken(accessToken, rc))
+        .orElseGet(() -> failedFuture(new ForbiddenException("Failed to find user token in request"))));
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(JsonWebToken jwt, RoutingContext rc) {
@@ -123,18 +127,10 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
   }
 
-  private Future<RoutingContext> authorizeAndCacheSystemToken(RoutingContext routingContext, Throwable error) {
+  private Future<RoutingContext> authorizeAndCacheSystemToken(RoutingContext routingContext) {
     return getParsedSystemToken(routingContext)
       .map(systemToken -> authorizeAndCacheToken(systemToken, routingContext))
-      .orElseGet(() -> failedFuture(prepareSystemTokenError(error)));
-  }
-
-  private static Exception prepareSystemTokenError(Throwable error) {
-    if (error instanceof SecurityException securityError) {
-      return securityError;
-    }
-
-    return new ForbiddenException("Failed to find system token in request", error);
+      .orElseGet(() -> failedFuture(new ForbiddenException("Failed to find system token in request")));
   }
 
   private static RoutingContext handleAuthorizationError(Throwable error) {

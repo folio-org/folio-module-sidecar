@@ -104,6 +104,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
   @Test
   void authorize_positive_userTokenCached() {
+    prepareSystemTokenMocks(false);
     prepareUserTokenMocks(true);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> {
@@ -138,7 +139,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
   @Test
   void authorize_positive_systemTokenCached() {
-    prepareUserTokenMocks(false);
     prepareSystemTokenMocks(true);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> {
@@ -160,7 +160,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   void authorize_positive_systemTokenAfterForbiddenForUserToken() {
     prepareUserTokenMocks(false);
     prepareSystemTokenMocks(false);
-    prepareUserRptMocks(SC_FORBIDDEN, succeededFuture(userTokenRptResponse));
     prepareSystemRptMocks(SC_OK, succeededFuture(systemTokenRptResponse));
 
     var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, systemToken));
@@ -170,7 +169,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.result()).isEqualTo(routingContext);
 
     verify(authTokenCache).put(systemTokenCacheKey(), systemToken);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
   }
 
@@ -260,7 +258,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
       .isInstanceOf(ForbiddenException.class)
-      .hasMessage("Failed to authorize request");
+      .hasMessage("Failed to find user token in request");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());

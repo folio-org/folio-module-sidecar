@@ -110,9 +110,6 @@ public class EgressRequestHandler implements RequestHandler {
       RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
       log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
         () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
-
-      // appropriate user id will be put from token by a sidecar when handling ingress request
-      RoutingUtils.removeHeader(rc, OkapiHeaders.USER_ID);
     } else {
       log.debug("System user token is not available [requestId: {}]", requestId);
     }
