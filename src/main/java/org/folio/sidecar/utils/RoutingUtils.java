@@ -10,8 +10,10 @@ import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -197,5 +199,20 @@ public class RoutingUtils {
 
   public static String getOriginTenant(RoutingContext rc) {
     return rc.get(ORIGIN_TENANT);
+  }
+
+  public static String dumpContextData(RoutingContext rc) {
+    return dumpStream(rc.data().entrySet().stream());
+  }
+
+  public static String dumpHeaders(RoutingContext rc) {
+    return dumpStream(rc.request().headers().entries().stream());
+  }
+
+  private static <K, V> String dumpStream(Stream<Entry<K, V>> stream) {
+    return stream
+      .map(entry -> String.format("%s = %s", entry.getKey(), entry.getValue()))
+      .reduce((a, b) -> a + "\n" + b)
+      .orElse("");
   }
 }

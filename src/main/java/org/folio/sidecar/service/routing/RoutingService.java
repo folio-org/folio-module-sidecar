@@ -1,17 +1,26 @@
 package org.folio.sidecar.service.routing;
 
 import static java.util.stream.Collectors.joining;
+import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
+import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
+import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 
 import io.quarkus.runtime.Quarkus;
+import io.vertx.codegen.annotations.Nullable;
+import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.Logger;
+import org.folio.sidecar.configuration.properties.RoutingHandlerProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ErrorHandler;
@@ -26,6 +35,7 @@ public class RoutingService {
   private final EgressRequestHandler egressRequestHandler;
   private final IngressRequestHandler ingressRequestHandler;
   private final RequestMatchingService requestMatchingService;
+  private final RoutingHandlerProperties routingHandlerProperties;
 
   private final Map<String, ModuleType> knownModules = new HashMap<>();
 
@@ -55,12 +65,20 @@ public class RoutingService {
 
     requestMatchingService.bootstrapModule(moduleBootstrap);
 
-    var routerRequestHandler = new ScRequestHandler(ingressRequestHandler, egressRequestHandler,
-      requestMatchingService, errorHandler);
+    var routerRequestHandler = createRequestHandler();
 
     router.route("/*").handler(routerRequestHandler);
 
     registerKnownModules(moduleBootstrap);
+  }
+
+  private Handler<RoutingContext> createRequestHandler() {
+    var requestHandler = new ScRequestHandler(ingressRequestHandler, egressRequestHandler,
+      requestMatchingService, errorHandler);
+
+    return !routingHandlerProperties.tracing().enabled()
+      ? requestHandler
+      : new TraceHeadersHandler(requestHandler, routingHandlerProperties.tracing().paths(), log);
   }
 
   private void registerKnownModules(ModuleBootstrap moduleBootstrap) {
@@ -93,5 +111,30 @@ public class RoutingService {
 
   enum ModuleType {
     PRIMARY, REQUIRED
+  }
+
+  @RequiredArgsConstructor
+  private static final class TraceHeadersHandler implements Handler<RoutingContext> {
+
+    private final Handler<RoutingContext> decorated;
+    private final Collection<String> paths;
+    private final Logger log;
+
+    @Override
+    public void handle(RoutingContext rc) {
+      var req = rc.request();
+      if (pathMatched(req.path())) {
+        log.debug("""
+        Request: method = {}, path = {}
+        Current state of request context:
+        ********** Headers *******************
+        {}""", req::method, req::path, () -> dumpHeaders(rc));
+      }
+      decorated.handle(rc);
+    }
+
+    private boolean pathMatched(@Nullable String path) {
+      return isEmpty(paths) || paths.stream().anyMatch(s -> containsIgnoreCase(path, s));
+    }
   }
 }
