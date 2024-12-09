@@ -14,6 +14,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -79,9 +80,9 @@ public class RoutingService {
     if (!routingHandlerProperties.tracing().enabled()) {
       return requestHandler;
     } else {
-      log.info("Header tracing is activated: paths = {}",
-        isEmpty(routingHandlerProperties.tracing().paths()) ? "<all>" : routingHandlerProperties.tracing().paths());
-      return new TraceHeadersHandler(requestHandler, routingHandlerProperties.tracing().paths(), log);
+      var paths = routingHandlerProperties.tracing().paths().orElseGet(Collections::emptyList);
+      log.info("Header tracing is activated: paths = {}", isEmpty(paths) ? "<all>" : paths);
+      return new TraceHeadersHandler(requestHandler, paths, log);
     }
   }
 

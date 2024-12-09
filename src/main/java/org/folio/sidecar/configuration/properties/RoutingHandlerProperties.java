@@ -3,6 +3,7 @@ package org.folio.sidecar.configuration.properties;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import java.util.List;
+import java.util.Optional;
 
 @ConfigMapping(prefix = "routing.handlers")
 public interface RoutingHandlerProperties {
@@ -14,6 +15,6 @@ public interface RoutingHandlerProperties {
     @WithDefault("false")
     boolean enabled();
 
-    List<String> paths();
+    Optional<List<String>> paths();
   }
 }
