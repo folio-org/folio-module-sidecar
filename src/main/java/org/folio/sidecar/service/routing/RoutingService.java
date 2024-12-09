@@ -130,7 +130,7 @@ public class RoutingService {
       var req = rc.request();
       if (pathMatched(req.path())) {
         log.debug("""
-        ======================================
+        \n======================================
         Request: method = {}, path = {}
         Current state of request context:
         ********** Headers *******************
