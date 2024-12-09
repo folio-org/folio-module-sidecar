@@ -4,7 +4,7 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.math.NumberUtils.max;
-import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
+import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;

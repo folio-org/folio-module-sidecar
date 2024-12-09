@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -211,8 +212,22 @@ public class RoutingUtils {
 
   private static <K, V> String dumpStream(Stream<Entry<K, V>> stream) {
     return stream
-      .map(entry -> String.format("%s = %s", entry.getKey(), entry.getValue()))
+      .map(entryToString())
       .reduce((a, b) -> a + "\n" + b)
       .orElse("");
+  }
+
+  private static <K, V> Function<Entry<K, V>, String> entryToString() {
+    return entry -> {
+      var key = entry.getKey();
+      var value = entry.getValue();
+
+      if (key instanceof String && key.toString().toLowerCase().endsWith("token")) {
+        var tokenHashed = TokenUtils.tokenHash(value.toString());
+        return String.format("%s = %s", key, tokenHashed);
+      }
+
+      return String.format("%s = %s", key, value);
+    };
   }
 }

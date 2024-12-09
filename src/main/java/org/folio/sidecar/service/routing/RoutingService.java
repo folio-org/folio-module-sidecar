@@ -76,9 +76,13 @@ public class RoutingService {
     var requestHandler = new ScRequestHandler(ingressRequestHandler, egressRequestHandler,
       requestMatchingService, errorHandler);
 
-    return !routingHandlerProperties.tracing().enabled()
-      ? requestHandler
-      : new TraceHeadersHandler(requestHandler, routingHandlerProperties.tracing().paths(), log);
+    if (!routingHandlerProperties.tracing().enabled()) {
+      return requestHandler;
+    } else {
+      log.info("Header tracing is activated: paths = {}",
+        isEmpty(routingHandlerProperties.tracing().paths()) ? "<all>" : routingHandlerProperties.tracing().paths());
+      return new TraceHeadersHandler(requestHandler, routingHandlerProperties.tracing().paths(), log);
+    }
   }
 
   private void registerKnownModules(ModuleBootstrap moduleBootstrap) {
@@ -125,6 +129,7 @@ public class RoutingService {
       var req = rc.request();
       if (pathMatched(req.path())) {
         log.debug("""
+        ======================================
         Request: method = {}, path = {}
         Current state of request context:
         ********** Headers *******************
