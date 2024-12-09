@@ -4,6 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import jakarta.ws.rs.NotFoundException;
+import org.folio.sidecar.configuration.properties.RoutingHandlerProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.support.TestConstants;
@@ -35,6 +37,7 @@ class RoutingServiceTest {
   @Mock private IngressRequestHandler ingressRequestHandler;
   @Mock private RequestMatchingService requestMatchingService;
   @Mock private ApplicationManagerService appManagerService;
+  @Mock private RoutingHandlerProperties routingHandlerProperties;
 
   @AfterEach
   void tearDown() {
@@ -44,6 +47,8 @@ class RoutingServiceTest {
 
   @Test
   void initRoutes_positive() {
+    var tracing = mock(RoutingHandlerProperties.Tracing.class);
+    when(routingHandlerProperties.tracing()).thenReturn(tracing);
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
     doNothing().when(requestMatchingService).bootstrapModule(TestConstants.MODULE_BOOTSTRAP);
 
@@ -66,6 +71,8 @@ class RoutingServiceTest {
 
   @Test
   void updateModuleRoutes_positive_updateIngressRoutes() {
+    var tracing = mock(RoutingHandlerProperties.Tracing.class);
+    when(routingHandlerProperties.tracing()).thenReturn(tracing);
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
     when(router.route("/*")).thenReturn(route);
     when(route.handler(any())).thenReturn(route);
@@ -80,6 +87,8 @@ class RoutingServiceTest {
 
   @Test
   void updateModuleRoutes_positive_updateEgressRoutes() {
+    var tracing = mock(RoutingHandlerProperties.Tracing.class);
+    when(routingHandlerProperties.tracing()).thenReturn(tracing);
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
     when(router.route("/*")).thenReturn(route);
     when(route.handler(any())).thenReturn(route);

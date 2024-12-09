@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.token;
+package org.folio.sidecar.utils;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 

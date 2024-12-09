@@ -1,6 +1,9 @@
 package org.folio.sidecar.service.filter;
 
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCauseStackTrace;
 import static org.folio.sidecar.utils.CollectionUtils.sortByOrder;
+import static org.folio.sidecar.utils.RoutingUtils.dumpContextData;
+import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
@@ -8,7 +11,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import java.util.List;
+import lombok.extern.log4j.Log4j2;
 
+@Log4j2
 @ApplicationScoped
 public class RequestFilterService {
 
@@ -42,6 +47,17 @@ public class RequestFilterService {
       filterFuture = filterFuture.compose(currentFilter::applyFilter);
     }
 
-    return filterFuture;
+    return filterFuture.onFailure(throwable -> {
+      log.debug("Exception happened while applying filters: error = {}, at = {}",
+        throwable.getMessage(), getRootCauseStackTrace(throwable)[0]);
+
+      log.debug("""
+        Current state of request context:
+        ********** Headers *******************
+        {}
+        ********** Context Data **************
+        {}
+        """, () -> dumpHeaders(rc), () -> dumpContextData(rc));
+    });
   }
 }
