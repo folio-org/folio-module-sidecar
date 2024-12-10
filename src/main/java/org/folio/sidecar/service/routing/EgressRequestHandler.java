@@ -5,9 +5,9 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
-import static org.folio.sidecar.service.token.TokenUtils.tokenHash;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
+import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;

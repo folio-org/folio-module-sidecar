@@ -2,9 +2,9 @@ package org.folio.sidecar.service.token;
 
 import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
-import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
+import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.vertx.ConsumeEvent;

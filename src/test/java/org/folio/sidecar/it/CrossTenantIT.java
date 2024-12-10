@@ -100,7 +100,7 @@ class CrossTenantIT {
 
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
-      .header(OkapiHeaders.TOKEN, authToken)
+      .header(OkapiHeaders.SYSTEM_TOKEN, authToken)
       .get("/foo/entities")
       .then()
       .log().ifValidationFails(ALL)
