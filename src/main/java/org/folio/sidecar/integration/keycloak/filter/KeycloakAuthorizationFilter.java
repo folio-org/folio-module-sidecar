@@ -112,15 +112,25 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(RoutingContext rc) {
-    return authorizeAndCacheSystemToken(rc)
-      .recover(error -> getParsedToken(rc)
-        .map(accessToken -> authorizeAndCacheToken(accessToken, rc))
-        .orElseGet(() -> failedFuture(new ForbiddenException("Failed to find user token in request"))));
+    if (getParsedSystemToken(rc).isPresent()) {
+      log.debug("Authorizing request with service token...");
+      return authorizeAndCacheSystemToken(rc);
+    }
+    var token = getParsedToken(rc);
+    if (token.isPresent()) {
+      log.debug("Authorizing request with user token...");
+      return authorizeAndCacheToken(token.get(), rc);
+    }
+    return failedFuture(new ForbiddenException("Failed to find token in request"));
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(JsonWebToken jwt, RoutingContext rc) {
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
+
+    for (var claimName : jwt.getClaimNames()) {
+      log.debug("Token Claim: {} = {}", claimName, jwt.getClaim(claimName));
+    }
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
