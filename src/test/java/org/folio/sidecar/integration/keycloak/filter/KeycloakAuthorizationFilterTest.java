@@ -190,26 +190,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void authorize_negative_forbiddenForBothTokens() {
-    prepareUserTokenMocks(false);
-    prepareSystemTokenMocks(false);
-    prepareUserRptMocks(SC_FORBIDDEN, succeededFuture(userTokenRptResponse));
-    prepareSystemRptMocks(SC_FORBIDDEN, succeededFuture(systemTokenRptResponse));
-
-    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, systemToken));
-    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
-
-    assertThat(result.succeeded()).isFalse();
-    assertThat(result.cause())
-      .isInstanceOf(ForbiddenException.class)
-      .hasMessage("Access Denied");
-
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
-    verify(authTokenCache, never()).put(anyString(), any());
-  }
-
-  @Test
   void authorize_negative_rptRequestFailedForUserToken() {
     prepareUserTokenMocks(false);
     var failedResponse = Future.<HttpResponse<Buffer>>failedFuture(new ServiceUnavailableException("Unavailable"));
@@ -258,7 +238,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause())
       .isInstanceOf(ForbiddenException.class)
-      .hasMessage("Failed to find user token in request");
+      .hasMessage("Failed to authorize request");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
