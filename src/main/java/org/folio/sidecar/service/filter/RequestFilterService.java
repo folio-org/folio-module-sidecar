@@ -10,6 +10,7 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import java.util.Arrays;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
 
@@ -49,7 +50,7 @@ public class RequestFilterService {
 
     return filterFuture.onFailure(throwable -> {
       log.debug("Exception happened while applying filters: error = {}, at = {}",
-        throwable.getMessage(), getRootCauseStackTrace(throwable)[0]);
+        throwable::getMessage, () -> getCausePlace(throwable));
 
       log.debug("""
         Current state of request context:
@@ -59,5 +60,10 @@ public class RequestFilterService {
         {}
         """, () -> dumpHeaders(rc), () -> dumpContextData(rc));
     });
+  }
+
+  private static String getCausePlace(Throwable throwable) {
+    String[] st = getRootCauseStackTrace(throwable);
+    return Arrays.stream(st).skip(1).findFirst().orElse("Unknown");
   }
 }
