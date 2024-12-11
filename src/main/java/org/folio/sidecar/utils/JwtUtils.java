@@ -1,8 +1,12 @@
 package org.folio.sidecar.utils;
 
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.endsWithIgnoreCase;
+import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import java.util.Optional;
+import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
@@ -33,5 +37,22 @@ public class JwtUtils {
 
   public static String trimTokenBearer(String token) {
     return token == null || !token.startsWith("Bearer ") ? token : token.substring(7).trim();
+  }
+
+  public static String dumpTokenClaims(JsonWebToken token) {
+    return token.getClaimNames().stream()
+      .map(claimToString(token))
+      .reduce((a, b) -> a + "\n" + b)
+      .orElse("");
+  }
+
+  private static Function<String, String> claimToString(JsonWebToken token) {
+    return claimName -> {
+      var value = endsWithIgnoreCase(claimName, "token")
+        ? tokenHash(token.getClaim(claimName))
+        : token.getClaim(claimName);
+
+      return format("%s = %s", claimName, value);
+    };
   }
 }

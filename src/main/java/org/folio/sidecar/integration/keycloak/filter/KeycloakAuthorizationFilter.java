@@ -9,6 +9,7 @@ import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHORIZATION;
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.dumpTokenClaims;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -128,9 +129,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
 
-    for (var claimName : jwt.getClaimNames()) {
-      log.debug("Token Claim: {} = {}", claimName, jwt.getClaim(claimName));
-    }
+    log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))

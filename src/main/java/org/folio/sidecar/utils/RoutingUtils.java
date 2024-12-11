@@ -1,12 +1,15 @@
 package org.folio.sidecar.utils;
 
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.endsWithIgnoreCase;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
+import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
@@ -49,7 +52,7 @@ public class RoutingUtils {
     var path = request.path();
     path = path.replaceFirst("^(/_)?(/[^/?]+).*$", "$2");
     var random = ThreadLocalRandom.current(); //NOSONAR - random is used for requestId generation
-    var newId = String.format("%06d%s", random.nextInt(1000000), path);
+    var newId = format("%06d%s", random.nextInt(1000000), path);
     var currentId = request.getHeader(REQUEST_ID);
 
     var requestId = StringUtils.isEmpty(currentId) ? newId : currentId + ";" + newId;
@@ -222,12 +225,12 @@ public class RoutingUtils {
       var key = entry.getKey();
       var value = entry.getValue();
 
-      if (key instanceof String && key.toString().toLowerCase().endsWith("token")) {
-        var tokenHashed = TokenUtils.tokenHash(value.toString());
-        return String.format("%s = %s", key, tokenHashed);
+      if (key instanceof String && endsWithIgnoreCase(key.toString(), "token")) {
+        var tokenHashed = tokenHash(value.toString());
+        return format("%s = %s", key, tokenHashed);
       }
 
-      return String.format("%s = %s", key, value);
+      return format("%s = %s", key, value);
     };
   }
 }
