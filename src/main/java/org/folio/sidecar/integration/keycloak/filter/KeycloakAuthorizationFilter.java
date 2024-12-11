@@ -9,6 +9,7 @@ import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHORIZATION;
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
+import static org.folio.sidecar.utils.JwtUtils.dumpTokenClaims;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -112,15 +113,23 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(RoutingContext rc) {
-    return authorizeAndCacheSystemToken(rc)
-      .recover(error -> getParsedToken(rc)
-        .map(accessToken -> authorizeAndCacheToken(accessToken, rc))
-        .orElseGet(() -> failedFuture(new ForbiddenException("Failed to find user token in request"))));
+    if (getParsedSystemToken(rc).isPresent()) {
+      log.debug("Authorizing request with service token...");
+      return authorizeAndCacheSystemToken(rc);
+    }
+    var token = getParsedToken(rc);
+    if (token.isPresent()) {
+      log.debug("Authorizing request with user token...");
+      return authorizeAndCacheToken(token.get(), rc);
+    }
+    return failedFuture(new ForbiddenException("Failed to find token in request"));
   }
 
   private Future<RoutingContext> authorizeAndCacheToken(JsonWebToken jwt, RoutingContext rc) {
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
+
+    log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))

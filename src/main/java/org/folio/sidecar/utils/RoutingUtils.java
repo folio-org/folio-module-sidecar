@@ -1,17 +1,23 @@
 package org.folio.sidecar.utils;
 
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.endsWithIgnoreCase;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.USER_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
+import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -46,7 +52,7 @@ public class RoutingUtils {
     var path = request.path();
     path = path.replaceFirst("^(/_)?(/[^/?]+).*$", "$2");
     var random = ThreadLocalRandom.current(); //NOSONAR - random is used for requestId generation
-    var newId = String.format("%06d%s", random.nextInt(1000000), path);
+    var newId = format("%06d%s", random.nextInt(1000000), path);
     var currentId = request.getHeader(REQUEST_ID);
 
     var requestId = StringUtils.isEmpty(currentId) ? newId : currentId + ";" + newId;
@@ -197,5 +203,34 @@ public class RoutingUtils {
 
   public static String getOriginTenant(RoutingContext rc) {
     return rc.get(ORIGIN_TENANT);
+  }
+
+  public static String dumpContextData(RoutingContext rc) {
+    return dumpStream(rc.data().entrySet().stream());
+  }
+
+  public static String dumpHeaders(RoutingContext rc) {
+    return dumpStream(rc.request().headers().entries().stream());
+  }
+
+  private static <K, V> String dumpStream(Stream<Entry<K, V>> stream) {
+    return stream
+      .map(entryToString())
+      .reduce((a, b) -> a + "\n" + b)
+      .orElse("");
+  }
+
+  private static <K, V> Function<Entry<K, V>, String> entryToString() {
+    return entry -> {
+      var key = entry.getKey();
+      var value = entry.getValue();
+
+      if (key instanceof String && endsWithIgnoreCase(key.toString(), "token")) {
+        var tokenHashed = tokenHash(value.toString());
+        return format("%s = %s", key, tokenHashed);
+      }
+
+      return format("%s = %s", key, value);
+    };
   }
 }
