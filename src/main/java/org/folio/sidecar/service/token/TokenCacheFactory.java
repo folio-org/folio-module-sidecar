@@ -2,7 +2,7 @@ package org.folio.sidecar.service.token;
 
 import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
-import static org.folio.sidecar.service.token.TokenUtils.tokenResponseAsString;
+import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
