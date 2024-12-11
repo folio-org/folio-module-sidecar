@@ -6,6 +6,7 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpContextData;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
@@ -13,6 +14,7 @@ import jakarta.inject.Inject;
 import java.util.Arrays;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Log4j2
 @ApplicationScoped
@@ -20,12 +22,15 @@ public class RequestFilterService {
 
   private final List<IngressRequestFilter> ingressRequestFilters;
   private final List<EgressRequestFilter> egressRequestFilters;
+  private final boolean tracingOnError;
 
   @Inject
   public RequestFilterService(Instance<IngressRequestFilter> ingressRequestFilters,
-    Instance<EgressRequestFilter> egressRequestFilters) {
+    Instance<EgressRequestFilter> egressRequestFilters,
+    @ConfigProperty(name = "filters.tracing.on-error", defaultValue = "false") boolean tracingOnError) {
     this.ingressRequestFilters = sortByOrder(ingressRequestFilters);
     this.egressRequestFilters = sortByOrder(egressRequestFilters);
+    this.tracingOnError = tracingOnError;
   }
 
   public Future<RoutingContext> filterIngressRequest(RoutingContext routingContext) {
@@ -48,8 +53,12 @@ public class RequestFilterService {
       filterFuture = filterFuture.compose(currentFilter::applyFilter);
     }
 
-    return filterFuture.onFailure(throwable -> {
-      log.debug("Exception happened while applying filters: error = {}, at = {}",
+    return !tracingOnError ? filterFuture : filterFuture.onFailure(traceContext(rc));
+  }
+
+  private static Handler<Throwable> traceContext(RoutingContext rc) {
+    return throwable -> {
+      log.debug("Exception happened while applying filters: error = {}, {}",
         throwable::getMessage, () -> getCausePlace(throwable));
 
       log.debug("""
@@ -59,7 +68,7 @@ public class RequestFilterService {
         ********** Context Data **************
         {}
         """, () -> dumpHeaders(rc), () -> dumpContextData(rc));
-    });
+    };
   }
 
   private static String getCausePlace(Throwable throwable) {
