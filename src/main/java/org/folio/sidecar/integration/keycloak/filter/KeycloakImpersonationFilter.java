@@ -52,7 +52,8 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
       .map(userIdOptional -> userIdOptional.orElseThrow(() -> new NotFoundException("User ID not found in token")))
       .flatMap(userId -> userService.findUser(targetTenant, userId, routingContext))
       .flatMap(user -> impersonationService.getUserToken(targetTenant, user))
-      .flatMap(impersonated -> populateRoutingContextByAccessToken(routingContext, impersonated.getAccessToken()));
+      .flatMap(impersonated -> populateRoutingContextByAccessToken(routingContext, impersonated.getAccessToken()))
+      .onFailure(error -> log.error("Impersonation failed", error));
   }
 
   @Override

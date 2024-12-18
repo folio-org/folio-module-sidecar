@@ -3,7 +3,6 @@ package org.folio.sidecar.integration.keycloak.filter;
 import static io.vertx.core.Future.failedFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_SYSTEM_JWT;
-import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasSystemAccessToken;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedSystemToken;
@@ -44,7 +43,7 @@ public class KeycloakSystemJwtFilter implements IngressRequestFilter {
 
   @Override
   public boolean shouldSkip(RoutingContext rc) {
-    return isSystemRequest(rc) || hasNoPermissionsRequired(rc) || !hasSystemAccessToken(rc);
+    return isSystemRequest(rc) || !hasSystemAccessToken(rc);
   }
 
   @Override
