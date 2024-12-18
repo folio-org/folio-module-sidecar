@@ -59,7 +59,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   @Override
   public Future<RoutingContext> filter(RoutingContext routingContext) {
     var permission = resolvePermission(routingContext);
-    routingContext.put(KC_PERMISSION_NAME, resolvePermission(routingContext));
+    routingContext.put(KC_PERMISSION_NAME, permission);
     var tenantName = getTenant(routingContext);
     log.info("Authorizing request to: {} for tenant: {}", permission, tenantName);
 
@@ -67,7 +67,10 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
       .map(jwt -> succeededFuture(routingContext))
       .orElseGet(() -> authorizeAndCacheToken(routingContext))
       .map(KeycloakAuthorizationFilter::removePermissionNameValue)
-      .onFailure(error -> removePermissionNameValue(routingContext));
+      .onFailure(error -> {
+        log.error("Authorization failed", error);
+        removePermissionNameValue(routingContext);
+      });
   }
 
   @Override
