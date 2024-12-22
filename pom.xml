@@ -32,7 +32,7 @@
     <!-- Test properties -->
     <jjwt.version>0.12.6</jjwt.version>
     <wiremock.version>3.10.0</wiremock.version>
-    <assertj-core.version>3.26.3</assertj-core.version>
+    <assertj-core.version>3.27.0</assertj-core.version>
     <mockito-core.version>5.8.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
