@@ -57,6 +57,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
 
   private static RoutingContext populatePermissions(RoutingContext rc, List<String> permissions, String userId) {
     if (isEmpty(permissions)) {
+      log.info("Test branch");
       log.warn("Skipping population of X-Okapi-Permissions: permissions is empty, userId = {}", userId);
       return rc;
     }
