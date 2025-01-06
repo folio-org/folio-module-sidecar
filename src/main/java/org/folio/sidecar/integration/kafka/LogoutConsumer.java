@@ -21,6 +21,7 @@ public class LogoutConsumer {
 
   @Incoming("logout")
   public void consume(LogoutEvent event) {
+    log.info("Test redeploying from branch using Jenkins pipeline");
     log.info("Consuming logout event: {}", event);
     caches.forEach(cache -> cache.invalidate(event));
   }
