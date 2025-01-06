@@ -6,7 +6,6 @@ import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
-import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.core.Future;
@@ -87,7 +86,7 @@ public class EgressRequestHandler implements RequestHandler {
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
-    return !hasUserIdHeader(rc) || !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
+    return !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
   }
 
   private void forwardEgressRequest(RoutingContext rc, ScRoutingEntry routingEntry) {
