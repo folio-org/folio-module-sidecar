@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.BadRequestException;
@@ -175,6 +176,8 @@ class ErrorHandlerTest {
   void sendErrorResponse_positive_responseIsEnded() {
     var routingContext = mock(RoutingContext.class);
     var response = mock(HttpServerResponse.class);
+    var request = mock(HttpServerRequest.class);
+    when(routingContext.request()).thenReturn(request);
     when(routingContext.response()).thenReturn(response);
     when(response.ended()).thenReturn(true);
 
@@ -185,8 +188,10 @@ class ErrorHandlerTest {
   private RoutingContext routingContext() {
     var routingContext = mock(RoutingContext.class);
     var response = mock(HttpServerResponse.class);
+    var request = mock(HttpServerRequest.class);
     when(response.ended()).thenReturn(false);
     when(routingContext.response()).thenReturn(response);
+    when(routingContext.request()).thenReturn(request);
     when(response.setStatusCode(responseStatusCaptor.capture())).thenReturn(response);
     when(response.putHeader(CONTENT_TYPE, APPLICATION_JSON)).thenReturn(response);
     when(response.end(responseCaptor.capture())).thenReturn(succeededFuture());

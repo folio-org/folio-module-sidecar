@@ -30,7 +30,7 @@ class SelfRequestFilterTest {
     var ctx = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
     when(selfRequestService.isSelfRequest(ctx)).thenReturn(true);
     when(ctx.request().method()).thenReturn(GET);
-    when(ctx.request().path()).thenReturn("/path");
+    when(ctx.request().uri()).thenReturn("/path");
 
     selfRequestFilter.filter(ctx);
 

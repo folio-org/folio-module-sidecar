@@ -93,6 +93,29 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_positive_listOfEntitiesWithQuery() {
+    var id = "f150770c-fd7c-4a3b-97b3-4e1fc51c29b3";
+
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/entities?query=id=={id}&limit={limit}", id, 1)
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is(id),
+        "entities[0].name", is("Test entity (by query)"),
+        "entities[0].description", is("A Test entity description")
+      );
+  }
+
+  @Test
   void handleIngressRequest_positive_selfRequest() {
     var signature = TestUtils.getSignature();
 
