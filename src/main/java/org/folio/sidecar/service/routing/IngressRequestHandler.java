@@ -1,5 +1,7 @@
 package org.folio.sidecar.service.routing;
 
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
+
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,7 @@ public class IngressRequestHandler implements RequestHandler {
   @Override
   public void handle(RoutingContext routingContext, ScRoutingEntry scRoutingEntry) {
     var rq = routingContext.request();
-    log.info("Handling ingress request [method: {}, path: {}]", rq.method(), rq.path());
+    log.info("Handling ingress request [method: {}, uri: {}]", rq::method, dumpUri(routingContext));
     requestFilterService.filterIngressRequest(routingContext)
       .onSuccess(authResponse -> forwardRequest(routingContext))
       .onFailure(error -> errorHandler.sendErrorResponse(routingContext, error));
@@ -46,7 +48,7 @@ public class IngressRequestHandler implements RequestHandler {
     rc.put("uct", System.currentTimeMillis());
 
     var path = pathProcessor.getModulePath(rc.request().path());
-    log.info("Forwarding ingress request to underlying module: [method: {}, path: {}]", request.method(), path);
+    log.info("Forwarding ingress request to underlying module: [method: {}, uri: {}]", request::method, dumpUri(rc));
 
     var absUri = moduleProperties.getUrl() + path;
     requestForwardingService.forwardIngress(rc, absUri);

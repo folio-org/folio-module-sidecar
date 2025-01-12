@@ -3,6 +3,7 @@ package org.folio.sidecar.utils;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.StringUtils.endsWithIgnoreCase;
+import static org.apache.commons.lang3.StringUtils.truncate;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
@@ -21,6 +22,7 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.util.Supplier;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -40,6 +42,7 @@ public class RoutingUtils {
   public static final String SELF_REQUEST_KEY = "selfRequest";
   public static final String ORIGIN_TENANT = "originTenant";
   public static final String PARSED_TOKEN = "parsedToken";
+  private static final int URI_MAX_LENGTH = 512;
 
   /**
    * Generates request id for ingress request.
@@ -205,12 +208,16 @@ public class RoutingUtils {
     return rc.get(ORIGIN_TENANT);
   }
 
-  public static String dumpContextData(RoutingContext rc) {
-    return dumpStream(rc.data().entrySet().stream());
+  public static Supplier<String> dumpContextData(RoutingContext rc) {
+    return () -> dumpStream(rc.data().entrySet().stream());
   }
 
-  public static String dumpHeaders(RoutingContext rc) {
-    return dumpStream(rc.request().headers().entries().stream());
+  public static Supplier<String> dumpHeaders(RoutingContext rc) {
+    return () -> dumpStream(rc.request().headers().entries().stream());
+  }
+
+  public static Supplier<String> dumpUri(RoutingContext rc) {
+    return () -> truncate(rc.request().uri(), URI_MAX_LENGTH);
   }
 
   private static <K, V> String dumpStream(Stream<Entry<K, V>> stream) {

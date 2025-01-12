@@ -6,6 +6,7 @@ import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMAR
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.quarkus.runtime.Quarkus;
 import io.vertx.codegen.annotations.Nullable;
@@ -131,10 +132,10 @@ public class RoutingService {
       if (pathMatched(req.path())) {
         log.debug("""
         \n======================================
-        Request: method = {}, path = {}
+        Request: method = {}, uri = {}
         Current state of request context:
         ********** Headers *******************
-        {}""", req::method, req::path, () -> dumpHeaders(rc));
+        {}""", req::method, dumpUri(rc), dumpHeaders(rc));
       }
       decorated.handle(rc);
     }
