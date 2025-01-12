@@ -2,6 +2,7 @@ package org.folio.sidecar.service;
 
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
@@ -73,8 +74,11 @@ public class ErrorHandler {
 
   private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride) {
     sidecarSignatureService.removeSignature(rc);
+
     log.debug("Handling error from request processing", error);
-    log.warn("Sending error response: type = {}, message = {}", error.getClass().getSimpleName(), error.getMessage());
+    log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}",
+      () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage);
+
     var response = rc.response();
     if (!response.ended()) {
       response
