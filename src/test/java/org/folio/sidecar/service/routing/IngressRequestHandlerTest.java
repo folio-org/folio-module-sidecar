@@ -60,7 +60,10 @@ class IngressRequestHandlerTest {
   void handle_positive() {
     var headers = new HeadersMultiMap();
     var routingPath = "/foo/entities";
-    var routingContext = routingContext(rc -> when(rc.request().headers()).thenReturn(headers));
+    var routingContext = routingContext(rc -> {
+      when(rc.request().path()).thenReturn("/foo/entities");
+      when(rc.request().headers()).thenReturn(headers);
+    });
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
     var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
@@ -97,7 +100,7 @@ class IngressRequestHandlerTest {
     var routingContext = mock(RoutingContext.class);
     var request = mock(HttpServerRequest.class);
     when(routingContext.request()).thenReturn(request);
-    when(request.path()).thenReturn("/foo/entities");
+    when(request.uri()).thenReturn("/foo/entities");
     when(request.method()).thenReturn(HttpMethod.GET);
 
     modifier.accept(routingContext);

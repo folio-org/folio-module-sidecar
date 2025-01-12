@@ -5,6 +5,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
 import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
@@ -43,7 +44,7 @@ public class EgressRequestHandler implements RequestHandler {
   @Override
   public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
-    log.info("Handling egress request [method: {}, path: {}]", rq.method(), rq.path());
+    log.info("Handling egress request [method: {}, uri: {}]", rq::method, dumpUri(rc));
 
     requestFilterService.filterEgressRequest(rc)
       .compose(v -> validateRoutingModuleId(routingEntry))
@@ -93,8 +94,8 @@ public class EgressRequestHandler implements RequestHandler {
     var rq = rc.request();
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
-    log.info("Forwarding egress request to module: [method: {}, path: {}, moduleId: {}, url: {}]",
-      rq.method(), updatedPath, routingEntry.getModuleId(), routingEntry.getLocation());
+    log.info("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
+      rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
     if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
       requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath);
     } else {

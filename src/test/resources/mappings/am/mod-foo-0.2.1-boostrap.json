@@ -100,22 +100,19 @@
               "version": "0.1",
               "endpoints": [
                 {
-                  "methods": [
-                    "POST"
-                  ],
+                  "methods": [ "POST" ],
                   "pathPattern": "/bar/entities",
-                  "permissionsRequired": [
-                    "item.post"
-                  ]
+                  "permissionsRequired": ["item.post"]
                 },
                 {
-                  "methods": [
-                    "GET"
-                  ],
+                  "methods": [ "GET" ],
+                  "pathPattern": "/bar/entities",
+                  "permissionsRequired": ["collection.get"]
+                },
+                {
+                  "methods": [ "GET" ],
                   "pathPattern": "/bar/no-module-id-header",
-                  "permissionsRequired": [
-                    "bar.no-module-id-header.get"
-                  ]
+                  "permissionsRequired": ["bar.no-module-id-header.get"]
                 }
               ]
             }

@@ -67,7 +67,7 @@ public class RequestFilterService {
         {}
         ********** Context Data **************
         {}
-        """, () -> dumpHeaders(rc), () -> dumpContextData(rc));
+        """, dumpHeaders(rc), dumpContextData(rc));
     };
   }
 

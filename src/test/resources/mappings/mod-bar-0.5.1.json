@@ -1,6 +1,75 @@
 {
   "mappings": [
     {
+      "priority": 1,
+      "request": {
+        "method": "GET",
+        "url": "/bar/entities?query=id%3D%3Df150770c-fd7c-4a3b-97b3-4e1fc51c29b3&limit=1",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/bar"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "totalRecords": 1,
+          "entities": [
+            {
+              "id": "f150770c-fd7c-4a3b-97b3-4e1fc51c29b3",
+              "name": "entity (by query)",
+              "description": "An entity description"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/bar/entities",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/bar"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "totalRecords": 1,
+          "entities": [
+            {
+              "id": "d747fc05-736e-494f-9b25-205c90d9d79a",
+              "name": "entity",
+              "description": "An entity description"
+            }
+          ]
+        }
+      }
+    },
+    {
       "request": {
         "method": "POST",
         "urlPath": "/bar/entities",

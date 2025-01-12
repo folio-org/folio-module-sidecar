@@ -116,7 +116,7 @@ class ForwardEgressTlsIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
-      .get("/bar/entities")
+      .delete("/bar/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
@@ -127,7 +127,7 @@ class ForwardEgressTlsIT {
         "total_records", is(1),
         "errors[0].type", is("NotFoundException"),
         "errors[0].code", is("route_not_found_error"),
-        "errors[0].message", is("Route is not found [method: GET, path: /bar/entities]")
+        "errors[0].message", is("Route is not found [method: DELETE, path: /bar/entities]")
       );
   }
 
@@ -149,6 +149,52 @@ class ForwardEgressTlsIT {
         "id", is("d747fc05-736e-494f-9b25-205c90d9d79a"),
         "name", is("entity"),
         "description", is("An entity description")
+      );
+  }
+
+  @Test
+  void handleEgressRequest_positive_listOfEntities() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .get("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is("d747fc05-736e-494f-9b25-205c90d9d79a"),
+        "entities[0].name", is("entity"),
+        "entities[0].description", is("An entity description")
+      );
+  }
+
+  @Test
+  void handleEgressRequest_positive_listOfEntitiesWithQuery() {
+    var id = "f150770c-fd7c-4a3b-97b3-4e1fc51c29b3";
+
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .get("/bar/entities?query=id=={id}&limit={limit}", id, 1)
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "totalRecords", is(1),
+        "entities[0].id", is(id),
+        "entities[0].name", is("entity (by query)"),
+        "entities[0].description", is("An entity description")
       );
   }
 }

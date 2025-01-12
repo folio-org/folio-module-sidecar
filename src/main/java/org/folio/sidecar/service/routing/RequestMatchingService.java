@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.routing;
 
 import static org.folio.sidecar.model.ScRoutingEntry.gatewayRoutingEntry;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
@@ -62,8 +63,7 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForIngressRequest(RoutingContext rc) {
     var request = rc.request();
-    log.debug("Searching routing entries for ingress request: method [{}], path [{}]",
-      request.method(), request.path());
+    log.debug("Searching routing entries for ingress request: method [{}], uri [{}]", request::method, dumpUri(rc));
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, ingressRequestCache, false);
@@ -84,8 +84,8 @@ public class RequestMatchingService {
    */
   public Optional<ScRoutingEntry> lookupForEgressRequest(RoutingContext rc) {
     var request = rc.request();
-    log.debug("Searching routing entries for egress request: method [{}], path [{}]",
-      request.method(), request.path());
+    log.debug("Searching routing entries for egress request: method [{}], uri [{}]",
+      request::method, dumpUri(rc));
 
     var path = pathProcessor.cleanIngressRequestPath(rc.request().path());
     var entry = lookup(request, path, egressRequestCache, true);

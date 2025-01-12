@@ -25,6 +25,7 @@ public class TransactionLogHandler {
     ThreadContext.put("remote-user", request.getHeader("X-Remote-User"));
     ThreadContext.put("method", String.valueOf(request.method()));
     ThreadContext.put("path", request.path());
+    ThreadContext.put("uri", request.uri());
     ThreadContext.put("protocol", String.valueOf(request.version()));
     ThreadContext.put("status", String.valueOf(resp.statusCode()));
     var bytes = String.valueOf(resp.body() == null ? 0 : resp.body().getBytes().length);
@@ -37,7 +38,12 @@ public class TransactionLogHandler {
     ThreadContext.put("uct", calculateValue(rc, end, "uct"));
     ThreadContext.put("uht", calculateValue(rc, end, "uht"));
     ThreadContext.put("urt", calculateValue(rc, end, "urt"));
-    log.info("");
+
+    try {
+      log.info("");
+    } finally {
+      ThreadContext.clearMap();
+    }
   }
 
   private String calculateValue(RoutingContext rc, long end, String name) {
