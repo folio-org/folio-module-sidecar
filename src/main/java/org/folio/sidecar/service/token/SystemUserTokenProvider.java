@@ -131,11 +131,5 @@ public class SystemUserTokenProvider {
       log.info("Invalidating system users tokens for tenants: tenants = {}", toInvalidate);
       tokenCache.synchronous().invalidateAll(toInvalidate);
     }
-
-    if (isNotEmpty(tenants)) {
-      var toLoad = tenants.stream().filter(t -> !cachedTenants.contains(t)).toList();
-      log.info("Retrieving system users tokens for tenants: tenants = {}", toLoad);
-      tokenCache.getAll(toLoad);
-    }
   }
 }
