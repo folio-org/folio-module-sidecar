@@ -260,6 +260,16 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-opentelemetry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-opentelemetry-exporter-otlp</artifactId>
+      <version>3.12.3</version>
+    </dependency>
+
   </dependencies>
 
   <build>

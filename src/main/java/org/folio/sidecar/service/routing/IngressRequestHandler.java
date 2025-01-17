@@ -2,6 +2,7 @@ package org.folio.sidecar.service.routing;
 
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class IngressRequestHandler implements RequestHandler {
    * @param routingContext - routing context to handle
    */
   @Override
+  @WithSpan
   public void handle(RoutingContext routingContext, ScRoutingEntry scRoutingEntry) {
     var rq = routingContext.request();
     log.info("Handling ingress request [method: {}, uri: {}]", rq::method, dumpUri(routingContext));
