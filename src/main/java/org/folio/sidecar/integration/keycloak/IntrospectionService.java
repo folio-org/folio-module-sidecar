@@ -13,6 +13,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -38,6 +39,7 @@ public class IntrospectionService implements CacheInvalidatable {
   private final AsyncSecureStore secureStore;
   private final Cache<String, TokenIntrospectionResponse> tokenCache;
 
+  @WithSpan
   public Future<RoutingContext> checkActiveToken(RoutingContext ctx) {
     return introspectToken(ctx)
       .map(TokenIntrospectionResponse::isActive)

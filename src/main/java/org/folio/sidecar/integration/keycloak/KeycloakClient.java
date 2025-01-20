@@ -7,6 +7,7 @@ import static org.folio.sidecar.utils.TokenRequestHelper.preparePasswordRequestB
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareRefreshRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareRptRequestBody;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;

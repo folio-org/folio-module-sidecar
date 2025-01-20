@@ -12,6 +12,7 @@ import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
@@ -30,6 +31,7 @@ public class KeycloakTenantFilter implements IngressRequestFilter {
 
   private final SidecarProperties sidecarProperties;
 
+  @WithSpan
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
     var resolvedTenants = resolveTokenTenants(rc);

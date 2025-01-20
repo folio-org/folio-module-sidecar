@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -68,6 +69,7 @@ public class RequestForwardingService {
    * @param rc - {@link RoutingContext} object to forward request
    * @param absUri - absolute uri as {@link String} object
    */
+  @WithSpan
   @SneakyThrows
   public void forwardIngress(RoutingContext rc, String absUri) {
     forwardRequest(rc, absUri, webClient);
@@ -79,6 +81,7 @@ public class RequestForwardingService {
    * @param rc - {@link RoutingContext} object to forward request
    * @param absUri - absolute uri as {@link String} object
    */
+  @WithSpan
   @SneakyThrows
   public void forwardEgress(RoutingContext rc, String absUri) {
     if (webClientConfig.egress().tls().enabled()) {

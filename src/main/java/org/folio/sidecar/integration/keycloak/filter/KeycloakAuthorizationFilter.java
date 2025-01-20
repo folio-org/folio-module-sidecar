@@ -20,6 +20,7 @@ import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
@@ -57,6 +58,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
    * @return succeeded {@link Future} if access is granted.
    */
   @Override
+  @WithSpan
   public Future<RoutingContext> filter(RoutingContext routingContext) {
     var permission = resolvePermission(routingContext);
     routingContext.put(KC_PERMISSION_NAME, permission);
@@ -84,6 +86,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   }
 
   @Override
+  @WithSpan
   public void invalidate(LogoutEvent event) {
     authTokenCache.asMap().entrySet().removeIf(entry -> shouldRemove(event, entry));
   }

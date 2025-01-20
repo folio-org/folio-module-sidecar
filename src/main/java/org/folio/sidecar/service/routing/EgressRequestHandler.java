@@ -9,6 +9,7 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
 import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -42,6 +43,7 @@ public class EgressRequestHandler implements RequestHandler {
    * @param rc - {@link RoutingContext} object to handle
    */
   @Override
+  @WithSpan
   public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
     log.info("Handling egress request [method: {}, uri: {}]", rq::method, dumpUri(rc));

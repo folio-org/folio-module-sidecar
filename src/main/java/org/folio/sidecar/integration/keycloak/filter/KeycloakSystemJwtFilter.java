@@ -7,6 +7,7 @@ import static org.folio.sidecar.utils.RoutingUtils.hasSystemAccessToken;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedSystemToken;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
@@ -32,6 +33,7 @@ public class KeycloakSystemJwtFilter implements IngressRequestFilter {
    * @param rc - {@link RoutingContext} object to filter
    * @return {@link Future} of {@link RoutingContext} object
    */
+  @WithSpan
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
     return getSystemToken(rc)

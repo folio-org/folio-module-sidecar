@@ -4,6 +4,7 @@ import static org.folio.sidecar.service.filter.IngressFilterOrder.SELF_REQUEST;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,6 +19,7 @@ public class SelfRequestFilter implements IngressRequestFilter {
 
   private final SidecarSignatureService sidecarSignatureService;
 
+  @WithSpan
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
     var selfRequest = sidecarSignatureService.isSelfRequest(rc);

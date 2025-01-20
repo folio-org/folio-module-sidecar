@@ -3,6 +3,7 @@ package org.folio.sidecar.service.routing;
 import static org.folio.sidecar.model.ScRoutingEntry.gatewayRoutingEntry;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -61,6 +62,7 @@ public class RequestMatchingService {
    * @return {@link Optional} of {@link ScRoutingEntry} for ingress request, it will be empty if request cannot be
    *   classified as ingress request
    */
+  @WithSpan
   public Optional<ScRoutingEntry> lookupForIngressRequest(RoutingContext rc) {
     var request = rc.request();
     log.debug("Searching routing entries for ingress request: method [{}], uri [{}]", request::method, dumpUri(rc));
@@ -82,6 +84,7 @@ public class RequestMatchingService {
    * @return {@link Optional} of {@link ScRoutingEntry} for egress request, it will be empty if request cannot be
    *   classified as egress request
    */
+  @WithSpan
   public Optional<ScRoutingEntry> lookupForEgressRequest(RoutingContext rc) {
     var request = rc.request();
     log.debug("Searching routing entries for egress request: method [{}], uri [{}]",

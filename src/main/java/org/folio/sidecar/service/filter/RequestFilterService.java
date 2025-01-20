@@ -5,6 +5,7 @@ import static org.folio.sidecar.utils.CollectionUtils.sortByOrder;
 import static org.folio.sidecar.utils.RoutingUtils.dumpContextData;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
@@ -33,10 +34,12 @@ public class RequestFilterService {
     this.tracingOnError = tracingOnError;
   }
 
+  @WithSpan
   public Future<RoutingContext> filterIngressRequest(RoutingContext routingContext) {
     return applyFilterChain(routingContext, ingressRequestFilters);
   }
 
+  @WithSpan
   public Future<RoutingContext> filterEgressRequest(RoutingContext routingContext) {
     return applyFilterChain(routingContext, egressRequestFilters);
   }

@@ -19,6 +19,7 @@ import static org.folio.sidecar.utils.RoutingUtils.putOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
@@ -50,6 +51,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
    * @param rc - {@link RoutingContext} routing context
    * @return {@link Future} of {@link RoutingContext} object
    */
+  @WithSpan
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
     var future = getParsedSystemToken(rc).isPresent()

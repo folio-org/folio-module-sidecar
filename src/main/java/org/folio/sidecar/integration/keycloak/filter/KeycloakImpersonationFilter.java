@@ -13,6 +13,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
@@ -38,6 +39,7 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
   private final IntrospectionService introspectionService;
 
   @Override
+  @WithSpan
   public Future<RoutingContext> filter(RoutingContext routingContext) {
     var token = getParsedToken(routingContext);
     if (token.isEmpty()) {

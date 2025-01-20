@@ -6,6 +6,7 @@ import static org.folio.sidecar.service.filter.IngressFilterOrder.TENANT;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTenantInstallRequest;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -23,6 +24,7 @@ public class TenantFilter implements IngressRequestFilter {
   private final TenantService tenantService;
 
   @Override
+  @WithSpan
   public Future<RoutingContext> filter(RoutingContext rc) {
     var tenant = rc.request().headers().get(OkapiHeaders.TENANT);
     return tenantService.isEnabledTenant(tenant)

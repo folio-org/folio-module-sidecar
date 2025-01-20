@@ -9,6 +9,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getUserIdHeader;
 import static org.folio.sidecar.utils.RoutingUtils.hasPermissionsDesired;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
@@ -31,6 +32,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
   }
 
   @Override
+  @WithSpan
   public Future<RoutingContext> filter(RoutingContext rc) {
     rc.request().headers().remove(PERMISSIONS);
     var userIdHeader = getUserIdHeader(rc);

@@ -1,6 +1,7 @@
 package org.folio.sidecar.integration.keycloak;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -26,18 +27,22 @@ public class KeycloakService {
   private final KeycloakClient keycloakClient;
   private final ErrorHandler errorHandler;
 
+  @WithSpan
   public Future<TokenResponse> obtainUserToken(String realm, ClientCredentials client, UserCredentials user) {
     return obtainToken(() -> keycloakClient.obtainUserToken(realm, client, user));
   }
 
+  @WithSpan
   public Future<TokenResponse> refreshUserToken(String realm, ClientCredentials client, String refreshToken) {
     return obtainToken(() -> keycloakClient.refreshUserToken(realm, client, refreshToken));
   }
 
+  @WithSpan
   public Future<TokenResponse> obtainToken(String realm, ClientCredentials client) {
     return obtainToken(() -> keycloakClient.obtainToken(realm, client));
   }
 
+  @WithSpan
   public Future<TokenResponse> obtainToken(String realm, ClientCredentials client, RoutingContext rc) {
     return obtainToken(() -> keycloakClient.obtainToken(realm, client),
       authError -> errorHandler.sendErrorResponse(rc, authError),
