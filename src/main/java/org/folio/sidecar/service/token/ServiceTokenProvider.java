@@ -10,7 +10,6 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.mutiny.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
@@ -33,16 +32,14 @@ public class ServiceTokenProvider {
   private final AsyncSecureStore secureStore;
   private final KeycloakProperties properties;
   private final AsyncLoadingCache<String, TokenResponse> tokenCache;
-  private final Vertx vertx;
 
   @Inject
   ServiceTokenProvider(KeycloakService keycloakService, KeycloakProperties properties,
-                       AsyncSecureStore secureStore, AsyncTokenCacheFactory cacheFactory, Vertx vertx) {
+                       AsyncSecureStore secureStore, AsyncTokenCacheFactory cacheFactory) {
     this.keycloakService = keycloakService;
     this.properties = properties;
     this.secureStore = secureStore;
     this.tokenCache = cacheFactory.createCache(this::retrieveToken);
-    this.vertx = vertx;
   }
 
   @SuppressWarnings("unused")
