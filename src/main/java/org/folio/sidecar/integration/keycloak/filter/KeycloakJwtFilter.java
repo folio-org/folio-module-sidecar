@@ -129,7 +129,6 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
    * @return {@link Future} of {@link RoutingContext} object
    */
   private static Future<RoutingContext> handleFailedTokenParsing(RoutingContext rc, Throwable error) {
-    log.error("Token parsing failed", error);
     if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())
       || isSelfRequest(rc) && !hasToken(rc)
       // If system token is present, then we should not fail the request
