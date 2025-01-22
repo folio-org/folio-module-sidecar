@@ -35,7 +35,7 @@ public class ServiceTokenProvider {
 
   @Inject
   ServiceTokenProvider(KeycloakService keycloakService, KeycloakProperties properties,
-    AsyncSecureStore secureStore, AsyncTokenCacheFactory cacheFactory) {
+                       AsyncSecureStore secureStore, AsyncTokenCacheFactory cacheFactory) {
     this.keycloakService = keycloakService;
     this.properties = properties;
     this.secureStore = secureStore;
