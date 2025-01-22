@@ -1,5 +1,7 @@
 package org.folio.sidecar.service;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
@@ -67,6 +69,9 @@ public class TenantService {
   }
 
   public boolean isEnabledTenant(String name) {
+    if (isEmpty(name)) {
+      return false;
+    }
     return enabledTenants.contains(name);
   }
 
