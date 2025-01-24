@@ -10,7 +10,6 @@ import static org.folio.sidecar.utils.JwtUtils.getSessionIdClaim;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
-import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.UnauthorizedException;
@@ -22,20 +21,17 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
-import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.service.CacheInvalidatable;
-import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.integration.cred.CredentialService;
 
 @Log4j2
 @ApplicationScoped
 @RequiredArgsConstructor
 public class IntrospectionService implements CacheInvalidatable {
 
-  private final KeycloakProperties properties;
   private final KeycloakClient keycloakClient;
-  private final AsyncSecureStore secureStore;
+  private final CredentialService credentialService;
   private final Cache<String, TokenIntrospectionResponse> tokenCache;
 
   public Future<RoutingContext> checkActiveToken(RoutingContext ctx) {
@@ -71,9 +67,7 @@ public class IntrospectionService implements CacheInvalidatable {
     }
 
     var token = ctx.request().getHeader(TOKEN);
-    var clientId = tenant + properties.getLoginClientSuffix();
-    return secureStore.get(tenantStoreKey(tenant, clientId))
-      .map(clientSecret -> ClientCredentials.of(clientId, clientSecret))
+    return credentialService.getLoginClientCredentials(tenant)
       .flatMap(client -> keycloakClient.introspectToken(tenant, client, token))
       .flatMap(response -> handelAndCacheResponse(response, key));
   }

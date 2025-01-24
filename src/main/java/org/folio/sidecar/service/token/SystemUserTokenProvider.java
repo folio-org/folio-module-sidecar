@@ -16,11 +16,12 @@ import jakarta.inject.Inject;
 import java.util.Set;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
-import org.folio.sidecar.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
-import org.folio.sidecar.model.UserCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2

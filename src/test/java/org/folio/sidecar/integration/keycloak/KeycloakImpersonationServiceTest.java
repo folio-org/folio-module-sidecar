@@ -20,8 +20,8 @@ import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.model.ClientCredentials;
-import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
 import org.folio.sidecar.service.token.TokenCacheFactory;
 import org.folio.sidecar.utils.SecureStoreUtils;
 import org.folio.support.types.UnitTest;
@@ -75,7 +75,7 @@ class KeycloakImpersonationServiceTest {
     var creds = ClientCredentials.of(IMPERSONATION_CLIENT, clientSecret);
 
     when(tokenCache.getIfPresent(key(tenant, USER_ID))).thenReturn(null);
-    when(properties.getImpersonationClient()).thenReturn(IMPERSONATION_CLIENT);
+    when(properties.getImpersonationClientId()).thenReturn(IMPERSONATION_CLIENT);
     when(secureStore.get(secretStoreKey)).thenReturn(succeededFuture(clientSecret));
     when(keycloakClient.impersonateUserToken(tenant, creds, username)).thenReturn(succeededFuture(tokenResponse));
     when(tokenResponse.bodyAsJson(TokenResponse.class)).thenReturn(token);
@@ -98,7 +98,7 @@ class KeycloakImpersonationServiceTest {
     var creds = ClientCredentials.of(IMPERSONATION_CLIENT, clientSecret);
 
     when(tokenCache.getIfPresent(key)).thenReturn(null);
-    when(properties.getImpersonationClient()).thenReturn(IMPERSONATION_CLIENT);
+    when(properties.getImpersonationClientId()).thenReturn(IMPERSONATION_CLIENT);
     when(secureStore.get(secretStoreKey)).thenReturn(succeededFuture(clientSecret));
     when(keycloakClient.impersonateUserToken(tenant, creds, username)).thenReturn(succeededFuture(tokenResponse));
     when(tokenResponse.statusCode()).thenReturn(404);

@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.token;
+package org.folio.sidecar.integration.cred;
 
 import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
 
@@ -11,9 +11,9 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
-import org.folio.sidecar.model.ClientCredentials;
-import org.folio.sidecar.model.UserCredentials;
-import org.folio.sidecar.service.store.AsyncSecureStore;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
+import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
 import org.folio.sidecar.utils.SecureStoreUtils;
 
 @Log4j2
@@ -51,6 +51,15 @@ public class CredentialService {
       creds -> log.info("Login client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant));
   }
 
+  public Future<ClientCredentials> getImpersonationClientCredentials(String tenant) {
+    log.info("Retrieving impersonation client credentials: tenant = {}", tenant);
+
+    return clientCredentials(properties::getImpersonationClientId,
+      clientId -> tenantStoreKey(tenant, clientId),
+      creds -> log.info("Impersonation client credentials obtained: clientId = {}, tenant = {}",
+        creds.getClientId(), tenant));
+  }
+
   public Future<UserCredentials> getUserCredentials(String tenant, String username) {
     log.info("Retrieving user credentials: tenant = {}, username = {}", tenant, username);
 
@@ -59,7 +68,8 @@ public class CredentialService {
     return getCredsFromCacheOrSecureStore(
       userCredentialsCache, key,
       secret -> UserCredentials.of(username, secret)
-    ).onSuccess(creds -> log.info("User credentials obtained: username = {}, tenant = {}", creds.getUsername(), tenant));
+    ).onSuccess(creds -> log.info("User credentials obtained: username = {}, tenant = {}",
+      creds.getUsername(), tenant));
   }
 
   private Future<ClientCredentials> clientCredentials(Supplier<String> clientIdSupplier,

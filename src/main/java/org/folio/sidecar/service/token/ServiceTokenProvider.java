@@ -15,6 +15,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.EntitlementsEvent;

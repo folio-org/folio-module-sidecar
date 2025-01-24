@@ -15,8 +15,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
-import org.folio.sidecar.model.ClientCredentials;
-import org.folio.sidecar.model.UserCredentials;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 
 @Log4j2
 @ApplicationScoped
