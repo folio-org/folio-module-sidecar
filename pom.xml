@@ -22,7 +22,7 @@
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.17.7</quarkus.platform.version>
+    <quarkus.platform.version>3.17.8</quarkus.platform.version>
     <applications-poc-tools.version>2.1.0</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.0.7</bcpkix-fips.version>
