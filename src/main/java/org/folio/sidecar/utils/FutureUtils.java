@@ -28,4 +28,12 @@ public class FutureUtils {
       return onFailure.apply(e);
     }
   }
+
+  @SuppressWarnings("unchecked")
+  public static <T, E extends Exception> Function<Throwable, Future<T>> tryRecoverFrom(Class<E> excClass,
+    Function<E, Future<T>> excHandler) {
+    return throwable -> excClass.isInstance(throwable)
+      ? excHandler.apply((E) throwable)
+      : Future.failedFuture(throwable);
+  }
 }

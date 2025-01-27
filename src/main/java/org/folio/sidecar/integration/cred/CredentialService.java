@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.cred;
 
+import static org.folio.sidecar.utils.SecureStoreUtils.globalStoreKey;
 import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -34,6 +35,10 @@ public class CredentialService {
       creds -> log.info("Admin client credentials obtained: clientId = {}", creds.getClientId()));
   }
 
+  public void resetAdminClientCredentials() {
+    clientCredentialsCache.invalidate(globalStoreKey(properties.getAdminClientId()));
+  }
+
   public Future<ClientCredentials> getServiceClientCredentials(String tenant) {
     log.info("Retrieving service client credentials: tenant = {}", tenant);
 
@@ -41,6 +46,10 @@ public class CredentialService {
       clientId -> tenantStoreKey(tenant, clientId),
       creds -> log.info("Service client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant)
     );
+  }
+
+  public void resetServiceClientCredentials(String tenant) {
+    clientCredentialsCache.invalidate(tenantStoreKey(tenant, properties.getServiceClientId()));
   }
 
   public Future<ClientCredentials> getLoginClientCredentials(String tenant) {
@@ -51,6 +60,10 @@ public class CredentialService {
       creds -> log.info("Login client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant));
   }
 
+  public void resetLoginClientCredentials(String tenant) {
+    clientCredentialsCache.invalidate(tenantStoreKey(tenant, tenant + properties.getLoginClientSuffix()));
+  }
+
   public Future<ClientCredentials> getImpersonationClientCredentials(String tenant) {
     log.info("Retrieving impersonation client credentials: tenant = {}", tenant);
 
@@ -58,6 +71,10 @@ public class CredentialService {
       clientId -> tenantStoreKey(tenant, clientId),
       creds -> log.info("Impersonation client credentials obtained: clientId = {}, tenant = {}",
         creds.getClientId(), tenant));
+  }
+
+  public void resetImpersonationClientCredentials(String tenant) {
+    clientCredentialsCache.invalidate(tenantStoreKey(tenant, properties.getImpersonationClientId()));
   }
 
   public Future<UserCredentials> getUserCredentials(String tenant, String username) {
@@ -70,6 +87,10 @@ public class CredentialService {
       secret -> UserCredentials.of(username, secret)
     ).onSuccess(creds -> log.info("User credentials obtained: username = {}, tenant = {}",
       creds.getUsername(), tenant));
+  }
+
+  public void resetUserCredentials(String tenant, String username) {
+    userCredentialsCache.invalidate(tenantStoreKey(tenant, username));
   }
 
   private Future<ClientCredentials> clientCredentials(Supplier<String> clientIdSupplier,

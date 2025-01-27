@@ -4,24 +4,27 @@ import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
+import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import io.quarkus.security.UnauthorizedException;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
+import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.cred.CredentialService;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
-import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
-import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
@@ -71,8 +74,9 @@ public class SystemUserTokenProvider {
 
   private TokenResponse retrieveToken(String tenant) {
     var username = moduleProperties.getName();
-    var tokenFuture = credentialService.getUserCredentials(tenant, username)
-      .compose(user -> obtainToken(tenant, user, username));
+
+    var tokenFuture = obtainToken(tenant, username)
+      .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant, username)));
 
     return executeAndGet(tokenFuture, throwable -> {
       log.warn("Failed to obtain system user token: message = {}", throwable.getMessage(), throwable);
@@ -80,9 +84,13 @@ public class SystemUserTokenProvider {
     });
   }
 
-  private Future<TokenResponse> obtainToken(String tenant, UserCredentials user, String username) {
-    return credentialService.getLoginClientCredentials(tenant)
-      .compose(client -> authUser(tenant, user, username, client))
+  private Future<TokenResponse> obtainToken(String tenant, String username) {
+    var compositeCreds = Future.all(
+      credentialService.getUserCredentials(tenant, username),
+      credentialService.getLoginClientCredentials(tenant));
+
+    return compositeCreds
+      .compose(creds -> authUser(tenant, creds.resultAt(0), creds.resultAt(1)))
       .map(tokenResponse -> {
         log.debug("System user token obtained: token = {}, tenant = {}",
           () -> tokenResponseAsString(tokenResponse), () -> tenant);
@@ -90,9 +98,21 @@ public class SystemUserTokenProvider {
       });
   }
 
-  private Future<TokenResponse> authUser(String tenant, UserCredentials user, String username,
-    ClientCredentials client) {
-    log.info("Authenticating system user: user = {}, tenant = {}", username, tenant);
+  private Function<UnauthorizedException, Future<TokenResponse>> resetCredentialsAndObtainToken(String tenant,
+    String username) {
+    return exc -> {
+      log.debug("Recovering from Unauthorized exception by resetting user / login credentials and retrying: " +
+        "tenant = {}, username = {}", tenant, username);
+
+      credentialService.resetUserCredentials(tenant, username);
+      credentialService.resetLoginClientCredentials(tenant);
+
+      return obtainToken(tenant, username);
+    };
+  }
+
+  private Future<TokenResponse> authUser(String tenant, UserCredentials user, ClientCredentials client) {
+    log.info("Authenticating system user: user = {}, tenant = {}", user.getUsername(), tenant);
     return keycloakService.obtainUserToken(tenant, client, user);
   }
 

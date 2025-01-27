@@ -4,16 +4,19 @@ import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
+import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import io.quarkus.security.UnauthorizedException;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
+import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
@@ -84,21 +87,42 @@ public class ServiceTokenProvider {
   }
 
   private TokenResponse retrieveToken(String tenant) {
-    var cred = SUPER_TENANT.equalsIgnoreCase(tenant)
-      ? credentialService.getAdminClientCredentials()
-      : credentialService.getServiceClientCredentials(tenant);
-
-    var tokenFuture = cred.compose(credentials -> keycloakService.obtainToken(tenant, credentials))
-      .map(tokenResponse -> {
-        log.debug("Service token obtained: token = {}, tenant = {}",
-          () -> tokenResponseAsString(tokenResponse), () -> tenant);
-        return tokenResponse;
-      });
+    var tokenFuture = obtainToken(tenant)
+      .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant)));
 
     return executeAndGet(tokenFuture, throwable -> {
       log.warn("Failed to obtain service token: message = {}", throwable.getMessage(), throwable);
       return null;
     });
+  }
+
+  private Future<TokenResponse> obtainToken(String tenant) {
+    var cred = SUPER_TENANT.equalsIgnoreCase(tenant)
+      ? credentialService.getAdminClientCredentials()
+      : credentialService.getServiceClientCredentials(tenant);
+
+    return cred
+      .compose(credentials -> keycloakService.obtainToken(tenant, credentials))
+      .map(tokenResponse -> {
+        log.debug("Service token obtained: token = {}, tenant = {}",
+          () -> tokenResponseAsString(tokenResponse), () -> tenant);
+        return tokenResponse;
+      });
+  }
+
+  private Function<UnauthorizedException, Future<TokenResponse>> resetCredentialsAndObtainToken(String tenant) {
+    return exc -> {
+      log.debug("Recovering from Unauthorized exception by resetting service client credentials and retrying: " +
+        "tenant = {}", tenant);
+
+      if (SUPER_TENANT.equalsIgnoreCase(tenant)) {
+        credentialService.resetAdminClientCredentials();
+      } else {
+        credentialService.resetServiceClientCredentials(tenant);
+      }
+
+      return obtainToken(tenant);
+    };
   }
 
   private void syncTenantCache(Set<String> tenants) {
