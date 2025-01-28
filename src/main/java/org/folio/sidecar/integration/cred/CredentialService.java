@@ -11,10 +11,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
+import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.utils.SecureStoreUtils;
 
 @Log4j2

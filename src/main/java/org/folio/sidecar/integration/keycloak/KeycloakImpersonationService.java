@@ -58,8 +58,8 @@ public class KeycloakImpersonationService implements CacheInvalidatable {
   private Function<ClientErrorException, Future<TokenResponse>> resetCredentialsAndImpersonateUser(String tenant,
     User user, String cacheKey) {
     return exc -> {
-      log.debug("Recovering from impersonation exception by resetting impersonation client credentials and retrying: " +
-        "tenant = {}, username = {}", tenant, user.getUsername());
+      log.debug("Recovering from impersonation exception by resetting impersonation client credentials and retrying: "
+        + "tenant = {}, username = {}", tenant, user.getUsername());
 
       credentialService.resetImpersonationClientCredentials(tenant);
 

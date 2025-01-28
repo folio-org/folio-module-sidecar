@@ -16,14 +16,12 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.folio.sidecar.integration.cred.CredentialService;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.integration.users.model.User;
-import org.folio.sidecar.integration.cred.model.ClientCredentials;
-import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
 import org.folio.sidecar.service.token.TokenCacheFactory;
-import org.folio.sidecar.utils.SecureStoreUtils;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,16 +38,15 @@ class KeycloakImpersonationServiceTest {
   private KeycloakImpersonationService service;
 
   @Mock private KeycloakClient keycloakClient;
-  @Mock private AsyncSecureStore secureStore;
+  @Mock private CredentialService credentialService;
   @Mock private Cache<String, TokenResponse> tokenCache;
-  @Mock private KeycloakProperties properties;
   @Mock private TokenCacheFactory cacheFactory;
   @Mock private HttpResponse<Buffer> tokenResponse;
 
   @BeforeEach
   void setup() {
     when(cacheFactory.createCache()).thenReturn(tokenCache);
-    service = new KeycloakImpersonationService(keycloakClient, secureStore, cacheFactory, properties);
+    service = new KeycloakImpersonationService(keycloakClient, credentialService, cacheFactory);
   }
 
   @Test
@@ -62,7 +59,7 @@ class KeycloakImpersonationServiceTest {
 
     assertThat(feature.succeeded()).isTrue();
     verifyNoMoreInteractions(tokenCache);
-    verifyNoInteractions(keycloakClient, secureStore, properties);
+    verifyNoInteractions(keycloakClient, credentialService);
   }
 
   @Test
@@ -70,13 +67,11 @@ class KeycloakImpersonationServiceTest {
     var token = new TokenResponse();
     var tenant = "tenant";
     var username = "username";
-    var secretStoreKey = SecureStoreUtils.tenantStoreKey(tenant, IMPERSONATION_CLIENT);
     var clientSecret = "client_secret";
     var creds = ClientCredentials.of(IMPERSONATION_CLIENT, clientSecret);
 
     when(tokenCache.getIfPresent(key(tenant, USER_ID))).thenReturn(null);
-    when(properties.getImpersonationClientId()).thenReturn(IMPERSONATION_CLIENT);
-    when(secureStore.get(secretStoreKey)).thenReturn(succeededFuture(clientSecret));
+    when(credentialService.getImpersonationClientCredentials(tenant)).thenReturn(succeededFuture(creds));
     when(keycloakClient.impersonateUserToken(tenant, creds, username)).thenReturn(succeededFuture(tokenResponse));
     when(tokenResponse.bodyAsJson(TokenResponse.class)).thenReturn(token);
     when(tokenResponse.statusCode()).thenReturn(200);
@@ -93,13 +88,11 @@ class KeycloakImpersonationServiceTest {
     var tenant = "tenant";
     var username = "username";
     var key = tenant + ":" + USER_ID;
-    var secretStoreKey = SecureStoreUtils.tenantStoreKey(tenant, IMPERSONATION_CLIENT);
     var clientSecret = "client_secret";
     var creds = ClientCredentials.of(IMPERSONATION_CLIENT, clientSecret);
 
     when(tokenCache.getIfPresent(key)).thenReturn(null);
-    when(properties.getImpersonationClientId()).thenReturn(IMPERSONATION_CLIENT);
-    when(secureStore.get(secretStoreKey)).thenReturn(succeededFuture(clientSecret));
+    when(credentialService.getImpersonationClientCredentials(tenant)).thenReturn(succeededFuture(creds));
     when(keycloakClient.impersonateUserToken(tenant, creds, username)).thenReturn(succeededFuture(tokenResponse));
     when(tokenResponse.statusCode()).thenReturn(404);
 

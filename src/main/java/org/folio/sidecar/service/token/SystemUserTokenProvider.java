@@ -101,8 +101,8 @@ public class SystemUserTokenProvider {
   private Function<UnauthorizedException, Future<TokenResponse>> resetCredentialsAndObtainToken(String tenant,
     String username) {
     return exc -> {
-      log.debug("Recovering from Unauthorized exception by resetting user / login credentials and retrying: " +
-        "tenant = {}, username = {}", tenant, username);
+      log.debug("Recovering from Unauthorized exception by resetting user / login credentials and retrying: "
+        + "tenant = {}, username = {}", tenant, username);
 
       credentialService.resetUserCredentials(tenant, username);
       credentialService.resetLoginClientCredentials(tenant);

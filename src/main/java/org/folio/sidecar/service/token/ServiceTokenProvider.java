@@ -112,8 +112,8 @@ public class ServiceTokenProvider {
 
   private Function<UnauthorizedException, Future<TokenResponse>> resetCredentialsAndObtainToken(String tenant) {
     return exc -> {
-      log.debug("Recovering from Unauthorized exception by resetting service client credentials and retrying: " +
-        "tenant = {}", tenant);
+      log.debug("Recovering from Unauthorized exception by resetting service client credentials and retrying: "
+        + "tenant = {}", tenant);
 
       if (SUPER_TENANT.equalsIgnoreCase(tenant)) {
         credentialService.resetAdminClientCredentials();

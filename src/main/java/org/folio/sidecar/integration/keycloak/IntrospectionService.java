@@ -84,8 +84,8 @@ public class IntrospectionService implements CacheInvalidatable {
   private Function<UnauthorizedException, Future<TokenIntrospectionResponse>> resetCredentialsAndIntrospectToken(
     String tenant, String token, String cacheKey) {
     return exc -> {
-      log.debug("Recovering from Unauthorized exception by resetting login credentials and retrying: " +
-        "tenant = {}, token = {}", () -> tenant, () -> tokenHash(token));
+      log.debug("Recovering from Unauthorized exception by resetting login credentials and retrying: "
+        + "tenant = {}, token = {}", () -> tenant, () -> tokenHash(token));
 
       credentialService.resetLoginClientCredentials(tenant);
 
