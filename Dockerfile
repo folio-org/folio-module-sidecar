@@ -5,14 +5,9 @@ WORKDIR /app
 USER root
 RUN apk upgrade --no-cache
 USER folio
-
-# We make four distinct layers so if there are application changes the library layers can be re-used
-COPY target/my-binary-sidecar /app/myapp
-
-# Expose this port locally in the container.
 EXPOSE 8081
 
-RUN chmod +x /app/myapp
+
 
 # Устанавливаем бинарник как точку входа
 ENTRYPOINT ["/app/myapp"]
