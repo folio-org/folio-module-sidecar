@@ -44,12 +44,12 @@ class IntrospectionServiceTest {
 
   private static final String JWT = "jwt";
 
-  @InjectMocks IntrospectionService introspectionService;
+  @InjectMocks private IntrospectionService introspectionService;
 
-  @Mock Cache<String, TokenIntrospectionResponse> tokenCache;
+  @Mock private Cache<String, TokenIntrospectionResponse> tokenCache;
   @Mock private CredentialService credentialService;
-  @Mock KeycloakClient keycloakClient;
-  @Mock HttpResponse<Buffer> introspectionResponse;
+  @Mock private KeycloakClient keycloakClient;
+  @Mock private HttpResponse<Buffer> introspectionResponse;
 
   @Test
   void invalidate_positive_logoutEventType() {
