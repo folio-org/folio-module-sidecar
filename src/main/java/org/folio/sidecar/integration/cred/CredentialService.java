@@ -9,6 +9,7 @@ import io.vertx.core.Handler;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
@@ -94,7 +95,7 @@ public class CredentialService {
   }
 
   private Future<ClientCredentials> clientCredentials(Supplier<String> clientIdSupplier,
-    Function<String, String> clientIdToKeyMapper, Handler<ClientCredentials> onSuccessHandler) {
+    UnaryOperator<String> clientIdToKeyMapper, Handler<ClientCredentials> onSuccessHandler) {
     var clientId = clientIdSupplier.get();
     var key = clientIdToKeyMapper.apply(clientId);
 
