@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
@@ -141,6 +142,35 @@ class IntrospectionServiceTest {
     assertThat(routingContextFuture.succeeded()).isFalse();
     verify(tokenCache).getIfPresent(key);
     verify(keycloakClient).introspectToken("tenant", client, JWT);
+  }
+
+  @Test
+  void checkActiveToken_positive_recoveredFromOutdatedLoginCredentials() {
+    var originTenant = "tenant";
+    var ctx = routingContext("tenant", "userId", "sessionId");
+    var key = cacheKey(originTenant, "userId", "sessionId");
+    when(tokenCache.getIfPresent(key)).thenReturn(null);
+
+    var outdatedCreds = ClientCredentials.of("tenant-login", "secret-old");
+    var credentials = ClientCredentials.of("tenant-login", "secret");
+    when(credentialService.getLoginClientCredentials(originTenant))
+      .thenReturn(succeededFuture(outdatedCreds))
+      .thenReturn(succeededFuture(credentials));
+
+    var unauthorized = (HttpResponse<Buffer>) mock(HttpResponse.class);
+    when(unauthorized.statusCode()).thenReturn(HttpResponseStatus.UNAUTHORIZED.code());
+    when(unauthorized.bodyAsString()).thenReturn("Unauthorized");
+    when(introspectionResponse.statusCode()).thenReturn(200);
+    when(introspectionResponse.bodyAsJson(TokenIntrospectionResponse.class)).thenReturn(activeTokenResponse());
+
+    when(keycloakClient.introspectToken(originTenant, outdatedCreds, JWT)).thenReturn(succeededFuture(unauthorized));
+    when(keycloakClient.introspectToken(originTenant, credentials, JWT))
+      .thenReturn(succeededFuture(introspectionResponse));
+
+    var result = introspectionService.checkActiveToken(ctx);
+
+    assertThat(result.succeeded()).isTrue();
+    verify(credentialService).resetLoginClientCredentials(originTenant);
   }
 
   @Test
