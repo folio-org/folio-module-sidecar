@@ -27,10 +27,9 @@ import io.vertx.ext.web.client.HttpResponse;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
-import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -48,9 +47,8 @@ class IntrospectionServiceTest {
   @InjectMocks IntrospectionService introspectionService;
 
   @Mock Cache<String, TokenIntrospectionResponse> tokenCache;
-  @Mock AsyncSecureStore secureStore;
+  @Mock private CredentialService credentialService;
   @Mock KeycloakClient keycloakClient;
-  @Mock KeycloakProperties properties;
   @Mock HttpResponse<Buffer> introspectionResponse;
 
   @Test
@@ -113,11 +111,8 @@ class IntrospectionServiceTest {
     var ctx = routingContext("tenant", "userId", "sessionId");
     var key = cacheKey(originTenant, "userId", "sessionId");
     when(tokenCache.getIfPresent(key)).thenReturn(null);
-    var loginClientPrefix = "-login";
-    when(properties.getLoginClientSuffix()).thenReturn(loginClientPrefix);
-    var clientSecretKey = "folio_tenant_tenant-login";
-    when(secureStore.get(clientSecretKey)).thenReturn(succeededFuture("secret"));
     var client = ClientCredentials.of("tenant-login", "secret");
+    when(credentialService.getLoginClientCredentials(originTenant)).thenReturn(succeededFuture(client));
     when(keycloakClient.introspectToken(originTenant, client, JWT)).thenReturn(succeededFuture(introspectionResponse));
     when(introspectionResponse.statusCode()).thenReturn(200);
     when(introspectionResponse.bodyAsJson(TokenIntrospectionResponse.class)).thenReturn(activeTokenResponse());
@@ -126,7 +121,6 @@ class IntrospectionServiceTest {
 
     assertThat(routingContextFuture.succeeded()).isTrue();
     verify(tokenCache).getIfPresent(key);
-    verify(secureStore).get(clientSecretKey);
     verify(keycloakClient).introspectToken("tenant", client, JWT);
   }
 
@@ -136,11 +130,8 @@ class IntrospectionServiceTest {
     var ctx = routingContext("tenant", "userId", "sessionId");
     var key = cacheKey(originTenant, "userId", "sessionId");
     when(tokenCache.getIfPresent(key)).thenReturn(null);
-    var loginClientPrefix = "-login";
-    when(properties.getLoginClientSuffix()).thenReturn(loginClientPrefix);
-    var clientSecretKey = "folio_tenant_tenant-login";
-    when(secureStore.get(clientSecretKey)).thenReturn(succeededFuture("secret"));
     var client = ClientCredentials.of("tenant-login", "secret");
+    when(credentialService.getLoginClientCredentials(originTenant)).thenReturn(succeededFuture(client));
     when(keycloakClient.introspectToken(originTenant, client, JWT)).thenReturn(succeededFuture(introspectionResponse));
     when(introspectionResponse.statusCode()).thenReturn(200);
     when(introspectionResponse.bodyAsJson(TokenIntrospectionResponse.class)).thenReturn(INACTIVE_TOKEN);
@@ -149,7 +140,6 @@ class IntrospectionServiceTest {
 
     assertThat(routingContextFuture.succeeded()).isFalse();
     verify(tokenCache).getIfPresent(key);
-    verify(secureStore).get(clientSecretKey);
     verify(keycloakClient).introspectToken("tenant", client, JWT);
   }
 

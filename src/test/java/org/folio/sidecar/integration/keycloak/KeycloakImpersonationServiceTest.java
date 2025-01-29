@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT_ALL;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -101,7 +102,7 @@ class KeycloakImpersonationServiceTest {
     assertThat(future.failed()).isTrue();
     verify(tokenCache).getIfPresent(key);
     verifyNoMoreInteractions(tokenCache);
-    verify(keycloakClient).impersonateUserToken(tenant, creds, username);
+    verify(keycloakClient, times(2)).impersonateUserToken(tenant, creds, username);
   }
 
   @Test
