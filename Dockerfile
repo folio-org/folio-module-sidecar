@@ -10,4 +10,4 @@ USER folio
 EXPOSE 8081
 
 
-
+ENTRYPOINT ["/app/myapp"]
