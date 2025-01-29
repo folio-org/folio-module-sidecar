@@ -4,10 +4,10 @@ WORKDIR /app
 # Install latest patch versions of packages: https://pythonspeed.com/articles/security-updates-in-docker/
 USER root
 RUN apk upgrade --no-cache
+COPY target/my-binary-sidecar /app/myapp
+RUN chmod +x /app/myapp
 USER folio
 EXPOSE 8081
 
 
 
-# Устанавливаем бинарник как точку входа
-ENTRYPOINT ["/app/myapp"]
