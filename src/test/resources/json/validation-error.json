@@ -1,0 +1,10 @@
+{
+  "totalRecords": 1,
+  "errors": [
+    {
+      "message": "Request contains duplicate X-Okapi headers: x-okapi-tenant",
+      "type": "ValidationException",
+      "code": "validation_error"
+    }
+  ]
+}
