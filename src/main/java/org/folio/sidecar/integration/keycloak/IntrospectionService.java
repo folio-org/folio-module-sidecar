@@ -6,36 +6,36 @@ import static java.lang.String.join;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT_ALL;
 import static org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse.INACTIVE_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
+import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
 import static org.folio.sidecar.utils.JwtUtils.getSessionIdClaim;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
-import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
+import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
-import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.service.CacheInvalidatable;
-import org.folio.sidecar.service.store.AsyncSecureStore;
 
 @Log4j2
 @ApplicationScoped
 @RequiredArgsConstructor
 public class IntrospectionService implements CacheInvalidatable {
 
-  private final KeycloakProperties properties;
   private final KeycloakClient keycloakClient;
-  private final AsyncSecureStore secureStore;
+  private final CredentialService credentialService;
   private final Cache<String, TokenIntrospectionResponse> tokenCache;
 
   public Future<RoutingContext> checkActiveToken(RoutingContext ctx) {
@@ -71,16 +71,31 @@ public class IntrospectionService implements CacheInvalidatable {
     }
 
     var token = ctx.request().getHeader(TOKEN);
-    var clientId = tenant + properties.getLoginClientSuffix();
-    return secureStore.get(tenantStoreKey(tenant, clientId))
-      .map(clientSecret -> ClientCredentials.of(clientId, clientSecret))
-      .flatMap(client -> keycloakClient.introspectToken(tenant, client, token))
-      .flatMap(response -> handelAndCacheResponse(response, key));
+    return introspectToken(tenant, token, key)
+      .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndIntrospectToken(tenant, token, key)));
+  }
+
+  private Future<TokenIntrospectionResponse> introspectToken(String tenant, String token, String cacheKey) {
+    return credentialService.getLoginClientCredentials(tenant)
+      .compose(client -> keycloakClient.introspectToken(tenant, client, token))
+      .compose(response -> handelAndCacheResponse(response, cacheKey));
+  }
+
+  private Function<UnauthorizedException, Future<TokenIntrospectionResponse>> resetCredentialsAndIntrospectToken(
+    String tenant, String token, String cacheKey) {
+    return exc -> {
+      log.debug("Recovering from Unauthorized exception by resetting login credentials and retrying: "
+        + "tenant = {}, token = {}", () -> tenant, () -> tokenHash(token));
+
+      credentialService.resetLoginClientCredentials(tenant);
+
+      return introspectToken(tenant, token, cacheKey);
+    };
   }
 
   private Future<TokenIntrospectionResponse> handelAndCacheResponse(HttpResponse<Buffer> response, String key) {
     var statusCode = response.statusCode();
-    if (statusCode != 200) {
+    if (statusCode != HttpResponseStatus.OK.code()) {
       log.warn("Failed to introspect user token: response = {}, status = {}", response::bodyAsString, () -> statusCode);
       return failedFuture(new UnauthorizedException("Failed to introspect user token"));
     }

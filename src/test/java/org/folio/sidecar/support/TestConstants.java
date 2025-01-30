@@ -8,10 +8,10 @@ import lombok.NoArgsConstructor;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.AppManagerClientProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.integration.te.TenantEntitlementClientProperties;
 import org.folio.sidecar.integration.tm.TenantManagerClientProperties;
-import org.folio.sidecar.model.ClientCredentials;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TestConstants {

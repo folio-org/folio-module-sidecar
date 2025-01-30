@@ -2,8 +2,8 @@ package org.folio.sidecar.utils;
 
 import io.vertx.core.MultiMap;
 import lombok.experimental.UtilityClass;
-import org.folio.sidecar.model.ClientCredentials;
-import org.folio.sidecar.model.UserCredentials;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 
 @UtilityClass
 public class TokenRequestHelper {

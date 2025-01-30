@@ -12,6 +12,9 @@
         "bodyPatterns": [
           {
             "contains": "grant_type=password"
+          },
+          {
+            "contains": "password=supersecret"
           }
         ]
       },

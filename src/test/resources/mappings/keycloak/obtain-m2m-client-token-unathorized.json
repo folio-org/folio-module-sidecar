@@ -14,24 +14,17 @@
             "contains": "grant_type=client_credentials"
           },
           {
-            "contains": "client_secret=supersecret"
+            "contains": "client_secret=outdated_secret"
           }
         ]
       },
       "response": {
-        "status": 200,
+        "status": 401,
         "headers": {
           "Content-Type": "application/json"
         },
         "jsonBody": {
-          "access_token": "dGVzdC1hY2Nlc3MtdG9rZW4=",
-          "expires_in": 1800,
-          "refresh_expires_in": 1800,
-          "refresh_token": "dGVzdC1yZWZyZXNoLXRva2Vu",
-          "token_type": "Bearer",
-          "not-before-policy": 0,
-          "session_state": "19d1caf3-d604-4556-ba33-000bf4de176c",
-          "scope": "email profile"
+          "error": "Not authorized"
         }
       }
     }

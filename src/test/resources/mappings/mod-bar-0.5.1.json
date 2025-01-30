@@ -14,6 +14,12 @@
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Token": {
+            "matches": ".+"
+          },
+          "X-System-Token": {
+            "matches": ".+"
           }
         }
       },
@@ -48,6 +54,12 @@
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Token": {
+            "matches": ".+"
+          },
+          "X-System-Token": {
+            "matches": ".+"
           }
         }
       },
@@ -82,6 +94,12 @@
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Token": {
+            "matches": ".+"
+          },
+          "X-System-Token": {
+            "matches": ".+"
           }
         },
         "bodyPatterns": [
@@ -119,6 +137,12 @@
           },
           "X-Okapi-Request-Id": {
             "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Token": {
+            "matches": ".+"
+          },
+          "X-System-Token": {
+            "matches": ".+"
           }
         },
         "bodyPatterns": [
