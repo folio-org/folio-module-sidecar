@@ -2,3 +2,4 @@
 !Dockerfile
 !docker*
 !target/
+!src/main/resources/application.properties
