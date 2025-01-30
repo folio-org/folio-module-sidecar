@@ -5,7 +5,7 @@ WORKDIR /app
 USER root
 RUN apk upgrade --no-cache
 COPY target/my-binary-sidecar /app/myapp
-COPY src/main/resources/application.properties /app/config/
+
 RUN chmod +x /app/myapp
 USER folio
 EXPOSE 8081
