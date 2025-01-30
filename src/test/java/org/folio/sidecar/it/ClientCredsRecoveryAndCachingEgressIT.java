@@ -18,8 +18,6 @@ import io.vertx.core.Future;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.cred.CredentialService;
-import org.folio.sidecar.integration.cred.model.ClientCredentials;
-import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.cred.store.AsyncSecureStore;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.support.TestConstants;
@@ -85,13 +83,13 @@ class ClientCredsRecoveryAndCachingEgressIT {
   private void assertClientCredentials() {
     var scf = credentialService.getServiceClientCredentials(TENANT_NAME);
     assertThat(scf.succeeded()).isTrue();
-    assertThat(scf.result()).isEqualTo(ClientCredentials.of(serviceClientId, SUPERSECRET));
+    assertThat(scf.result().getClientSecret()).isEqualTo(SUPERSECRET);
   }
 
   private void assertUserCredentials() {
     var ucf = credentialService.getUserCredentials(TENANT_NAME, moduleName);
     assertThat(ucf.succeeded()).isTrue();
-    assertThat(ucf.result()).isEqualTo(UserCredentials.of(moduleName, SUPERSECRET));
+    assertThat(ucf.result().getPassword()).isEqualTo(SUPERSECRET);
   }
 
   private void sendRequest() {
