@@ -4,24 +4,25 @@ import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
+import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import io.quarkus.security.UnauthorizedException;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Set;
+import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
-import org.folio.sidecar.integration.keycloak.configuration.KeycloakProperties;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
-import org.folio.sidecar.model.ClientCredentials;
 import org.folio.sidecar.model.EntitlementsEvent;
-import org.folio.sidecar.service.store.AsyncSecureStore;
 import org.folio.sidecar.utils.RoutingUtils;
-import org.folio.sidecar.utils.SecureStoreUtils;
 
 @Log4j2
 @ApplicationScoped
@@ -29,16 +30,14 @@ public class ServiceTokenProvider {
 
   private static final String SUPER_TENANT = "master";
   private final KeycloakService keycloakService;
-  private final AsyncSecureStore secureStore;
-  private final KeycloakProperties properties;
+  private final CredentialService credentialService;
   private final AsyncLoadingCache<String, TokenResponse> tokenCache;
 
   @Inject
-  ServiceTokenProvider(KeycloakService keycloakService, KeycloakProperties properties,
-                       AsyncSecureStore secureStore, AsyncTokenCacheFactory cacheFactory) {
+  ServiceTokenProvider(KeycloakService keycloakService, CredentialService credentialService,
+    AsyncTokenCacheFactory cacheFactory) {
     this.keycloakService = keycloakService;
-    this.properties = properties;
-    this.secureStore = secureStore;
+    this.credentialService = credentialService;
     this.tokenCache = cacheFactory.createCache(this::retrieveToken);
   }
 
@@ -77,7 +76,7 @@ public class ServiceTokenProvider {
     var rq = rc.request();
     var requestId = rq.getHeader(REQUEST_ID);
     log.info("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
-      rq.method(), rq.path(), requestId, tenant);
+      rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
   }
@@ -88,16 +87,8 @@ public class ServiceTokenProvider {
   }
 
   private TokenResponse retrieveToken(String tenant) {
-    var cred = SUPER_TENANT.equalsIgnoreCase(tenant)
-      ? getAdminClientCredentials()
-      : getServiceClientCredentials(tenant);
-
-    var tokenFuture = cred.compose(credentials -> keycloakService.obtainToken(tenant, credentials))
-      .map(tokenResponse -> {
-        log.debug("Service token obtained: token = {}, tenant = {}",
-          () -> tokenResponseAsString(tokenResponse), () -> tenant);
-        return tokenResponse;
-      });
+    var tokenFuture = obtainToken(tenant)
+      .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant)));
 
     return executeAndGet(tokenFuture, throwable -> {
       log.warn("Failed to obtain service token: message = {}", throwable.getMessage(), throwable);
@@ -105,20 +96,33 @@ public class ServiceTokenProvider {
     });
   }
 
-  private Future<ClientCredentials> getAdminClientCredentials() {
-    log.info("Retrieving admin client credentials from secret store");
+  private Future<TokenResponse> obtainToken(String tenant) {
+    var cred = SUPER_TENANT.equalsIgnoreCase(tenant)
+      ? credentialService.getAdminClientCredentials()
+      : credentialService.getServiceClientCredentials(tenant);
 
-    var clientId = properties.getAdminClientId();
-    return secureStore.get(SecureStoreUtils.globalStoreKey(clientId))
-      .map(secret -> ClientCredentials.of(clientId, secret));
+    return cred
+      .compose(credentials -> keycloakService.obtainToken(tenant, credentials))
+      .map(tokenResponse -> {
+        log.debug("Service token obtained: token = {}, tenant = {}",
+          () -> tokenResponseAsString(tokenResponse), () -> tenant);
+        return tokenResponse;
+      });
   }
 
-  private Future<ClientCredentials> getServiceClientCredentials(String tenantName) {
-    log.info("Retrieving service client credentials from secret store: tenant = {}", tenantName);
+  private Function<UnauthorizedException, Future<TokenResponse>> resetCredentialsAndObtainToken(String tenant) {
+    return exc -> {
+      log.debug("Recovering from Unauthorized exception by resetting service client credentials and retrying: "
+        + "tenant = {}", tenant);
 
-    var clientId = properties.getServiceClientId();
-    return secureStore.get(SecureStoreUtils.tenantStoreKey(tenantName, clientId))
-      .map(secret -> ClientCredentials.of(clientId, secret));
+      if (SUPER_TENANT.equalsIgnoreCase(tenant)) {
+        credentialService.resetAdminClientCredentials();
+      } else {
+        credentialService.resetServiceClientCredentials(tenant);
+      }
+
+      return obtainToken(tenant);
+    };
   }
 
   private void syncTenantCache(Set<String> tenants) {

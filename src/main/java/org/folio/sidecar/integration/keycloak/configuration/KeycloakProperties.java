@@ -19,7 +19,7 @@ public class KeycloakProperties {
   @ConfigProperty(name = "keycloak.login.client-suffix") String loginClientSuffix;
   @ConfigProperty(name = "keycloak.admin.client-id") String adminClientId;
   @ConfigProperty(name = "keycloak.service.client-id") String serviceClientId;
-  @ConfigProperty(name = "keycloak.impersonation-client") String impersonationClient;
+  @ConfigProperty(name = "keycloak.impersonation.client-id") String impersonationClientId;
 
   @ConfigProperty(name = "keycloak.authorization-cache-max-size") long authorizationCacheMaxSize;
   @ConfigProperty(name = "keycloak.authorization-cache-ttl-offset") long authorizationCacheTtlOffset;
