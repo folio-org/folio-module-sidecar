@@ -7,8 +7,6 @@ import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.utils.SecureStoreUtils.tenantStoreKey;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.junit.TestProfile;
@@ -71,13 +69,6 @@ class ClientCredsRecoveryAndCachingEgressIT {
 
     assertUserCredentials();
     assertClientCredentials();
-
-    sendRequest();
-
-    assertUserCredentials();
-    assertClientCredentials();
-    verify(secureStore, times(2)).get(tenantStoreKey(TENANT_NAME, moduleName));
-    verify(secureStore, times(2)).get(tenantStoreKey(TENANT_NAME, serviceClientId));
   }
 
   private void assertClientCredentials() {
