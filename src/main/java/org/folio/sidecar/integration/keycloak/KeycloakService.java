@@ -13,9 +13,9 @@ import jakarta.ws.rs.WebApplicationException;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.cred.model.ClientCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
-import org.folio.sidecar.model.ClientCredentials;
-import org.folio.sidecar.model.UserCredentials;
 import org.folio.sidecar.service.ErrorHandler;
 
 @Log4j2

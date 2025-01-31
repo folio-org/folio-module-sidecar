@@ -1,6 +1,5 @@
 package org.folio.sidecar.service.routing;
 
-import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
@@ -13,6 +12,7 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.BadRequestException;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
@@ -44,22 +44,24 @@ public class EgressRequestHandler implements RequestHandler {
   @Override
   public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
-    log.info("Handling egress request [method: {}, uri: {}]", rq::method, dumpUri(rc));
+    log.info("Handling egress request [method: {}, uri: {}, requestId: {}]",
+      rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
 
     requestFilterService.filterEgressRequest(rc)
-      .compose(v -> validateRoutingModuleId(routingEntry))
+      .map(v -> validateRoutingModuleId(routingEntry))
       .compose(v -> populateSystemToken(rc))
       .compose(v -> populateSystemUserToken(rc))
       .onSuccess(v -> forwardEgressRequest(rc, routingEntry))
       .onFailure(error -> errorHandler.sendErrorResponse(rc, error));
   }
 
-  private Future<Void> validateRoutingModuleId(ScRoutingEntry routingEntry) {
+  private Void validateRoutingModuleId(ScRoutingEntry routingEntry) {
     var moduleId = routingEntry.getModuleId();
 
-    return (routingEntry.getLocation() == null)
-      ? failedFuture(new BadRequestException("Module location is not found for moduleId: " + moduleId))
-      : succeededFuture();
+    if (routingEntry.getLocation() == null) {
+      throw new BadRequestException("Module location is not found for moduleId: " + moduleId);
+    }
+    return null;
   }
 
   private Future<Void> populateSystemToken(RoutingContext rc) {
@@ -77,12 +79,10 @@ public class EgressRequestHandler implements RequestHandler {
     return !requireSystemUserToken(rc)
       ? succeededFuture()
       : systemUserTokenProvider.getToken(rc)
-        .compose(token -> {
-          setSysUserTokenIfAvailable(rc, token);
-          return succeededFuture();
-        }, error -> {
+        .map(setSysUserTokenIfAvailable(rc))
+        .otherwise(error -> {
           log.debug("Failed to get system user token: {}", error.getMessage(), error);
-          return succeededFuture();
+          return null;
         }); // any errors to get token are ignored
   }
 
@@ -103,15 +103,18 @@ public class EgressRequestHandler implements RequestHandler {
     }
   }
 
-  private static void setSysUserTokenIfAvailable(RoutingContext rc, String token) {
-    String requestId = rc.request().getHeader(REQUEST_ID);
+  private static Function<String, Void> setSysUserTokenIfAvailable(RoutingContext rc) {
+    return token -> {
+      String requestId = rc.request().getHeader(REQUEST_ID);
 
-    if (isNotBlank(token)) {
-      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
-      log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
-        () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
-    } else {
-      log.debug("System user token is not available [requestId: {}]", requestId);
-    }
+      if (isNotBlank(token)) {
+        RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
+        log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
+          () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
+      } else {
+        log.debug("System user token is not available [requestId: {}]", requestId);
+      }
+      return null;
+    };
   }
 }
