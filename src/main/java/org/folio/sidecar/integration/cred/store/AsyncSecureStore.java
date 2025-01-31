@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.store;
+package org.folio.sidecar.integration.cred.store;
 
 import io.vertx.core.Future;
 

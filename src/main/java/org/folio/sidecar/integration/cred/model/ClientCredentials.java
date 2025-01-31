@@ -1,4 +1,4 @@
-package org.folio.sidecar.model;
+package org.folio.sidecar.integration.cred.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -6,10 +6,9 @@ import lombok.ToString;
 
 @Data
 @AllArgsConstructor(staticName = "of")
-public class UserCredentials {
+public class ClientCredentials {
 
-  private String username;
-
+  private String clientId;
   @ToString.Exclude
-  private String password;
+  private String clientSecret;
 }

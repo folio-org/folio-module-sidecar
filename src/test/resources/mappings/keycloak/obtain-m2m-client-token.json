@@ -12,6 +12,9 @@
         "bodyPatterns": [
           {
             "contains": "grant_type=client_credentials"
+          },
+          {
+            "contains": "client_secret=supersecret"
           }
         ]
       },

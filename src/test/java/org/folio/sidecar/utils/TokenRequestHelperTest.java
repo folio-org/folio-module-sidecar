@@ -3,7 +3,7 @@ package org.folio.sidecar.utils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.folio.sidecar.model.UserCredentials;
+import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.support.TestConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.routing;
 
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.ext.web.RoutingContext;
@@ -29,15 +30,17 @@ public class IngressRequestHandler implements RequestHandler {
   /**
    * Handles incoming (ingress) request using given {@link RoutingContext} object.
    *
-   * @param routingContext - routing context to handle
+   * @param rc - routing context to handle
    */
   @Override
-  public void handle(RoutingContext routingContext, ScRoutingEntry scRoutingEntry) {
-    var rq = routingContext.request();
-    log.info("Handling ingress request [method: {}, uri: {}]", rq::method, dumpUri(routingContext));
-    requestFilterService.filterIngressRequest(routingContext)
-      .onSuccess(authResponse -> forwardRequest(routingContext))
-      .onFailure(error -> errorHandler.sendErrorResponse(routingContext, error));
+  public void handle(RoutingContext rc, ScRoutingEntry scRoutingEntry) {
+    var rq = rc.request();
+    log.info("Handling ingress request [method: {}, uri: {}, requestId: {}]",
+      rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
+    
+    requestFilterService.filterIngressRequest(rc)
+      .onSuccess(authResponse -> forwardRequest(rc))
+      .onFailure(error -> errorHandler.sendErrorResponse(rc, error));
   }
 
   private void forwardRequest(RoutingContext rc) {

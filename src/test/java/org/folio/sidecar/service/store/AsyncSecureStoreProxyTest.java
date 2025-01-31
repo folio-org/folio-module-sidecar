@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import jakarta.enterprise.inject.Instance;
+import org.folio.sidecar.integration.cred.store.AsyncSecureStoreProxy;
 import org.folio.support.types.UnitTest;
 import org.folio.tools.store.SecureStore;
 import org.junit.jupiter.api.BeforeEach;
