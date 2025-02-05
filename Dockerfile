@@ -8,8 +8,7 @@ RUN apk upgrade --no-cache
 COPY target/my-binary-sidecar /app/myapp
 
 RUN chmod +x /app/myapp
-RUN addgroup --system folio && adduser --system --ingroup folio  folio
-USER folio
+
 EXPOSE 8081
 
 
