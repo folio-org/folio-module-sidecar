@@ -4,7 +4,7 @@ FROM alpine:latest
 WORKDIR /app
 # Install latest patch versions of packages: https://pythonspeed.com/articles/security-updates-in-docker/
 USER root
-RUN apk upgrade --no-cache
+RUN apk upgrade  && apk add       libc6-compat  && rm -rf /var/cache/apk/*
 COPY target/my-binary-sidecar /app/myapp
 
 RUN chmod +x /app/myapp
