@@ -25,6 +25,7 @@ import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.model.error.Parameter;
+import org.jboss.resteasy.reactive.common.headers.DuplicateHeaderException;
 
 @Log4j2
 @ApplicationScoped
@@ -66,6 +67,11 @@ public class ErrorHandler {
 
     if (throwable instanceof TenantNotEnabledException) {
       sendErrorResponse(rc, throwable, BAD_REQUEST, ErrorCode.UNKNOWN_TENANT, null);
+      return;
+    }
+
+    if (throwable instanceof DuplicateHeaderException) {
+      sendErrorResponse(rc, throwable, BAD_REQUEST, ErrorCode.BAD_REQUEST, null);
       return;
     }
 
