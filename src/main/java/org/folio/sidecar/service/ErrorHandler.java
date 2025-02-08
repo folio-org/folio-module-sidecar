@@ -20,12 +20,12 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.exception.DuplicateHeaderException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.model.error.Parameter;
-import org.jboss.resteasy.reactive.common.headers.DuplicateHeaderException;
 
 @Log4j2
 @ApplicationScoped

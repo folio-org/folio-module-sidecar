@@ -17,7 +17,8 @@ public enum ErrorCode {
   UNKNOWN_TENANT("tenant_not_enabled"),
   FOUND_ERROR("found_error"),
   AUTHORIZATION_ERROR("authorization_error"),
-  READ_TIMEOUT_ERROR("read_timeout_error");
+  READ_TIMEOUT_ERROR("read_timeout_error"),
+  BAD_REQUEST("bad_request");
 
   @JsonValue
   private final String value;

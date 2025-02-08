@@ -6,9 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.vertx.core.MultiMap;
 import org.folio.sidecar.exception.DuplicateHeaderException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
+import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@UnitTest
+@ExtendWith(MockitoExtension.class)
 class OkapiHeaderValidatorTest {
 
   private OkapiHeaderValidator validator;

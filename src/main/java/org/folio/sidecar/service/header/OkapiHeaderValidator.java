@@ -2,11 +2,9 @@ package org.folio.sidecar.service.header;
 
 import io.vertx.core.MultiMap;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.DuplicateHeaderException;
-import org.folio.sidecar.integration.okapi.OkapiHeaders;
-
-import java.util.List;
 
 @Log4j2
 @ApplicationScoped
@@ -28,7 +26,7 @@ public class OkapiHeaderValidator {
     List<String> headerValues = headers.getAll(headerName);
     if (headerValues.size() > 1) {
       log.debug("Found duplicate header: {} with values: {}", headerName, headerValues);
-      throw new DuplicateHeaderException(headerName);
+      throw new DuplicateHeaderException(headerName + ": " + headerValues);
     }
   }
 }
