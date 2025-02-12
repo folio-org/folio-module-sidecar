@@ -70,7 +70,7 @@ class TenantEntitlementClientTest {
     when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
     when(response.bodyAsString()).thenReturn(readString("json/tenant-entitlements.json"));
 
-    var actual = client.getEntitlements(MODULE_ID, AUTH_TOKEN);
+    var actual = client.getModuleEntitlements(MODULE_ID, AUTH_TOKEN);
 
     assertThat(actual.result()).isEqualTo(ResultList.asSinglePage(Entitlement.of(APPLICATION_ID, TENANT_ID)));
 

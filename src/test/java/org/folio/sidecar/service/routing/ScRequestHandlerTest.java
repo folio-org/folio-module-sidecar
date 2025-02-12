@@ -18,6 +18,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,7 @@ class ScRequestHandlerTest {
   @Mock private ErrorHandler errorHandler;
   @Mock private EgressRequestHandler egressRequestHandler;
   @Mock private IngressRequestHandler ingressRequestHandler;
-  @Mock private RequestMatchingService requestMatchingService;
+  @Mock private RoutingLookupUtils requestMatchingService;
   @Mock private RoutingContext rc;
 
   @BeforeEach

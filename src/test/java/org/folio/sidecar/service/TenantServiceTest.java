@@ -55,7 +55,7 @@ class TenantServiceTest {
     mockRetryTemplate();
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
-    when(tenantEntitlementClient.getEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(
         ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID))));
 
@@ -75,7 +75,7 @@ class TenantServiceTest {
     mockRetryTemplate();
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
-    when(tenantEntitlementClient.getEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(failedFuture(new RuntimeException()));
 
     tenantService.init(STARTUP_EVENT);
@@ -91,7 +91,7 @@ class TenantServiceTest {
     mockRetryTemplate();
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
-    when(tenantEntitlementClient.getEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(
         ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID))));
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN)).thenReturn(

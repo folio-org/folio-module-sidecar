@@ -16,6 +16,7 @@ import jakarta.ws.rs.NotFoundException;
 import org.folio.sidecar.configuration.properties.RoutingHandlerProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -35,7 +36,7 @@ class RoutingServiceTest {
   @Mock private ErrorHandler errorHandler;
   @Mock private EgressRequestHandler egressRequestHandler;
   @Mock private IngressRequestHandler ingressRequestHandler;
-  @Mock private RequestMatchingService requestMatchingService;
+  @Mock private RoutingLookupUtils requestMatchingService;
   @Mock private ApplicationManagerService appManagerService;
   @Mock private RoutingHandlerProperties routingHandlerProperties;
 

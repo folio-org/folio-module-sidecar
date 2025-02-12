@@ -27,6 +27,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.PathProcessor;
+import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestValues;
 import org.folio.support.types.UnitTest;
@@ -45,7 +46,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RequestMatchingServiceTest {
 
-  private RequestMatchingService requestMatchingService;
+  private RoutingLookupUtils requestMatchingService;
   @Mock private PathProcessor pathProcessor;
   @Mock private SidecarProperties sidecarProperties;
   @Mock private ApplicationManagerClient appManagerClient;
@@ -53,7 +54,7 @@ class RequestMatchingServiceTest {
   @BeforeEach
   void setUp() {
     when(sidecarProperties.getUnknownRequestsDestination()).thenReturn(TestConstants.GATEWAY_URL);
-    requestMatchingService = new RequestMatchingService(pathProcessor, sidecarProperties);
+    requestMatchingService = new RoutingLookupUtils(pathProcessor, sidecarProperties);
     requestMatchingService.bootstrapModule(TestConstants.MODULE_BOOTSTRAP);
   }
 

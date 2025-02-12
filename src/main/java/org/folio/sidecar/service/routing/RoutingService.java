@@ -26,6 +26,7 @@ import org.folio.sidecar.configuration.properties.RoutingHandlerProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 
 @Log4j2
 @ApplicationScoped
@@ -36,7 +37,7 @@ public class RoutingService {
   private final ErrorHandler errorHandler;
   private final EgressRequestHandler egressRequestHandler;
   private final IngressRequestHandler ingressRequestHandler;
-  private final RequestMatchingService requestMatchingService;
+  private final RoutingLookupUtils requestMatchingService;
   private final RoutingHandlerProperties routingHandlerProperties;
 
   private final Map<String, ModuleType> knownModules = new HashMap<>();

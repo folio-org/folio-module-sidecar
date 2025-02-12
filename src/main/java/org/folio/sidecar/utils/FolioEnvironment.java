@@ -2,7 +2,7 @@ package org.folio.sidecar.utils;
 
 import static java.lang.System.getProperty;
 import static java.lang.System.getenv;
-import static org.folio.sidecar.utils.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import lombok.experimental.UtilityClass;
 
@@ -16,11 +16,11 @@ public class FolioEnvironment {
    */
   public static String getFolioEnvName() {
     var env = getenv("ENV");
-    if (!isEmpty(env)) {
+    if (isNotEmpty(env)) {
       return env;
     } else {
       var propertyEnv = getProperty("env");
-      if (!isEmpty(propertyEnv)) {
+      if (isNotEmpty(propertyEnv)) {
         return propertyEnv;
       }
     }
