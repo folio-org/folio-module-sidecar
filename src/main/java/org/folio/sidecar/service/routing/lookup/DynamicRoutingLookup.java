@@ -15,10 +15,9 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Named;
 import java.util.Optional;
 import java.util.function.Function;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
@@ -30,20 +29,12 @@ import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.utils.SemverUtils;
 
 @Log4j2
-@ApplicationScoped
+@RequiredArgsConstructor
 public class DynamicRoutingLookup implements RoutingLookup {
 
   private final ApplicationManagerService applicationManagerService;
   private final TenantEntitlementService tenantEntitlementService;
   private final Cache<String, ScRoutingEntry> routingEntryCache;
-
-  public DynamicRoutingLookup(ApplicationManagerService applicationManagerService,
-    TenantEntitlementService tenantEntitlementService,
-    @Named("dynamicRoutingCache") Cache<String, ScRoutingEntry> routingEntryCache) {
-    this.applicationManagerService = applicationManagerService;
-    this.tenantEntitlementService = tenantEntitlementService;
-    this.routingEntryCache = routingEntryCache;
-  }
 
   @Override
   public Future<Optional<ScRoutingEntry>> lookupRoute(String path, RoutingContext rc) {
@@ -106,6 +97,6 @@ public class DynamicRoutingLookup implements RoutingLookup {
       .filter(m -> m.startsWith(moduleName))
       .findFirst()
       .orElseThrow(() -> new IllegalArgumentException("No entitled module found for name: "
-        + "moduleName = " + moduleName + ", tenant = " + tenant);
+        + "moduleName = " + moduleName + ", tenant = " + tenant));
   }
 }

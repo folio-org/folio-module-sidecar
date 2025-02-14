@@ -25,6 +25,8 @@ import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
 import org.folio.sidecar.service.filter.RequestFilterService;
+import org.folio.sidecar.service.routing.handler.EgressRequestHandler;
+import org.folio.sidecar.service.routing.handler.RequestForwardingService;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.sidecar.service.token.SystemUserTokenProvider;
 import org.folio.sidecar.support.TestConstants;
@@ -86,7 +88,7 @@ class EgressRequestHandlerTest {
     when(tokenProvider.getTokenSync(any())).thenReturn(SERVICE_TOKEN);
     when(systemUserService.getTokenSync(rc)).thenReturn(USER_TOKEN);
 
-    egressRequestHandler.handle(rc, routingEntry());
+    egressRequestHandler.handle(routingEntry(), rc);
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
@@ -106,7 +108,7 @@ class EgressRequestHandlerTest {
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(true);
     when(tokenProvider.getTokenSync(any())).thenReturn(SERVICE_TOKEN);
 
-    egressRequestHandler.handle(rc, routingEntry());
+    egressRequestHandler.handle(routingEntry(), rc);
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).contains(OkapiHeaders.USER_ID);
@@ -125,7 +127,7 @@ class EgressRequestHandlerTest {
     when(tokenProvider.getTokenSync(any())).thenReturn(SERVICE_TOKEN);
     when(systemUserService.getTokenSync(rc)).thenReturn(USER_TOKEN);
 
-    egressRequestHandler.handle(rc, routingEntry());
+    egressRequestHandler.handle(routingEntry(), rc);
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
@@ -144,7 +146,7 @@ class EgressRequestHandlerTest {
     when(tokenProvider.getTokenSync(any())).thenReturn(SERVICE_TOKEN);
     when(systemUserService.getTokenSync(rc)).thenReturn(null);
 
-    egressRequestHandler.handle(rc, routingEntry());
+    egressRequestHandler.handle(routingEntry(), rc);
 
     verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
@@ -157,7 +159,7 @@ class EgressRequestHandlerTest {
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
 
     var routingEntry = ScRoutingEntry.of(MODULE_ID, null, "foo", new ModuleBootstrapEndpoint());
-    egressRequestHandler.handle(rc, routingEntry);
+    egressRequestHandler.handle(routingEntry, rc);
 
     verify(errorHandler).sendErrorResponse(eq(rc), any(BadRequestException.class));
     verifyNoInteractions(requestForwardingService);
@@ -174,7 +176,7 @@ class EgressRequestHandlerTest {
     when(tokenProvider.getTokenSync(any())).thenReturn(SERVICE_TOKEN);
     when(systemUserService.getTokenSync(rc)).thenReturn(USER_TOKEN);
 
-    egressRequestHandler.handle(rc, scGatewayEntry(TestConstants.GATEWAY_URL));
+    egressRequestHandler.handle(scGatewayEntry(TestConstants.GATEWAY_URL), rc);
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
@@ -186,7 +188,7 @@ class EgressRequestHandlerTest {
   void handle_negative_filterValidationFailed() {
     prepareHttpRequest(true);
     when(testEgressFilter.filter(rc)).thenReturn(succeededFuture(rc));
-    egressRequestHandler.handle(rc, routingEntry());
+    egressRequestHandler.handle(routingEntry(), rc);
     verifyNoInteractions(requestForwardingService);
   }
 

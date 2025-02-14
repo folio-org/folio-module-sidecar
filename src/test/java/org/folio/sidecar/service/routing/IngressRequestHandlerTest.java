@@ -25,6 +25,8 @@ import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
+import org.folio.sidecar.service.routing.handler.IngressRequestHandler;
+import org.folio.sidecar.service.routing.handler.RequestForwardingService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -70,7 +72,7 @@ class IngressRequestHandlerTest {
     when(pathProcessor.getModulePath(routingPath)).thenReturn(routingPath);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
 
-    ingressRequestHandler.handle(routingContext, requestRoutingEntry);
+    ingressRequestHandler.handle(requestRoutingEntry, routingContext);
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
@@ -90,7 +92,7 @@ class IngressRequestHandlerTest {
     var error = new ForbiddenException("Access Denied");
     when(requestFilterService.filterIngressRequest(rc)).thenReturn(failedFuture(error));
 
-    ingressRequestHandler.handle(rc, requestRoutingEntry);
+    ingressRequestHandler.handle(requestRoutingEntry, rc);
 
     verify(errorHandler).sendErrorResponse(eq(rc), any(Throwable.class));
     verifyNoInteractions(requestForwardingService);

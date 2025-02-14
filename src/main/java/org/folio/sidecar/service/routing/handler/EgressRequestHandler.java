@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.logging.log4j.util.Strings.isNotBlank;
@@ -11,6 +11,7 @@ import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import jakarta.ws.rs.BadRequestException;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +26,10 @@ import org.folio.sidecar.service.token.SystemUserTokenProvider;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
+@Named
 @ApplicationScoped
 @RequiredArgsConstructor
-public class EgressRequestHandler implements RequestHandler {
+class EgressRequestHandler implements RoutingEntryHandler {
 
   private final ErrorHandler errorHandler;
   private final PathProcessor pathProcessor;
@@ -42,7 +44,7 @@ public class EgressRequestHandler implements RequestHandler {
    * @param rc - {@link RoutingContext} object to handle
    */
   @Override
-  public void handle(RoutingContext rc, ScRoutingEntry routingEntry) {
+  public void handle(ScRoutingEntry routingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.info("Handling egress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));

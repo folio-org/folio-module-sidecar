@@ -8,20 +8,16 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.model.ScRoutingEntry;
 
 @Log4j2
-@ApplicationScoped
-@RequiredArgsConstructor
 public class EgressRoutingLookup implements RoutingLookup {
 
   private Map<String, List<ScRoutingEntry>> egressRequestCache = new HashMap<>();
@@ -38,6 +34,7 @@ public class EgressRoutingLookup implements RoutingLookup {
     return succeededFuture(entry);
   }
 
+  // TODO (Dima Tkachenko): review code
   public void bootstrapModule(ModuleBootstrap bootstrap) {
     log.info("Initializing Egress module routes from bootstrap information");
 

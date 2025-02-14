@@ -18,6 +18,9 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.routing.handler.EgressRequestHandler;
+import org.folio.sidecar.service.routing.handler.IngressRequestHandler;
+import org.folio.sidecar.service.routing.handler.ScRequestHandler;
 import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -60,7 +63,7 @@ class ScRequestHandlerTest {
 
     requestHandler.handle(rc);
 
-    verify(ingressRequestHandler).handle(rc, rre);
+    verify(ingressRequestHandler).handle(rre, rc);
   }
 
   @Test
@@ -71,7 +74,7 @@ class ScRequestHandlerTest {
 
     requestHandler.handle(rc);
 
-    verify(egressRequestHandler).handle(rc, rre);
+    verify(egressRequestHandler).handle(rre, rc);
   }
 
   @Test
