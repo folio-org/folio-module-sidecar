@@ -3,24 +3,21 @@ package org.folio.sidecar.service.routing;
 import static java.util.stream.Collectors.joining;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
-import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 
 import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Collections;
+import jakarta.enterprise.inject.Instance;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.service.routing.configuration.RequestHandler;
-import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
-import org.folio.sidecar.service.routing.handler.TraceHeadersHandler;
+import org.folio.sidecar.service.routing.configuration.RequestHandler;
 
 @Log4j2
 @ApplicationScoped
@@ -28,12 +25,14 @@ public class RoutingService {
 
   private final ApplicationManagerService appManagerService;
   private final Handler<RoutingContext> requestHandler;
+  private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
 
   public RoutingService(ApplicationManagerService appManagerService,
-    @RequestHandler Handler<RoutingContext> requestHandler) {
+    @RequestHandler Handler<RoutingContext> requestHandler, Instance<ModuleBootstrapListener> mbListeners) {
     this.appManagerService = appManagerService;
     this.requestHandler = requestHandler;
+    this.moduleBootstrapListeners = mbListeners.stream().toList();
   }
 
   public void initRoutes(Router router) {
@@ -60,7 +59,10 @@ public class RoutingService {
   private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
-    requestMatchingService.bootstrapModule(moduleBootstrap);
+    moduleBootstrapListeners.forEach(listener -> {
+      listener.onModuleBootstrap(moduleBootstrap.getModule());
+      listener.onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules());
+    });
 
     router.route("/*").handler(requestHandler);
 
@@ -81,11 +83,12 @@ public class RoutingService {
   private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type) {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
-        requestMatchingService.updateIngressRoutes(moduleBootstrap.getModule());
+        moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule()));
         return;
       }
 
-      requestMatchingService.updateEgressRoutes(moduleBootstrap.getRequiredModules());
+      moduleBootstrapListeners.forEach(listener -> listener
+        .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules()));
     };
   }
 

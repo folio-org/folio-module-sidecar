@@ -8,17 +8,21 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.model.ScRoutingEntry;
+import org.folio.sidecar.service.routing.ModuleBootstrapListener;
 
 @Log4j2
-public class IngressRoutingLookup implements RoutingLookup {
+@Named("ingressLookup")
+@ApplicationScoped
+public class IngressRoutingLookup implements RoutingLookup, ModuleBootstrapListener {
 
   private Map<String, List<ScRoutingEntry>> ingressRequestCache = new HashMap<>();
 
@@ -34,20 +38,16 @@ public class IngressRoutingLookup implements RoutingLookup {
     return succeededFuture(entry);
   }
 
-  // TODO (Dima Tkachenko): review code
-  public void bootstrapModule(ModuleBootstrap bootstrap) {
-    log.info("Initializing Ingress module routes from bootstrap information");
-
-    ingressRequestCache = getRoutes(bootstrap.getModule());
-
-    log.info("Ingress routes initialized: count = {}", () -> calculateRoutes(ingressRequestCache));
-  }
-
-  public void updateIngressRoutes(ModuleBootstrapDiscovery discovery) {
+  @Override
+  public void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap) {
     log.info("Updating module ingress routes");
 
-    ingressRequestCache = getRoutes(discovery);
+    ingressRequestCache = getRoutes(moduleBootstrap);
 
-    log.info("Ingress routes updated [count = {}]", () -> calculateRoutes(ingressRequestCache));
+    log.info("Ingress routes updated: count = {}", () -> calculateRoutes(ingressRequestCache));
+  }
+
+  @Override
+  public void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap) {
   }
 }

@@ -27,20 +27,11 @@ import org.folio.sidecar.service.routing.handler.RoutingHandlerWithLookup;
 import org.folio.sidecar.service.routing.handler.ScRequestHandler;
 import org.folio.sidecar.service.routing.handler.TraceHeadersHandler;
 import org.folio.sidecar.service.routing.lookup.DynamicRoutingLookup;
-import org.folio.sidecar.service.routing.lookup.EgressRoutingLookup;
 import org.folio.sidecar.service.routing.lookup.GatewayRoutingLookup;
-import org.folio.sidecar.service.routing.lookup.IngressRoutingLookup;
 import org.folio.sidecar.service.routing.lookup.RoutingLookup;
 
 @Log4j2
 public class RoutingConfiguration {
-
-  @Produces
-  @Named("ingressLookup")
-  @ApplicationScoped
-  public RoutingLookup ingressRoutingLookup() {
-    return new IngressRoutingLookup();
-  }
 
   @Produces
   @Named
@@ -49,13 +40,6 @@ public class RoutingConfiguration {
     @Named("ingressRequestHandler") RoutingEntryHandler handler,
     PathProcessor pathProcessor, ErrorHandler errorHandler) {
     return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
-  }
-
-  @Produces
-  @Named("egressLookup")
-  @ApplicationScoped
-  public RoutingLookup egressRoutingLookup() {
-    return new EgressRoutingLookup();
   }
 
   @Produces

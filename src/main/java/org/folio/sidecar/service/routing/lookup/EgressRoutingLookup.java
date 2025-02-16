@@ -8,17 +8,21 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.model.ScRoutingEntry;
+import org.folio.sidecar.service.routing.ModuleBootstrapListener;
 
 @Log4j2
-public class EgressRoutingLookup implements RoutingLookup {
+@Named("egressLookup")
+@ApplicationScoped
+public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListener {
 
   private Map<String, List<ScRoutingEntry>> egressRequestCache = new HashMap<>();
 
@@ -34,20 +38,16 @@ public class EgressRoutingLookup implements RoutingLookup {
     return succeededFuture(entry);
   }
 
-  // TODO (Dima Tkachenko): review code
-  public void bootstrapModule(ModuleBootstrap bootstrap) {
-    log.info("Initializing Egress module routes from bootstrap information");
-
-    egressRequestCache = getCollectedRoutes(bootstrap.getRequiredModules());
-
-    log.info("Egress routes initialized: count = {}", () -> calculateRoutes(egressRequestCache));
+  @Override
+  public void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap) {
   }
 
-  public void updateEgressRoutes(List<ModuleBootstrapDiscovery> discoveries) {
+  @Override
+  public void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap) {
     log.info("Updating module egress routes");
 
-    egressRequestCache = getCollectedRoutes(discoveries);
+    egressRequestCache = getCollectedRoutes(requiredModulesBootstrap);
 
-    log.info("Egress routes updated [count = {}]", () -> calculateRoutes(egressRequestCache));
+    log.info("Egress routes updated: count = {}", () -> calculateRoutes(egressRequestCache));
   }
 }
