@@ -1,6 +1,8 @@
 package org.folio.sidecar.service.routing;
 
 import static java.util.stream.Collectors.joining;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
 
@@ -60,8 +62,8 @@ public class RoutingService {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
     moduleBootstrapListeners.forEach(listener -> {
-      listener.onModuleBootstrap(moduleBootstrap.getModule());
-      listener.onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules());
+      listener.onModuleBootstrap(moduleBootstrap.getModule(), INIT);
+      listener.onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), INIT);
     });
 
     router.route("/*").handler(requestHandler);
@@ -83,12 +85,12 @@ public class RoutingService {
   private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type) {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
-        moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule()));
+        moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
         return;
       }
 
       moduleBootstrapListeners.forEach(listener -> listener
-        .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules()));
+        .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), UPDATE));
     };
   }
 

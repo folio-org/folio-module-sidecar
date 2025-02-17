@@ -5,7 +5,13 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 
 public interface ModuleBootstrapListener {
 
-  void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap);
+  default void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap, ChangeType changeType) {}
 
-  void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap);
+  default void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap,
+    ChangeType changeType) {}
+
+  enum ChangeType {
+    INIT,
+    UPDATE
+  }
 }

@@ -48,7 +48,7 @@ class RequestForwardingService {
   private final WebClientConfig webClientConfig;
   private final TransactionLogHandler transactionLogHandler;
 
-  public RequestForwardingService(@Named("webClient") WebClient webClient,
+  RequestForwardingService(@Named("webClient") WebClient webClient,
     @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
     ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
     WebClientConfig webClientConfig, TransactionLogHandler transactionLogHandler) {

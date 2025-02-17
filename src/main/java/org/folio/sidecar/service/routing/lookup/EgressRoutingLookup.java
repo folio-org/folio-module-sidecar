@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.routing.lookup;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.calculateRoutes;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.getCollectedRoutes;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.lookup;
@@ -39,15 +40,13 @@ public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListen
   }
 
   @Override
-  public void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap) {
-  }
-
-  @Override
-  public void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap) {
-    log.info("Updating module egress routes");
+  public void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap,
+    ChangeType changeType) {
+    log.info("{} module egress routes", changeType == INIT ? "Initializing" : "Updating");
 
     egressRequestCache = getCollectedRoutes(requiredModulesBootstrap);
 
-    log.info("Egress routes updated: count = {}", () -> calculateRoutes(egressRequestCache));
+    log.info("Egress routes {}: count = {}", () -> changeType == INIT ? "initialized" : "updated",
+      () -> calculateRoutes(egressRequestCache));
   }
 }
