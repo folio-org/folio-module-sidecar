@@ -1,8 +1,10 @@
 package org.folio.sidecar.service.routing.configuration;
 
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
+import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
 
-import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.arc.lookup.LookupUnlessProperty;
 import io.vertx.core.Handler;
@@ -16,8 +18,8 @@ import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
+import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
-import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
@@ -99,12 +101,29 @@ public class RoutingConfiguration {
   public static class Dynamic {
 
     @Produces
+    @Named("dynamicRoutingDiscoveryCache")
+    @ApplicationScoped
+    public AsyncLoadingCache<String, ModuleDiscovery> discoveryCache(
+      ApplicationManagerService applicationManagerService) {
+      return Caffeine.newBuilder()
+        .maximumSize(100)
+        .initialCapacity(10)
+        //.expireAfterWrite()
+        //.expireAfterAccess()
+        //.executor() ??
+        //.refreshAfterWrite() ??
+        .buildAsync(moduleId -> {
+          var discovery = applicationManagerService.getModuleDiscovery(moduleId);
+          return executeAndGet(discovery);
+        });
+    }
+
+    @Produces
     @Named("dynamicLookup")
     @ApplicationScoped
-    public RoutingLookup dynamicRoutingLookup(ApplicationManagerService applicationManagerService,
-      TenantEntitlementService tenantEntitlementService,
-      @Named("dynamicRoutingCache") Cache<String, ScRoutingEntry> routingEntryCache) {
-      return new DynamicRoutingLookup(applicationManagerService, tenantEntitlementService, routingEntryCache);
+    public RoutingLookup dynamicRoutingLookup(TenantEntitlementService tenantEntitlementService,
+      @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveryCache) {
+      return new DynamicRoutingLookup(tenantEntitlementService, discoveryCache);
     }
 
     @Produces

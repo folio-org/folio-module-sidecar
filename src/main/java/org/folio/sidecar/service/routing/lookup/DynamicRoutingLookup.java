@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.routing.lookup;
 
 import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.fromCompletionStage;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.MODULE_HINT;
@@ -11,15 +12,13 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.getHeader;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeader;
 
-import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
@@ -32,9 +31,8 @@ import org.folio.sidecar.utils.SemverUtils;
 @RequiredArgsConstructor
 public class DynamicRoutingLookup implements RoutingLookup {
 
-  private final ApplicationManagerService applicationManagerService;
   private final TenantEntitlementService tenantEntitlementService;
-  private final Cache<String, ScRoutingEntry> routingEntryCache;
+  private final AsyncLoadingCache<String, ModuleDiscovery> discoveryCache;
 
   @Override
   public Future<Optional<ScRoutingEntry>> lookupRoute(String path, RoutingContext rc) {
@@ -49,49 +47,33 @@ public class DynamicRoutingLookup implements RoutingLookup {
       return failedFuture(new IllegalArgumentException("Module hint header is present but empty: " + MODULE_HINT));
     }
 
-    return getCachedOrLookup(moduleHint, path, rc);
+    return lookupForModule(moduleHint, path, rc);
   }
 
-  private Future<Optional<ScRoutingEntry>> getCachedOrLookup(String moduleHint, String path, RoutingContext rc) {
+  private Future<Optional<ScRoutingEntry>> lookupForModule(String moduleHint, String path, RoutingContext rc) {
     var request = rc.request();
-    var cacheKey = cacheKey(path, request.method());
-
-    var entry = routingEntryCache.getIfPresent(cacheKey);
-    if (entry != null) {
-      log.debug("Dynamic routing entry found in cache: method = {}, uri = {}, moduleHint = {}, entry = {}",
-        request::method, dumpUri(rc), () -> moduleHint, () -> entry);
-      return succeededFuture(Optional.of(entry));
-    }
-
-    log.debug("Searching routing entries for dynamic request: method = {}, uri = {}, moduleHint = {}",
+    log.debug("Getting routing entry for dynamic request: method = {}, uri = {}, moduleHint = {}",
       request::method, dumpUri(rc), () -> moduleHint);
 
-    var discovery = getDiscovery(moduleHint, rc);
-
-    return discovery.map(md -> {
-      var re = dynamicRoutingEntry(md.getLocation(), md.getId(),
-        new ModuleBootstrapEndpoint(path, request.method().name()));
-
-      routingEntryCache.put(cacheKey, re);
-      log.debug("Dynamic routing entry stored in cache: key {}, entry = {}", cacheKey, re);
-
-      return Optional.of(re);
-    });
-  }
-
-  private Future<ModuleDiscovery> getDiscovery(String moduleHint, RoutingContext rc) {
-    return SemverUtils.hasVersion(moduleHint)
-      ? applicationManagerService.getModuleDiscovery(moduleHint)
+    var moduleId = SemverUtils.hasVersion(moduleHint)
+      ? succeededFuture(moduleHint)
       : tenantEntitlementService.getTenantEntitlements(getHeader(rc, TENANT), true)
-        .map(findEntitledModuleByName(moduleHint, getHeader(rc, TENANT)))
-        .compose(applicationManagerService::getModuleDiscovery);
+          .map(findEntitledModuleIdByName(moduleHint, getHeader(rc, TENANT)));
+
+    return moduleId.compose(id -> fromCompletionStage(discoveryCache.get(id)))
+      .map(discovery -> routingEntryFromDiscovery(discovery, rc, path))
+      .map(Optional::of)
+      .onSuccess(entry -> log.debug("Dynamic routing entry found: method = {}, uri = {}, entry = {}",
+        request::method, dumpUri(rc), () -> entry));
   }
 
-  private static String cacheKey(String path, HttpMethod method) {
-    return method + "#" + path;
+  private static ScRoutingEntry routingEntryFromDiscovery(ModuleDiscovery discovery, RoutingContext rc, String path) {
+    return dynamicRoutingEntry(discovery.getLocation(), discovery.getId(),
+      new ModuleBootstrapEndpoint(path, rc.request().method().name()));
   }
 
-  private static Function<ResultList<Entitlement>, String> findEntitledModuleByName(String moduleName, String tenant) {
+  private static Function<ResultList<Entitlement>, String> findEntitledModuleIdByName(String moduleName,
+    String tenant) {
     return result -> toStream(result.getRecords())
       .flatMap(r -> toStream(r.getModules()))
       .filter(m -> m.startsWith(moduleName))
