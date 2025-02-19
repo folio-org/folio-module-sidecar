@@ -1,10 +1,8 @@
 package org.folio.sidecar.service.routing.configuration;
 
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
-import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.arc.lookup.LookupUnlessProperty;
 import io.vertx.core.Handler;
@@ -22,12 +20,15 @@ import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
+import org.folio.sidecar.service.routing.configuration.properties.DynamicRoutingProperties;
 import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
 import org.folio.sidecar.service.routing.handler.ChainedHandler;
 import org.folio.sidecar.service.routing.handler.RoutingEntryHandler;
 import org.folio.sidecar.service.routing.handler.RoutingHandlerWithLookup;
 import org.folio.sidecar.service.routing.handler.ScRequestHandler;
 import org.folio.sidecar.service.routing.handler.TraceHeadersHandler;
+import org.folio.sidecar.service.routing.lookup.DiscoveryCacheFactory;
+import org.folio.sidecar.service.routing.lookup.DiscoveryCacheUpdator;
 import org.folio.sidecar.service.routing.lookup.DynamicRoutingLookup;
 import org.folio.sidecar.service.routing.lookup.GatewayRoutingLookup;
 import org.folio.sidecar.service.routing.lookup.RoutingLookup;
@@ -101,21 +102,24 @@ public class RoutingConfiguration {
   public static class Dynamic {
 
     @Produces
+    @ApplicationScoped
+    public DiscoveryCacheFactory discoveryCacheFactory(ApplicationManagerService applicationManagerService) {
+      return new DiscoveryCacheFactory(applicationManagerService);
+    }
+
+    @Produces
     @Named("dynamicRoutingDiscoveryCache")
     @ApplicationScoped
-    public AsyncLoadingCache<String, ModuleDiscovery> discoveryCache(
-      ApplicationManagerService applicationManagerService) {
-      return Caffeine.newBuilder()
-        .maximumSize(100)
-        .initialCapacity(10)
-        //.expireAfterWrite()
-        //.expireAfterAccess()
-        //.executor() ??
-        //.refreshAfterWrite() ??
-        .buildAsync(moduleId -> {
-          var discovery = applicationManagerService.getModuleDiscovery(moduleId);
-          return executeAndGet(discovery);
-        });
+    public AsyncLoadingCache<String, ModuleDiscovery> discoveryCache(DiscoveryCacheFactory factory,
+      DynamicRoutingProperties properties) {
+      return factory.createCache(properties.discoveryCache());
+    }
+
+    @Produces
+    @ApplicationScoped
+    public DiscoveryCacheUpdator discoveryCacheUpdator(
+      @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveryCache) {
+      return new DiscoveryCacheUpdator(discoveryCache);
     }
 
     @Produces

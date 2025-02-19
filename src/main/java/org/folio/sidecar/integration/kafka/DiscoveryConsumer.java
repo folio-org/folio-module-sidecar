@@ -1,21 +1,24 @@
 package org.folio.sidecar.integration.kafka;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.RequiredArgsConstructor;
+import jakarta.enterprise.inject.Instance;
+import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.folio.sidecar.service.routing.RoutingService;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class DiscoveryConsumer {
 
-  private final RoutingService routingService;
+  private final List<DiscoveryListener> discoveryListeners;
+
+  public DiscoveryConsumer(Instance<DiscoveryListener> listeners) {
+    this.discoveryListeners = listeners.stream().toList();
+  }
 
   @Incoming("discovery")
   public void consume(DiscoveryEvent discovery) {
     log.debug("Consuming discovery event: {}", discovery);
-    routingService.updateModuleRoutes(discovery.getModuleId());
+    discoveryListeners.forEach(listener -> listener.onDiscovery(discovery.getModuleId()));
   }
 }

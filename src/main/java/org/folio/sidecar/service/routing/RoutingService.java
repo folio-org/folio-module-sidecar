@@ -19,11 +19,12 @@ import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
+import org.folio.sidecar.integration.kafka.DiscoveryListener;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
 
 @Log4j2
 @ApplicationScoped
-public class RoutingService {
+public class RoutingService implements DiscoveryListener {
 
   private final ApplicationManagerService appManagerService;
   private final Handler<RoutingContext> requestHandler;
@@ -39,6 +40,11 @@ public class RoutingService {
 
   public void initRoutes(Router router) {
     loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+  }
+
+  @Override
+  public void onDiscovery(String moduleId) {
+    updateModuleRoutes(moduleId);
   }
 
   public void updateModuleRoutes(String moduleId) {
