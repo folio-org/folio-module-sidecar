@@ -225,7 +225,38 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
-    }, {
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/foo/bar",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/foo"
+          },
+          "X-Okapi-Permissions": {
+            "equalTo": "[\"foo.bar.item.get\"]"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "message": "x-okapi-permissions header is presented"
+        }
+      }
+    },
+    {
       "request": {
         "method": "GET",
         "urlPath": "/bar/foo",
@@ -251,7 +282,38 @@
           "X-Okapi-Tenant": "testtenant"
         }
       }
-    }, {
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/bar/foo",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/bar"
+          },
+          "X-Okapi-Permissions": {
+            "equalTo": "[\"qux.foo.item.get\",\"bar.foo.desired.get\",\"bar.foo.item.get\",\"bar.foo.desired.post\"]"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "message": "permissions merged and sets in x-okapi-permissions"
+        }
+      }
+    },
+    {
       "request": {
         "method": "POST",
         "urlPath": "/foo/expire/timer",

@@ -1,12 +1,14 @@
 package org.folio.sidecar.service.filter;
 
 import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.MultiMap.caseInsensitiveMultiMap;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.DESIRED_PERMISSIONS;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.support.TestValues.routingContext;
+import static org.folio.sidecar.utils.PermissionsUtils.parsePermissionsHeader;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -98,5 +100,61 @@ class DesiredPermissionsFilterTest {
     var order = filter.getOrder();
 
     assertThat(order).isEqualTo(DESIRED_PERMISSIONS.getOrder());
+  }
+
+  @Test
+  void filter_positive_userPermissionsNotFound() {
+    var rc = routingContext(TENANT_NAME);
+    rc.request().headers().add(OkapiHeaders.USER_ID, USER_ID);
+    var permissionsDesired = List.of("perm1", "perm2");
+    getScRoutingEntry(rc).getRoutingEntry().setPermissionsDesired(permissionsDesired);
+    var permissionHeader = "[\"perm3\",\"perm4\"]";
+    var headers = caseInsensitiveMultiMap()
+      .add(OkapiHeaders.USER_ID, USER_ID)
+      .add(OkapiHeaders.TENANT, TENANT_NAME)
+      .add(OkapiHeaders.SYSTEM_TOKEN, "token")
+      .add(OkapiHeaders.PERMISSIONS, permissionHeader);
+
+    when(userService.findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME))
+      .thenReturn(succeededFuture(List.of()));
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+    when(request.headers()).thenReturn(headers);
+
+    var resultFuture = filter.filter(rc);
+
+    assertThat(resultFuture.succeeded()).isTrue();
+    assertThat(headers.get(OkapiHeaders.PERMISSIONS)).isEqualTo(permissionHeader);
+    verify(userService).findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME);
+  }
+
+  @Test
+  void filter_positive_permissionsMerged() {
+    var rc = routingContext(TENANT_NAME);
+    rc.request().headers().add(OkapiHeaders.USER_ID, USER_ID);
+    var permissionsDesired = List.of("perm1", "perm2");
+    getScRoutingEntry(rc).getRoutingEntry().setPermissionsDesired(permissionsDesired);
+    var permissionsHeader = "[\"perm3\",\"perm4\"]";
+    var headers = caseInsensitiveMultiMap()
+      .add(OkapiHeaders.USER_ID, USER_ID)
+      .add(OkapiHeaders.TENANT, TENANT_NAME)
+      .add(OkapiHeaders.SYSTEM_TOKEN, "token")
+      .add(OkapiHeaders.PERMISSIONS, permissionsHeader);
+    var userPermissions = List.of("perm1", "perm2");
+
+    when(userService.findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME))
+      .thenReturn(succeededFuture(userPermissions));
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+    when(request.getHeader(OkapiHeaders.PERMISSIONS)).thenReturn(permissionsHeader);
+    when(request.headers()).thenReturn(headers);
+
+    var resultFuture = filter.filter(rc);
+
+    assertThat(resultFuture.succeeded()).isTrue();
+    var expectedPermissionHeader = parsePermissionsHeader("[\"perm3\",\"perm4\",\"perm1\",\"perm2\"]");
+    var actual = parsePermissionsHeader(headers.get(OkapiHeaders.PERMISSIONS));
+    assertThat(actual).containsExactlyInAnyOrderElementsOf(expectedPermissionHeader);
+    verify(userService).findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME);
   }
 }

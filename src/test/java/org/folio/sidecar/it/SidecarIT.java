@@ -586,6 +586,41 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_positive_permissionHeaderProxying() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.SYSTEM_TOKEN, authToken)
+      .header(OkapiHeaders.PERMISSIONS, "[\"foo.bar.item.get\"]")
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body("message", is("x-okapi-permissions header is presented"));
+  }
+
+  @Test
+  void handleIngressRequest_positive_permissionHeaderMerged() {
+    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .header(OkapiHeaders.SYSTEM_TOKEN, authToken)
+      .header(OkapiHeaders.PERMISSIONS, "[\"qux.foo.item.get\"]")
+      .get("/bar/foo")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .contentType(is(APPLICATION_JSON))
+      .body("message", is("permissions merged and sets in x-okapi-permissions"));
+  }
+
+  @Test
   void authorizeTimerRequest_negative_expiredToken() {
     authToken = TestJwtGenerator.generateExpiredJwtToken(keycloakUrl, TestConstants.TENANT_NAME);
     TestUtils.givenJson()

@@ -1,13 +1,9 @@
 package org.folio.sidecar.integration.am.model;
 
-import static java.util.stream.Collectors.toMap;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import lombok.Data;
 
 @Data
@@ -31,18 +27,16 @@ public class ModuleBootstrapDiscovery {
    */
   @JsonProperty
   private String location;
-  
+
   /**
    * Provided interfaces.
    */
+  @JsonProperty
   private List<ModuleBootstrapInterface> interfaces = new ArrayList<>();
 
   /**
-   * Get Map of interface id as key and list of RoutingEntries as value.
+   * Permission sets.
    */
-  @JsonIgnore
-  public Map<String, List<ModuleBootstrapEndpoint>> getProvidedRoutingEntriesMap() {
-    return interfaces.stream()
-      .collect(toMap(ModuleBootstrapInterface::getId, ModuleBootstrapInterface::getEndpoints));
-  }
+  @JsonProperty
+  private List<Permission> permissionSets = new ArrayList<>();
 }
