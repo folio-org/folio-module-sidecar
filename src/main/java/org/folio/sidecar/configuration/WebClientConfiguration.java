@@ -3,6 +3,7 @@ package org.folio.sidecar.configuration;
 import static java.lang.String.format;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -25,16 +26,16 @@ public class WebClientConfiguration {
   private final WebClientConfig webClientConfig;
 
   /**
-   * Creates {@link WebClient} component for outside HTTP requests.
+   * Creates {@link HttpClient} component for outside HTTP requests.
    *
    * @param vertx - {@link Vertx} context from quarkus.
-   * @return created {@link WebClient} component.
+   * @return created {@link HttpClient} component.
    */
   @Produces
-  @Named("webClient")
+  @Named("httpClient")
   @ApplicationScoped
-  public WebClient webClient(Vertx vertx) {
-    return createWebClient(webClientConfig.ingress(), vertx);
+  public HttpClient httpClient(Vertx vertx) {
+    return createHttpClient(webClientConfig.ingress(), vertx);
   }
 
   /**
@@ -52,11 +53,18 @@ public class WebClientConfiguration {
   }
 
   /**
-   * Creates {@link WebClient} component for egress HTTPS requests otherwise HTTP {@link WebClient} is returned.
+   * Creates {@link HttpClient} component for egress HTTPS requests otherwise HTTP {@link HttpClient} is returned.
    *
    * @param vertx - {@link Vertx} context from quarkus.
-   * @return created {@link WebClient} component.
+   * @return created {@link HttpClient} component.
    */
+  @Produces
+  @ApplicationScoped
+  @Named("httpClientEgress")
+  public HttpClient httpClientEgress(Vertx vertx) {
+    return createHttpClient(webClientConfig.egress(), vertx);
+  }
+
   @Produces
   @ApplicationScoped
   @Named("webClientEgress")
@@ -65,22 +73,27 @@ public class WebClientConfiguration {
   }
 
   /**
-   * Creates {@link WebClient} component for outside HTTPS requests to Gateway otherwise HTTP {@link WebClient} is
+   * Creates {@link HttpClient} component for outside HTTPS requests to Gateway otherwise HTTP {@link HttpClient} is
    * returned.
    *
    * @param vertx - {@link Vertx} context from quarkus.
-   * @return created {@link WebClient} component.
+   * @return created {@link HttpClient} component.
    */
   @Produces
   @ApplicationScoped
-  @Named("webClientGateway")
-  public WebClient webClientGateway(Vertx vertx) {
-    return createWebClient(webClientConfig.gateway(), vertx);
+  @Named("httpClientGateway")
+  public HttpClient httpClientGateway(Vertx vertx) {
+    return createHttpClient(webClientConfig.gateway(), vertx);
   }
 
   private WebClient createWebClient(WebClientSettings settings, Vertx vertx) {
     var options = populateOptionsFrom(settings);
     return WebClient.create(vertx, options);
+  }
+
+  private HttpClient createHttpClient(WebClientSettings settings, Vertx vertx) {
+    var options = populateOptionsFrom(settings);
+    return vertx.createHttpClient(options);
   }
 
   private WebClientOptions populateOptionsFrom(WebClientSettings settings) {
