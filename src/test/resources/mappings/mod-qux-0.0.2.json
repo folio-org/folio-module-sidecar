@@ -41,6 +41,36 @@
           ]
         }
       }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "urlPath": "/dez/items",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-Okapi-Request-Id": {
+            "matches": "\\d{6}/dez"
+          },
+          "X-Okapi-Permissions": {
+            "equalTo": "[\"foo.item.get\",\"foo.item.post\",\"foo.collection.get\"]"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "message": "permissions sets in x-okapi-permissions"
+        }
+      }
     }
   ]
 }
