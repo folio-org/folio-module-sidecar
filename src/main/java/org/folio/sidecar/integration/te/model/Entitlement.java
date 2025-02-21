@@ -6,12 +6,14 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Tenant entitlement descriptor.
  */
 @Data
 @AllArgsConstructor(staticName = "of")
+@NoArgsConstructor
 @RegisterForReflection
 public class Entitlement {
 

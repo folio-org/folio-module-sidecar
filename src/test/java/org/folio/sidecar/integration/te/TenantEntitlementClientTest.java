@@ -72,7 +72,8 @@ class TenantEntitlementClientTest {
 
     var actual = client.getModuleEntitlements(MODULE_ID, AUTH_TOKEN);
 
-    assertThat(actual.result()).isEqualTo(ResultList.asSinglePage(Entitlement.of(APPLICATION_ID, TENANT_ID)));
+    assertThat(actual.result()).isEqualTo(ResultList.asSinglePage(
+      Entitlement.of(APPLICATION_ID, TENANT_ID, null)));
 
     verify(request).addQueryParam("limit", Integer.toString(TE_PROPERTIES.getBatchSize()));
     verify(request).addQueryParam("offset", "0");

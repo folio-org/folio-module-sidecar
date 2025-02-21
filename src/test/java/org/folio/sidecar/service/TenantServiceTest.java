@@ -2,6 +2,7 @@ package org.folio.sidecar.service;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,7 +58,7 @@ class TenantServiceTest {
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
     when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(
-        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID))));
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
 
     var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
@@ -93,7 +94,7 @@ class TenantServiceTest {
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
     when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(
-        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID))));
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN)).thenReturn(
       failedFuture(new RuntimeException()));
 
