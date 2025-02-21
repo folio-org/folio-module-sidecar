@@ -1,6 +1,7 @@
 package org.folio.sidecar.support;
 
 import static org.folio.sidecar.support.TestUtils.parse;
+import static org.folio.sidecar.support.TestUtils.readString;
 
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -31,7 +32,9 @@ public class TestConstants {
   public static final String MODULE_HEALTH_PATH = "/admin/health";
   public static final String APPLICATION_ID = "application-0.0.1";
   public static final ModuleBootstrap MODULE_BOOTSTRAP =
-    parse(TestUtils.readString("json/module-bootstrap.json"), ModuleBootstrap.class);
+    parse(readString("json/module-bootstrap.json"), ModuleBootstrap.class);
+  public static final ModuleBootstrap MODULE_BOOTSTRAP_EGRESS =
+    parse(readString("json/module-bootstrap-egress.json"), ModuleBootstrap.class);
   public static final String AUTH_TOKEN = "dGVzdC1hY2Nlc3MtdG9rZW4=";
   public static final String REFRESH_TOKEN = "dGVzdC1yZWZyZXNoLXRva2Vu";
   public static final String SYS_TOKEN = "dGVzdC1zeXN0ZW0tYWNjZXNzLXRva2Vu";

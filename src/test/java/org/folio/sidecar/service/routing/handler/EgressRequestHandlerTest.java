@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
@@ -25,8 +25,6 @@ import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
 import org.folio.sidecar.service.filter.RequestFilterService;
-import org.folio.sidecar.service.routing.handler.EgressRequestHandler;
-import org.folio.sidecar.service.routing.handler.RequestForwardingService;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.sidecar.service.token.SystemUserTokenProvider;
 import org.folio.sidecar.support.TestConstants;

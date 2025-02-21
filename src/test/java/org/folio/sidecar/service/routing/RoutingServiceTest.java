@@ -2,29 +2,29 @@ package org.folio.sidecar.service.routing;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Handler;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import jakarta.enterprise.inject.Instance;
 import jakarta.ws.rs.NotFoundException;
+import java.util.stream.Stream;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
-import org.folio.sidecar.service.ErrorHandler;
-import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
-import org.folio.sidecar.service.routing.handler.EgressRequestHandler;
-import org.folio.sidecar.service.routing.handler.IngressRequestHandler;
-import org.folio.sidecar.service.routing.lookup.RoutingLookupUtils;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -32,35 +32,43 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RoutingServiceTest {
 
-  @InjectMocks private RoutingService routingService;
+  private RoutingService routingService;
   @Mock private Route route;
   @Mock private Router router;
-  @Mock private ErrorHandler errorHandler;
-  @Mock private EgressRequestHandler egressRequestHandler;
-  @Mock private IngressRequestHandler ingressRequestHandler;
-  @Mock private RoutingLookupUtils requestMatchingService;
   @Mock private ApplicationManagerService appManagerService;
-  @Mock private TraceRoutingProperties traceRoutingProperties;
+  @Mock private Handler<RoutingContext> requestHandler;
+  @Mock private Instance<ModuleBootstrapListener> moduleBootstrapListeners;
+  @Mock private ModuleBootstrapListener listener1;
+  @Mock private ModuleBootstrapListener listener2;
+
+  @BeforeEach
+  void setUp() {
+    when(moduleBootstrapListeners.stream()).thenReturn(Stream.of(listener1, listener2));
+    routingService = new RoutingService(appManagerService, requestHandler, moduleBootstrapListeners);
+  }
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(errorHandler, egressRequestHandler,
-      ingressRequestHandler, requestMatchingService, appManagerService);
+    verifyNoMoreInteractions(appManagerService, requestHandler, listener1, listener2);
   }
 
   @Test
   void initRoutes_positive() {
-    var tracing = mock(TraceRoutingProperties.Tracing.class);
-    when(traceRoutingProperties.tracing()).thenReturn(tracing);
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
-    doNothing().when(requestMatchingService).bootstrapModule(TestConstants.MODULE_BOOTSTRAP);
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
-    when(route.handler(any())).thenReturn(route);
+
+    var listenersOrder = inOrder(listener1, listener2);
 
     routingService.initRoutes(router);
 
+    listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
     verify(router).route("/*");
+    verify(route).handler(requestHandler);
   }
 
   @Test
@@ -74,39 +82,43 @@ class RoutingServiceTest {
 
   @Test
   void updateModuleRoutes_positive_updateIngressRoutes() {
-    var tracing = mock(TraceRoutingProperties.Tracing.class);
-    when(traceRoutingProperties.tracing()).thenReturn(tracing);
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
-    when(route.handler(any())).thenReturn(route);
 
     routingService.initRoutes(router);
-    verify(router).route("/*");
-    verify(requestMatchingService).bootstrapModule(TestConstants.MODULE_BOOTSTRAP);
+    reset(listener1, listener2, router, route);
+
+    var listenersOrder = inOrder(listener1, listener2);
 
     routingService.updateModuleRoutes(TestConstants.MODULE_ID);
-    verify(requestMatchingService).updateIngressRoutes(TestConstants.MODULE_BOOTSTRAP.getModule());
+
+    listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), UPDATE);
+    listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), UPDATE);
   }
 
   @Test
   void updateModuleRoutes_positive_updateEgressRoutes() {
-    var tracing = mock(TraceRoutingProperties.Tracing.class);
-    when(traceRoutingProperties.tracing()).thenReturn(tracing);
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
-    when(route.handler(any())).thenReturn(route);
 
     routingService.initRoutes(router);
-    verify(router).route("/*");
-    verify(requestMatchingService).bootstrapModule(TestConstants.MODULE_BOOTSTRAP);
+    reset(listener1, listener2, router, route);
+
+    var listenersOrder = inOrder(listener1, listener2);
 
     routingService.updateModuleRoutes("mod-bar-0.5.1");
-    verify(requestMatchingService).updateEgressRoutes(TestConstants.MODULE_BOOTSTRAP.getRequiredModules());
+
+    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
+    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
   }
 
   @Test
   void updateModuleRoutes_negative_moduleNotFound() {
     routingService.updateModuleRoutes("unknown_module");
-    verifyNoInteractions(requestMatchingService);
+    verifyNoInteractions(appManagerService, listener1, listener2, router, route);
   }
 }

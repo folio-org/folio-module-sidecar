@@ -9,12 +9,12 @@ import jakarta.inject.Named;
 import jakarta.ws.rs.NotFoundException;
 import org.folio.sidecar.service.ErrorHandler;
 
-public class NotFoundHandler {
+class NotFoundHandler {
 
   @Produces
   @Named("notFoundHandler")
   @ApplicationScoped
-  public static ChainedHandler getInstance(ErrorHandler errorHandler) {
+  static ChainedHandler getInstance(ErrorHandler errorHandler) {
     return ChainedHandler.as(rc -> errorHandler.sendErrorResponse(rc, notFoundError(rc.request())));
   }
 

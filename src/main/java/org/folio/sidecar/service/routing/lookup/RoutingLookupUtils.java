@@ -1,5 +1,8 @@
 package org.folio.sidecar.service.routing.lookup;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.sidecar.utils.RoutingUtils.MULTIPLE_INTERFACE_TYPE;
+
 import io.vertx.core.http.HttpServerRequest;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -122,13 +125,15 @@ class RoutingLookupUtils {
       return true;
     }
 
-    var interfaceType = candidate.getInterfaceType();
     var moduleIdHeader = request.getHeader(OkapiHeaders.MODULE_ID);
-    if (!Objects.equals("multiple", interfaceType)) {
-      return true;
-    }
+    var interfaceType = candidate.getInterfaceType();
 
-    return Objects.equals(moduleIdHeader, candidate.getModuleId());
+    if (isEmpty(moduleIdHeader)) {
+      return !Objects.equals(MULTIPLE_INTERFACE_TYPE, interfaceType);
+    } else {
+      return Objects.equals(moduleIdHeader, candidate.getModuleId())
+        && Objects.equals(MULTIPLE_INTERFACE_TYPE, interfaceType);
+    }
   }
 
   private static boolean match(ScRoutingEntry candidate, HttpServerRequest request, String uri,

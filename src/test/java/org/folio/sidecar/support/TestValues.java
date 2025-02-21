@@ -1,5 +1,6 @@
 package org.folio.sidecar.support;
 
+import static org.folio.sidecar.utils.CollectionUtils.safeList;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
@@ -9,6 +10,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Arrays;
+import java.util.List;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -42,6 +44,15 @@ public class TestValues {
     var routingEntry = new ModuleBootstrapEndpoint();
     routingEntry.setPathPattern(pathPattern);
     routingEntry.setMethods(methods);
+    return routingEntry;
+  }
+
+  public static ModuleBootstrapEndpoint routingEntryWithPerms(String pathPattern, List<String> methods,
+    List<String> requiredPermissions) {
+    var routingEntry = new ModuleBootstrapEndpoint();
+    routingEntry.setPathPattern(pathPattern);
+    routingEntry.setMethods(safeList(methods).toArray(new String[0]));
+    routingEntry.setPermissionsRequired(safeList(requiredPermissions));
     return routingEntry;
   }
 

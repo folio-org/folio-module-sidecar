@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -34,7 +34,6 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
-import org.folio.sidecar.service.routing.handler.RequestForwardingService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;

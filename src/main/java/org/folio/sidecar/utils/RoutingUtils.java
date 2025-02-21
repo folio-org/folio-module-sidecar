@@ -34,6 +34,7 @@ public class RoutingUtils {
 
   public static final String TENANT_INTERFACE = "_tenant";
   public static final String SYS_INTERFACE_TYPE = "system";
+  public static final String MULTIPLE_INTERFACE_TYPE = "multiple";
   public static final String TIMER_INTERFACE_ID = "_timer";
 
   /**

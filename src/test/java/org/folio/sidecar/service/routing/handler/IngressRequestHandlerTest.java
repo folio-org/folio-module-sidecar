@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -25,8 +25,6 @@ import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
-import org.folio.sidecar.service.routing.handler.IngressRequestHandler;
-import org.folio.sidecar.service.routing.handler.RequestForwardingService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
