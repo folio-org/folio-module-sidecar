@@ -603,11 +603,11 @@ class SidecarIT {
 
   @Test
   void handleIngressRequest_positive_permissionHeaderMerged() {
-    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    var token = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
-      .header(OkapiHeaders.TOKEN, authToken)
-      .header(OkapiHeaders.SYSTEM_TOKEN, authToken)
+      .header(OkapiHeaders.TOKEN, token)
+      .header(OkapiHeaders.SYSTEM_TOKEN, token)
       .header(OkapiHeaders.PERMISSIONS, "[\"qux.foo.item.get\"]")
       .get("/bar/foo")
       .then()
