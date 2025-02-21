@@ -32,9 +32,9 @@ public class RoutingService implements DiscoveryListener {
   private final Map<String, ModuleType> knownModules = new HashMap<>();
 
   public RoutingService(ApplicationManagerService appManagerService,
-    @RequestHandler Handler<RoutingContext> requestHandler, Instance<ModuleBootstrapListener> mbListeners) {
+    @RequestHandler Instance<Handler<RoutingContext>> requestHandler, Instance<ModuleBootstrapListener> mbListeners) {
     this.appManagerService = appManagerService;
-    this.requestHandler = requestHandler;
+    this.requestHandler = requestHandler.get();
     this.moduleBootstrapListeners = mbListeners.stream().toList();
   }
 

@@ -36,6 +36,7 @@ class RoutingServiceTest {
   @Mock private Route route;
   @Mock private Router router;
   @Mock private ApplicationManagerService appManagerService;
+  @Mock private Instance<Handler<RoutingContext>> instanceRequestHandler;
   @Mock private Handler<RoutingContext> requestHandler;
   @Mock private Instance<ModuleBootstrapListener> moduleBootstrapListeners;
   @Mock private ModuleBootstrapListener listener1;
@@ -44,7 +45,8 @@ class RoutingServiceTest {
   @BeforeEach
   void setUp() {
     when(moduleBootstrapListeners.stream()).thenReturn(Stream.of(listener1, listener2));
-    routingService = new RoutingService(appManagerService, requestHandler, moduleBootstrapListeners);
+    when(instanceRequestHandler.get()).thenReturn(requestHandler);
+    routingService = new RoutingService(appManagerService, instanceRequestHandler, moduleBootstrapListeners);
   }
 
   @AfterEach
