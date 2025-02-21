@@ -19,6 +19,7 @@ public interface CacheSettings {
 
   interface Duration {
 
+    @WithDefault("0")
     long duration();
 
     @WithDefault("secs")
