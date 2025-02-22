@@ -9,7 +9,6 @@ import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Named;
 import java.util.Collections;
 import lombok.extern.log4j.Log4j2;
@@ -36,7 +35,6 @@ import org.folio.sidecar.service.routing.lookup.RoutingLookup;
 @Log4j2
 public class RoutingConfiguration {
 
-  @Produces
   @Named
   @ApplicationScoped
   public ChainedHandler basicIngressHandler(@Named("ingressLookup") RoutingLookup lookup,
@@ -45,7 +43,6 @@ public class RoutingConfiguration {
     return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
   }
 
-  @Produces
   @Named
   @ApplicationScoped
   public ChainedHandler basicEgressHandler(@Named("egressLookup") RoutingLookup lookup,
@@ -54,7 +51,6 @@ public class RoutingConfiguration {
     return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
   }
 
-  @Produces
   @Named
   @ApplicationScoped
   public ChainedHandler chainedHandler(@Named("basicIngressHandler") ChainedHandler ingressHandler,
@@ -77,7 +73,6 @@ public class RoutingConfiguration {
     return handler.next(notFoundHandler);
   }
 
-  @Produces
   @RequestHandler
   @ApplicationScoped
   @LookupUnlessProperty(name = "routing.tracing.enabled", stringValue = "true")
@@ -86,7 +81,6 @@ public class RoutingConfiguration {
     return new ScRequestHandler(chainedHandler, errorHandler);
   }
 
-  @Produces
   @RequestHandler
   @ApplicationScoped
   @LookupIfProperty(name = "routing.tracing.enabled", stringValue = "true")
@@ -98,16 +92,13 @@ public class RoutingConfiguration {
     return new TraceHeadersHandler(new ScRequestHandler(chainedHandler, errorHandler), paths);
   }
 
-  @LookupIfProperty(name = "routing.dynamic.enabled", stringValue = "true")
   public static class Dynamic {
 
-    @Produces
     @ApplicationScoped
     public DiscoveryCacheFactory discoveryCacheFactory(ApplicationManagerService applicationManagerService) {
       return new DiscoveryCacheFactory(applicationManagerService);
     }
 
-    @Produces
     @Named("dynamicRoutingDiscoveryCache")
     @ApplicationScoped
     public AsyncLoadingCache<String, ModuleDiscovery> discoveryCache(DiscoveryCacheFactory factory,
@@ -115,14 +106,12 @@ public class RoutingConfiguration {
       return factory.createCache(properties.discoveryCache());
     }
 
-    @Produces
     @ApplicationScoped
     public DiscoveryCacheUpdator discoveryCacheUpdator(
       @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveryCache) {
       return new DiscoveryCacheUpdator(discoveryCache);
     }
 
-    @Produces
     @Named("dynamicLookup")
     @ApplicationScoped
     public RoutingLookup dynamicRoutingLookup(TenantEntitlementService tenantEntitlementService,
@@ -130,9 +119,9 @@ public class RoutingConfiguration {
       return new DynamicRoutingLookup(tenantEntitlementService, discoveryCache);
     }
 
-    @Produces
     @Named
     @ApplicationScoped
+    @LookupIfProperty(name = "routing.dynamic.enabled", stringValue = "true")
     public ChainedHandler dynamicEgressHandler(@Named("dynamicLookup") RoutingLookup lookup,
       @Named("egressRequestHandler") RoutingEntryHandler handler,
       PathProcessor pathProcessor, ErrorHandler errorHandler) {
@@ -140,10 +129,8 @@ public class RoutingConfiguration {
     }
   }
 
-  @LookupIfProperty(name = "routing.forward-to-gateway.enabled", stringValue = "true")
   public static class Gateway {
 
-    @Produces
     @Named("gatewayLookup")
     @ApplicationScoped
     public RoutingLookup gatewayRoutingLookup(
@@ -152,9 +139,9 @@ public class RoutingConfiguration {
       return new GatewayRoutingLookup(gatewayDestination, sidecarProperties);
     }
 
-    @Produces
     @Named
     @ApplicationScoped
+    @LookupIfProperty(name = "routing.forward-to-gateway.enabled", stringValue = "true")
     public ChainedHandler gatewayEgressHandler(@Named("gatewayLookup") RoutingLookup lookup,
       @Named("egressRequestHandler") RoutingEntryHandler handler,
       PathProcessor pathProcessor, ErrorHandler errorHandler) {

@@ -1,7 +1,6 @@
 package org.folio.sidecar.configuration.properties;
 
 import io.smallrye.config.WithConverter;
-import io.smallrye.config.WithDefault;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
@@ -19,10 +18,8 @@ public interface CacheSettings {
 
   interface Duration {
 
-    @WithDefault("0")
     long duration();
 
-    @WithDefault("secs")
     @WithConverter(TimeUnitConverter.class)
     TimeUnit unit();
 

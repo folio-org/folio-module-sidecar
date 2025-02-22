@@ -17,7 +17,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.inject.Instance;
 import jakarta.ws.rs.NotFoundException;
-import java.util.stream.Stream;
+import java.util.List;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -38,15 +38,13 @@ class RoutingServiceTest {
   @Mock private ApplicationManagerService appManagerService;
   @Mock private Instance<Handler<RoutingContext>> instanceRequestHandler;
   @Mock private Handler<RoutingContext> requestHandler;
-  @Mock private Instance<ModuleBootstrapListener> moduleBootstrapListeners;
   @Mock private ModuleBootstrapListener listener1;
   @Mock private ModuleBootstrapListener listener2;
 
   @BeforeEach
   void setUp() {
-    when(moduleBootstrapListeners.stream()).thenReturn(Stream.of(listener1, listener2));
     when(instanceRequestHandler.get()).thenReturn(requestHandler);
-    routingService = new RoutingService(appManagerService, instanceRequestHandler, moduleBootstrapListeners);
+    routingService = new RoutingService(appManagerService, instanceRequestHandler, List.of(listener1, listener2));
   }
 
   @AfterEach

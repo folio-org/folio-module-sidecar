@@ -4,14 +4,12 @@ import static java.lang.String.format;
 
 import io.vertx.core.http.HttpServerRequest;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Named;
 import jakarta.ws.rs.NotFoundException;
 import org.folio.sidecar.service.ErrorHandler;
 
 class NotFoundHandler {
 
-  @Produces
   @Named("notFoundHandler")
   @ApplicationScoped
   static ChainedHandler getInstance(ErrorHandler errorHandler) {

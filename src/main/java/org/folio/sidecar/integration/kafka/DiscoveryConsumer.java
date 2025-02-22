@@ -1,7 +1,7 @@
 package org.folio.sidecar.integration.kafka;
 
+import io.quarkus.arc.All;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
@@ -12,8 +12,8 @@ public class DiscoveryConsumer {
 
   private final List<DiscoveryListener> discoveryListeners;
 
-  public DiscoveryConsumer(Instance<DiscoveryListener> listeners) {
-    this.discoveryListeners = listeners.stream().toList();
+  public DiscoveryConsumer(@All List<DiscoveryListener> listeners) {
+    this.discoveryListeners = listeners;
   }
 
   @Incoming("discovery")

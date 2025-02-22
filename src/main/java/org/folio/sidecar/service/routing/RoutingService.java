@@ -6,6 +6,7 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
 
+import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
@@ -32,10 +33,10 @@ public class RoutingService implements DiscoveryListener {
   private final Map<String, ModuleType> knownModules = new HashMap<>();
 
   public RoutingService(ApplicationManagerService appManagerService,
-    @RequestHandler Instance<Handler<RoutingContext>> requestHandler, Instance<ModuleBootstrapListener> mbListeners) {
+    @RequestHandler Instance<Handler<RoutingContext>> requestHandler, @All List<ModuleBootstrapListener> mbListeners) {
     this.appManagerService = appManagerService;
     this.requestHandler = requestHandler.get();
-    this.moduleBootstrapListeners = mbListeners.stream().toList();
+    this.moduleBootstrapListeners = mbListeners;
   }
 
   public void initRoutes(Router router) {
