@@ -11,7 +11,7 @@ import lombok.extern.log4j.Log4j2;
 @ApplicationScoped
 public class ModulePermissionsService {
 
-  @SuppressWarnings("java:S3077")
+  //NOSONAR
   private volatile List<String> permissionsCache = List.of();
 
   public Future<List<String>> getPermissions() {
