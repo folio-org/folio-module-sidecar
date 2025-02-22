@@ -11,8 +11,7 @@ import lombok.extern.log4j.Log4j2;
 @ApplicationScoped
 public class ModulePermissionsService {
 
-  //NOSONAR
-  private volatile List<String> permissionsCache = List.of();
+  private volatile List<String> permissionsCache = List.of(); // NOSONAR
 
   public Future<List<String>> getPermissions() {
     log.debug("Returning permissions from cache: {}", permissionsCache);
