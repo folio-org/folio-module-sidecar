@@ -107,6 +107,7 @@ public class RoutingConfiguration {
     }
 
     @ApplicationScoped
+    @LookupIfProperty(name = "routing.dynamic.enabled", stringValue = "true")
     public DiscoveryCacheUpdator discoveryCacheUpdator(
       @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveryCache) {
       return new DiscoveryCacheUpdator(discoveryCache);
