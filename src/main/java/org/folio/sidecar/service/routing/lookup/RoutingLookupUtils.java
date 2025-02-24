@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
@@ -20,6 +21,7 @@ import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.utils.CollectionUtils;
 
 @Log4j2
+@UtilityClass
 class RoutingLookupUtils {
 
   static Optional<ScRoutingEntry> lookup(HttpServerRequest request, String path,

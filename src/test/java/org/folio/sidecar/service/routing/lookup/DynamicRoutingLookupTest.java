@@ -2,7 +2,6 @@ package org.folio.sidecar.service.routing.lookup;
 
 import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.http.HttpMethod.GET;
-import static java.util.Optional.empty;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.MODULE_HINT;
@@ -72,7 +71,7 @@ class DynamicRoutingLookupTest {
     var actual = dynamicRoutingLookup.lookupRoute(PATH, rc);
 
     assertThat(actual.succeeded()).isTrue();
-    assertThat(actual.result()).isEqualTo(empty());
+    assertThat(actual.result()).isEmpty();
   }
 
   @Test

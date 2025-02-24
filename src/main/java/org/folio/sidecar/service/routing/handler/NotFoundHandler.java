@@ -6,8 +6,11 @@ import io.vertx.core.http.HttpServerRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import jakarta.ws.rs.NotFoundException;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.folio.sidecar.service.ErrorHandler;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 class NotFoundHandler {
 
   @Named("notFoundHandler")
