@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 @IntegrationTest
 @TestProfile(DynamicRoutingIT.DynamicRoutingTestProfile.class)
 @EnableWireMock(verbose = true)
-public class DynamicRoutingIT {
+class DynamicRoutingIT {
 
   private static final String MODULE_DYNAMIC_ID = "mod-dynamic-0.0.1";
   private static final String MODULE_DYNAMIC_NAME = "mod-dynamic";
