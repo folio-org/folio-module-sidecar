@@ -197,4 +197,20 @@ class ForwardEgressTlsIT {
         "entities[0].description", is("An entity description")
       );
   }
+
+  @Test
+  void handleEgressRequest_positive_xOkapiPermissionsPopulated() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .post("/dez/items")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_CREATED))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .body("message", is("permissions sets in x-okapi-permissions"));
+  }
 }
