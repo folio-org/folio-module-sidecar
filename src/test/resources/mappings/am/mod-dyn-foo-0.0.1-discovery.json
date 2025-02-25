@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "urlPath": "/modules/mod-dynamic-0.0.1/discovery",
+    "urlPath": "/modules/mod-dyn-foo-0.0.1/discovery",
     "headers": {
       "X-Okapi-Token": {
         "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
@@ -18,8 +18,8 @@
     },
     "jsonBody": {
       "location": "{{request.baseUrl}}",
-      "id": "mod-dynamic-0.0.1",
-      "name": "mod-dynamic",
+      "id": "mod-dyn-foo-0.0.1",
+      "name": "mod-dyn-foo",
       "version": "0.0.1"
     }
   }

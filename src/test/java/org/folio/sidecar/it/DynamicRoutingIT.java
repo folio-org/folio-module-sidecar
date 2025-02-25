@@ -1,7 +1,12 @@
 package org.folio.sidecar.it;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static java.lang.String.format;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
+import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -25,8 +30,10 @@ import org.junit.jupiter.api.Test;
 @EnableWireMock(verbose = true)
 class DynamicRoutingIT {
 
-  private static final String MODULE_DYNAMIC_ID = "mod-dynamic-0.0.1";
-  private static final String MODULE_DYNAMIC_NAME = "mod-dynamic";
+  private static final String MODULE_DYN_FOO_ID = "mod-dyn-foo-0.0.1";
+  private static final String MODULE_DYN_FOO_NAME = "mod-dyn-foo";
+  private static final String MODULE_DYN_BAR_ID = "mod-dyn-bar-0.0.1";
+  private static final String MODULE_DYN_BAR_NAME = "mod-dyn-bar";
 
   @ConfigProperty(name = "keycloak.url")
   String keycloakUrl;
@@ -34,24 +41,24 @@ class DynamicRoutingIT {
 
   @BeforeEach
   void init() {
-    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME);
+    authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TENANT_NAME);
   }
 
   @Test
   void handleDynamicRequest_positive_withModuleIdHint() {
     TestUtils.givenJson()
-      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TENANT, TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
-      .header(OkapiHeaders.MODULE_HINT, MODULE_DYNAMIC_ID)
-      .get("/dynamic/entities")
+      .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_ID)
+      .get("/dyn-foo/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
       .statusCode(is(SC_OK))
       .assertThat()
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
-      .header(OkapiHeaders.TENANT, is(TestConstants.TENANT_NAME))
+      .header(OkapiHeaders.TENANT, is(TENANT_NAME))
       .contentType(is(APPLICATION_JSON))
       .body(
         "entities[0].id", is("6781b843-9255-4fc4-8fe2-041141fef7c9"),
@@ -67,18 +74,18 @@ class DynamicRoutingIT {
   @Test
   void handleDynamicRequest_positive_withModuleNameHint() {
     TestUtils.givenJson()
-      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TENANT, TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
-      .header(OkapiHeaders.MODULE_HINT, MODULE_DYNAMIC_NAME)
-      .get("/dynamic/entities")
+      .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_NAME)
+      .get("/dyn-foo/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
       .statusCode(is(SC_OK))
       .assertThat()
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
-      .header(OkapiHeaders.TENANT, is(TestConstants.TENANT_NAME))
+      .header(OkapiHeaders.TENANT, is(TENANT_NAME))
       .contentType(is(APPLICATION_JSON))
       .body(
         "entities[0].id", is("6781b843-9255-4fc4-8fe2-041141fef7c9"),
@@ -88,6 +95,49 @@ class DynamicRoutingIT {
         "entities[1].name", is("Dynamic entity 2"),
         "entities[1].description", is("A dynamic entity 2 description"),
         "totalRecords", is(2)
+      );
+  }
+
+  @Test
+  void handleDynamicRequest_negative_discoveryNotFound() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TENANT_NAME)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_BAR_ID)
+      .get("/dyn-bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_NOT_FOUND))
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "errors[0].message", containsString("Unable to find discovery of the module with id: " + MODULE_DYN_BAR_ID),
+        "total_records", is(1)
+      );
+  }
+
+  @Test
+  void handleDynamicRequest_negative_moduleNotEntitled() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TENANT_NAME)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_BAR_NAME)
+      .get("/dyn-bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "errors[0].message", containsString(format("No entitled module found for name: moduleName = %s, tenant = %s",
+          MODULE_DYN_BAR_NAME, TENANT_NAME)),
+        "total_records", is(1)
       );
   }
 

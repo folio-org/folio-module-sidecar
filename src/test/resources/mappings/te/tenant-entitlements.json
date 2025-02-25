@@ -71,7 +71,7 @@
               "tenantId": "90b113f0-4e98-45f7-bccc-cf318e13a9bc",
               "modules": [
                 "mod-foo-0.2.1",
-                "mod-dynamic-0.0.1"
+                "mod-dyn-foo-0.0.1"
               ]
             }
           ]

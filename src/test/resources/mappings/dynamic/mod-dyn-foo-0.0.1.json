@@ -3,7 +3,7 @@
     {
       "request": {
         "method": "GET",
-        "urlPath": "/dynamic/entities",
+        "urlPath": "/dyn-foo/entities",
         "headers": {
           "Content-Type": {
             "equalTo": "application/json"
