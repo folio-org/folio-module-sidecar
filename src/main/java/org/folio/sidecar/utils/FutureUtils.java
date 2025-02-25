@@ -15,6 +15,15 @@ public class FutureUtils {
   private static final long DEFAULT_TIMEOUT = 10;
   private static final TimeUnit DEFAULT_TIMEOUT_UNIT = SECONDS;
 
+  public static <T> T executeAndGet(Future<T> future) throws Exception {
+    return executeAndGet(future, DEFAULT_TIMEOUT, DEFAULT_TIMEOUT_UNIT);
+  }
+
+  public static <T> T executeAndGet(Future<T> future, long timeout, TimeUnit unit) throws Exception {
+    var cf = future.toCompletionStage().toCompletableFuture();
+    return cf.get(timeout, unit);
+  }
+
   public static <T> T executeAndGet(Future<T> future, Function<Throwable, T> onFailure) {
     return executeAndGet(future, onFailure, DEFAULT_TIMEOUT, DEFAULT_TIMEOUT_UNIT);
   }

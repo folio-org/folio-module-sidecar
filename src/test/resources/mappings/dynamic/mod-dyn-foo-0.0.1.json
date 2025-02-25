@@ -1,0 +1,40 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/dyn-foo/entities",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Okapi-Tenant": "testtenant"
+        },
+        "jsonBody": {
+          "totalRecords": 2,
+          "entities": [
+            {
+              "id": "6781b843-9255-4fc4-8fe2-041141fef7c9",
+              "name": "Dynamic entity 1",
+              "description": "A dynamic entity 1 description"
+            },
+            {
+              "id": "f97f07f1-38f2-48c8-8070-414511c33d2d",
+              "name": "Dynamic entity 2",
+              "description": "A dynamic entity 2 description"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

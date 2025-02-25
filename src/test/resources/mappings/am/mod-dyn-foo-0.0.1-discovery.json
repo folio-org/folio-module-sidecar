@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/modules/mod-dyn-foo-0.0.1/discovery",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "location": "{{request.baseUrl}}",
+      "id": "mod-dyn-foo-0.0.1",
+      "name": "mod-dyn-foo",
+      "version": "0.0.1"
+    }
+  }
+}

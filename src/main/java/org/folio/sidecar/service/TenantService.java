@@ -55,7 +55,7 @@ public class TenantService {
   public void loadTenantsAndEntitlements() {
     retryTemplate.callAsync(() ->
       tokenProvider.getAdminToken().compose(token ->
-        tenantEntitlementClient.getEntitlements(moduleProperties.getId(), token)
+        tenantEntitlementClient.getModuleEntitlements(moduleProperties.getId(), token)
           .map(TenantService::getTenantIds)
           .compose(tenantIds -> tenantManagerClient.getTenantInfo(tenantIds, token)
             .onSuccess(this::addEnabledTenants)
