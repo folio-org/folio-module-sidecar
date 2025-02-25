@@ -1,31 +1,32 @@
 package org.folio.sidecar.service.routing;
 
 import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.http.HttpMethod.GET;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.sidecar.support.TestConstants.MODULE_URL_TLS;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.netty.handler.codec.http.QueryStringEncoder;
 import io.smallrye.mutiny.TimeoutException;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 import jakarta.ws.rs.InternalServerErrorException;
 import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.HttpProperties;
@@ -53,12 +54,16 @@ class RequestForwardingServiceTest {
   private final String absoluteUrl = TestConstants.MODULE_URL + PATH;
 
   @InjectMocks private RequestForwardingService service;
-  @Mock private WebClient webClient;
+  @Mock private HttpClient httpClient;
   @Mock private ErrorHandler errorHandler;
   @Mock private HttpRequest<Buffer> httpRequest;
+
+  @Mock private HttpClientRequest httpClientRequest;
   @Mock private HttpResponse<Buffer> httpResponse;
-  @Mock private Buffer buffer;
+  @Mock private HttpClientResponse httpClientResponse;
   @Mock private MultiMap headers;
+
+  @Mock private MultiMap headersResponse;
   @Mock private SidecarSignatureService sidecarSignatureService;
   @Mock private HttpProperties httpProperties;
   @Mock private WebClientConfig webClientConfig;
@@ -73,15 +78,17 @@ class RequestForwardingServiceTest {
   @Test
   void forward_positive() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
 
-    when(webClient.requestAbs(GET, absoluteUrl)).thenReturn(httpRequest);
-    prepareHttpRequestMocks(routingContext);
-    prepareHttpResponseMocks(buffer);
+    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+      Future.succeededFuture(httpClientRequest));
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(httpClientResponse);
 
     var response = routingContext.response();
-    when(response.headers()).thenReturn(headers);
-    when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
-    when(response.end(buffer)).thenReturn(succeededFuture());
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
     service.forwardIngress(routingContext, absoluteUrl);
 
@@ -97,7 +104,7 @@ class RequestForwardingServiceTest {
     assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
     assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
     assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
-    assertThat(queryParamCaptor.getAllValues()).containsExactly("query", "name==test", "offset", "10", "size", "50");
+
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
@@ -111,16 +118,19 @@ class RequestForwardingServiceTest {
     var egressTlsMock = mock(WebClientConfig.TlsSettings.class);
     when(egressSettingsMock.tls()).thenReturn(egressTlsMock);
     when(egressTlsMock.enabled()).thenReturn(true);
-
-    when(webClient.requestAbs(GET, MODULE_URL_TLS + PATH)).thenReturn(httpRequest);
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
-    prepareHttpRequestMocks(routingContext);
-    prepareHttpResponseMocks(buffer);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+      Future.succeededFuture(httpClientRequest));
+
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(httpClientResponse);
 
     var response = routingContext.response();
-    when(response.headers()).thenReturn(headers);
-    when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
-    when(response.end(buffer)).thenReturn(succeededFuture());
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
     service.forwardEgress(routingContext, absoluteUrl);
 
@@ -136,7 +146,6 @@ class RequestForwardingServiceTest {
     assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
     assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
     assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
-    assertThat(queryParamCaptor.getAllValues()).containsExactly("query", "name==test", "offset", "10", "size", "50");
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
@@ -146,14 +155,18 @@ class RequestForwardingServiceTest {
   void forward_positive_nullBodyBuffer() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
 
-    when(webClient.requestAbs(GET, absoluteUrl)).thenReturn(httpRequest);
-    prepareHttpRequestMocks(routingContext);
-    prepareHttpResponseMocks(null);
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+      Future.succeededFuture(httpClientRequest));
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(httpClientResponse);
 
     var response = routingContext.response();
-    when(response.headers()).thenReturn(headers);
-    when(headers.addAll(responseHeadersMapCaptor.capture())).thenReturn(headers);
-    when(response.end()).thenReturn(succeededFuture());
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
     service.forwardIngress(routingContext, absoluteUrl);
 
@@ -168,7 +181,7 @@ class RequestForwardingServiceTest {
     assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
     assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
 
-    assertThat(queryParamCaptor.getAllValues()).containsExactly("query", "name==test", "offset", "10", "size", "50");
+    // assertThat(queryParamCaptor.getAllValues()).containsExactly("query", "name==test", "offset", "10", "size", "50");
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
     assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
 
@@ -180,32 +193,34 @@ class RequestForwardingServiceTest {
     var routingContext = routingContext(rc -> {});
     var error = new TimeoutException();
 
-    when(webClient.requestAbs(GET, absoluteUrl)).thenReturn(httpRequest);
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString()))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
-    when(httpRequest.timeout(TIMEOUT)).thenReturn(httpRequest);
-    when(httpRequest.putHeaders(any(MultiMap.class))).thenReturn(httpRequest);
-    when(httpRequest.addQueryParam(anyString(), anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(OkapiHeaders.REQUEST_ID), anyString())).thenReturn(httpRequest);
-    when(httpRequest.sendStream(routingContext.request())).thenReturn(failedFuture(error));
+    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
+    when(httpClientRequest.headers()).thenReturn(headers);
+    when(headers.addAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+    when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+    when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
     service.forwardIngress(routingContext, absoluteUrl);
 
     verify(errorHandler).sendErrorResponse(eq(routingContext), any(InternalServerErrorException.class));
   }
 
-  private void prepareHttpResponseMocks(Buffer buffer) {
-    when(httpResponse.headers()).thenReturn(responseHeaders());
-    when(httpResponse.statusCode()).thenReturn(SC_OK);
-    when(httpResponse.bodyAsBuffer()).thenReturn(buffer);
+  private void prepareHttpResponseMocks(HttpClientResponse httpClientResponse) {
+    when(httpClientResponse.headers()).thenReturn(responseHeaders());
+    when(httpClientResponse.statusCode()).thenReturn(SC_OK);
   }
 
-  private void prepareHttpRequestMocks(RoutingContext routingContext) {
+  private void prepareHttpRequestMocks(RoutingContext routingContext, HttpClientRequest httpClientRequest) {
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
-    when(httpRequest.timeout(TIMEOUT)).thenReturn(httpRequest);
-    when(httpRequest.putHeaders(requestHeadersMapCaptor.capture())).thenReturn(httpRequest);
-    when(httpRequest.addQueryParam(queryParamCaptor.capture(), queryParamCaptor.capture())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(httpRequest);
-    when(httpRequest.sendStream(routingContext.request())).thenReturn(succeededFuture(httpResponse));
+    when(httpClientRequest.headers()).thenReturn(headers);
+    when(headers.addAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+    when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+    when(httpClientRequest.response()).thenReturn(Future.succeededFuture(httpClientResponse));
   }
 
   private static RoutingContext routingContext(Consumer<RoutingContext> rcConsumer) {

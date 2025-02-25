@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
+import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
@@ -109,9 +110,13 @@ public class RequestForwardingService {
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);
 
+    QueryStringEncoder encoder = new QueryStringEncoder(httpUri.getPath());
+    httpServerRequest.params().forEach(encoder::addParam);
+
     // Create an HTTP request
-    Future<HttpClientRequest> httpClientRequestFuture = httpClient.request(httpServerRequest.method(),
-        httpUri.getPort(), httpUri.getHost(), httpUri.getPath())
+    Future<HttpClientRequest> request = httpClient.request(httpServerRequest.method(),
+      httpUri.getPort(), httpUri.getHost(), encoder.toString());
+    Future<HttpClientRequest> httpClientRequestFuture = request
         .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
     httpClientRequestFuture.onSuccess(httpClientRequest -> {
 
@@ -140,7 +145,9 @@ public class RequestForwardingService {
         log.trace("Handle the HTTP client response by streaming the output back to the server");
         handleSuccessfulResponse(rc, response);
         transactionLogHandler.log(rc, response, httpClientRequest);
-      });
+      }).onFailure(error -> errorHandler.sendErrorResponse(
+        rc, new InternalServerErrorException("Failed to proxy request", error)));
+
       // End the request when the file stream finishes
       httpServerRequest.endHandler(v -> {
         log.trace("End the request when the file stream finishes");
