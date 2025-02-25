@@ -5,6 +5,8 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -16,6 +18,7 @@ import jakarta.ws.rs.NotFoundException;
 import org.folio.sidecar.configuration.properties.RoutingHandlerProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +41,7 @@ class RoutingServiceTest {
   @Mock private RequestMatchingService requestMatchingService;
   @Mock private ApplicationManagerService appManagerService;
   @Mock private RoutingHandlerProperties routingHandlerProperties;
+  @Mock private ModulePermissionsService modulePermissionsService;
 
   @AfterEach
   void tearDown() {
@@ -58,6 +62,7 @@ class RoutingServiceTest {
     routingService.initRoutes(router);
 
     verify(router).route("/*");
+    verify(modulePermissionsService).putPermissions(anyList());
   }
 
   @Test
@@ -83,6 +88,7 @@ class RoutingServiceTest {
 
     routingService.updateModuleRoutes(TestConstants.MODULE_ID);
     verify(requestMatchingService).updateIngressRoutes(TestConstants.MODULE_BOOTSTRAP.getModule());
+    verify(modulePermissionsService, times(2)).putPermissions(anyList());
   }
 
   @Test
@@ -99,6 +105,7 @@ class RoutingServiceTest {
 
     routingService.updateModuleRoutes("mod-bar-0.5.1");
     verify(requestMatchingService).updateEgressRoutes(TestConstants.MODULE_BOOTSTRAP.getRequiredModules());
+    verify(modulePermissionsService).putPermissions(anyList());
   }
 
   @Test

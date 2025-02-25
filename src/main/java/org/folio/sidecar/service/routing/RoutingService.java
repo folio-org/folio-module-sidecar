@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
+import static org.folio.sidecar.utils.PermissionsUtils.extractPermissions;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
@@ -27,6 +28,9 @@ import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ErrorHandler;
 
+import org.folio.sidecar.service.ModulePermissionsService;
+
+
 @Log4j2
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -38,6 +42,7 @@ public class RoutingService {
   private final IngressRequestHandler ingressRequestHandler;
   private final RequestMatchingService requestMatchingService;
   private final RoutingHandlerProperties routingHandlerProperties;
+  private final ModulePermissionsService modulePermissionsService;
 
   private final Map<String, ModuleType> knownModules = new HashMap<>();
 
@@ -66,6 +71,8 @@ public class RoutingService {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
     requestMatchingService.bootstrapModule(moduleBootstrap);
+
+    modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
 
     var routerRequestHandler = createRequestHandler();
 
@@ -102,6 +109,7 @@ public class RoutingService {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
         requestMatchingService.updateIngressRoutes(moduleBootstrap.getModule());
+        modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
         return;
       }
 
