@@ -7,6 +7,7 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -20,7 +21,6 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.ws.rs.NotFoundException;
 import java.util.List;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -48,7 +48,8 @@ class RoutingServiceTest {
   @BeforeEach
   void setUp() {
     when(instanceRequestHandler.get()).thenReturn(requestHandler);
-    routingService = new RoutingService(appManagerService, instanceRequestHandler, List.of(listener1, listener2));
+    routingService = new RoutingService(appManagerService, instanceRequestHandler, List.of(listener1, listener2),
+      modulePermissionsService);
   }
 
   @AfterEach

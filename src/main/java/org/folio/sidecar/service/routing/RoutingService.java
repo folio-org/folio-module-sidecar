@@ -5,6 +5,7 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
+import static org.folio.sidecar.utils.PermissionsUtils.extractPermissions;
 
 import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
@@ -21,6 +22,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
+import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
 
 @Log4j2
