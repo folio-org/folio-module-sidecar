@@ -1,10 +1,11 @@
 package org.folio.sidecar.integration.am.model;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.List;
 import lombok.Data;
-import org.folio.sidecar.utils.StringUtils;
 
 @Data
 @RegisterForReflection
@@ -37,6 +38,6 @@ public class ModuleBootstrapEndpoint {
    */
   @JsonIgnore
   public String getStaticPath() {
-    return StringUtils.isEmpty(path) ? pathPattern : path;
+    return isEmpty(path) ? pathPattern : path;
   }
 }

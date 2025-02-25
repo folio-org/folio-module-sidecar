@@ -1,4 +1,4 @@
-package org.folio.sidecar.configuration;
+package org.folio.sidecar.integration.cred.configuration;
 
 import static org.folio.sidecar.utils.ConfigProviderUtils.getRequiredValue;
 import static org.folio.sidecar.utils.ConfigProviderUtils.getValue;

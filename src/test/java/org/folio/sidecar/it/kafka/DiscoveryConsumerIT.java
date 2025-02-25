@@ -47,7 +47,7 @@ class DiscoveryConsumerIT {
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(discoveryConsumer).consume(event));
-    verify(routingService).updateModuleRoutes(MODULE_ID);
+    verify(routingService).onDiscovery(MODULE_ID);
   }
 
   private void sendEvent(DiscoveryEvent event) {

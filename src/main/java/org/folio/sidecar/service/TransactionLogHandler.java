@@ -1,5 +1,7 @@
 package org.folio.sidecar.service;
 
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
@@ -9,7 +11,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.ThreadContext;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
-import org.folio.sidecar.utils.StringUtils;
 
 @Log4j2(topic = "transaction")
 @ApplicationScoped
@@ -19,7 +20,7 @@ public class TransactionLogHandler {
     var request = rc.request();
     var end = System.currentTimeMillis();
     String forwardedFor = request.getHeader("X-Forwarded-For");
-    String remoteIp = StringUtils.isEmpty(forwardedFor) ? String.valueOf(request.remoteAddress()) : forwardedFor;
+    String remoteIp = isEmpty(forwardedFor) ? String.valueOf(request.remoteAddress()) : forwardedFor;
     ThreadContext.put("remote-ip", remoteIp);
     ThreadContext.put("remote-host", String.valueOf(request.authority()));
     ThreadContext.put("remote-user", request.getHeader("X-Remote-User"));
