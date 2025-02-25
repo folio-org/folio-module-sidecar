@@ -122,7 +122,7 @@ public class WebClientConfiguration {
         result.setSsl(true).setTrustAll(false);
       } else {
         result.setVerifyHost(tls.verifyHostname())
-          .setTrustAll(false)
+          .setSsl(true).setTrustAll(false)
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
             .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
