@@ -141,12 +141,13 @@ public class RequestForwardingService {
       });
 
       //Handle the HTTP client response by streaming the output back to the server.
-      httpClientRequest.response().onSuccess(response -> {
-        log.trace("Handle the HTTP client response by streaming the output back to the server");
-        handleSuccessfulResponse(rc, response);
-        transactionLogHandler.log(rc, response, httpClientRequest);
-      }).onFailure(error -> errorHandler.sendErrorResponse(
-        rc, new InternalServerErrorException("Failed to proxy request", error)));
+      httpClientRequest.response()
+        .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS).onSuccess(response -> {
+          log.trace("Handle the HTTP client response by streaming the output back to the server");
+          handleSuccessfulResponse(rc, response);
+          transactionLogHandler.log(rc, response, httpClientRequest);
+        }).onFailure(error -> errorHandler.sendErrorResponse(
+          rc, new InternalServerErrorException("Failed to proxy request", error)));
 
       // End the request when the file stream finishes
       httpServerRequest.endHandler(v -> {
