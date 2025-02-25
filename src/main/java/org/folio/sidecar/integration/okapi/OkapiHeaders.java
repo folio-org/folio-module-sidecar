@@ -82,6 +82,12 @@ public class OkapiHeaders {
   public static final String MODULE_ID = "X-Okapi-Module-Id";
 
   /**
+   * X-Okapi-Module-Hint. Suggests which module should be called. Used in the absence of a module id.
+   * Can contain a module id or a module name.
+   */
+  public static final String MODULE_HINT = "X-Okapi-Module-Hint";
+
+  /**
    * X-Okapi-Request-Id. Identifies the original request to Okapi. Useful for logging.
    */
   public static final String REQUEST_ID = "X-Okapi-Request-Id";

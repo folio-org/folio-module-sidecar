@@ -1,7 +1,7 @@
 package org.folio.sidecar.integration.cred.configuration;
 
 import io.smallrye.config.ConfigMapping;
-import io.smallrye.config.WithDefault;
+import org.folio.sidecar.configuration.properties.CacheSettings;
 
 @ConfigMapping(prefix = "credentials")
 public interface CredentialProperties {
@@ -18,14 +18,5 @@ public interface CredentialProperties {
   interface User {
 
     CacheSettings cache();
-  }
-
-  interface CacheSettings {
-
-    @WithDefault("5")
-    int initialCapacity();
-
-    @WithDefault("50")
-    int maxSize();
   }
 }

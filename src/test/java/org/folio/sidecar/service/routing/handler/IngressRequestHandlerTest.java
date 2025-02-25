@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -70,7 +70,7 @@ class IngressRequestHandlerTest {
     when(pathProcessor.getModulePath(routingPath)).thenReturn(routingPath);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
 
-    ingressRequestHandler.handle(routingContext, requestRoutingEntry);
+    ingressRequestHandler.handle(requestRoutingEntry, routingContext);
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
@@ -90,7 +90,7 @@ class IngressRequestHandlerTest {
     var error = new ForbiddenException("Access Denied");
     when(requestFilterService.filterIngressRequest(rc)).thenReturn(failedFuture(error));
 
-    ingressRequestHandler.handle(rc, requestRoutingEntry);
+    ingressRequestHandler.handle(requestRoutingEntry, rc);
 
     verify(errorHandler).sendErrorResponse(eq(rc), any(Throwable.class));
     verifyNoInteractions(requestForwardingService);

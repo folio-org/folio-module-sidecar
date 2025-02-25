@@ -52,6 +52,7 @@
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
       src/main/java/**/sidecar/integration/**/model/**,
+      src/main/java/**/sidecar/**/configuration/**,
       <!-- Temporary ignored until deleted or added to quarkus application scope -->
       src/main/java/**/sidecar/integration/keycloak/**,
       src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,
@@ -459,6 +460,7 @@
           -->
           src/main/java/**/sidecar/model/**,
           src/main/java/**/sidecar/integration/**/model/**,
+          src/main/java/**/sidecar/**/configuration/**,
           <!-- Temporary ignored until deleted or added to quarkus application scope -->
           src/main/java/**/sidecar/integration/keycloak/**,
           src/main/java/**/sidecar/integration/okapi/UserPermissionService.java,

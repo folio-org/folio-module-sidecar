@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static java.lang.String.format;
@@ -27,7 +27,7 @@ import org.folio.sidecar.service.TransactionLogHandler;
 
 @Log4j2
 @ApplicationScoped
-public class RequestForwardingService {
+class RequestForwardingService {
 
   /**
    * Predicate for removing headers from the request.
@@ -48,7 +48,7 @@ public class RequestForwardingService {
   private final WebClientConfig webClientConfig;
   private final TransactionLogHandler transactionLogHandler;
 
-  public RequestForwardingService(@Named("webClient") WebClient webClient,
+  RequestForwardingService(@Named("webClient") WebClient webClient,
     @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
     ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
     WebClientConfig webClientConfig, TransactionLogHandler transactionLogHandler) {

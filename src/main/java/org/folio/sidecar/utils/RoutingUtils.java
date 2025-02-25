@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Supplier;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
@@ -33,6 +34,7 @@ public class RoutingUtils {
 
   public static final String TENANT_INTERFACE = "_tenant";
   public static final String SYS_INTERFACE_TYPE = "system";
+  public static final String MULTIPLE_INTERFACE_TYPE = "multiple";
   public static final String TIMER_INTERFACE_ID = "_timer";
 
   /**
@@ -126,6 +128,10 @@ public class RoutingUtils {
 
   public static Optional<JsonWebToken> getParsedSystemToken(RoutingContext rc) {
     return ofNullable(rc.get(SYSTEM_TOKEN));
+  }
+
+  public static String getHeader(RoutingContext rc, String header) {
+    return rc.request().headers().get(header);
   }
 
   public static void setHeader(RoutingContext rc, String header, String value) {
