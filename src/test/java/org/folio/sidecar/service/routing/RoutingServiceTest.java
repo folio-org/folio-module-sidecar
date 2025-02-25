@@ -4,8 +4,10 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -19,6 +21,7 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.ws.rs.NotFoundException;
 import java.util.List;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
+import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -40,16 +43,18 @@ class RoutingServiceTest {
   @Mock private Handler<RoutingContext> requestHandler;
   @Mock private ModuleBootstrapListener listener1;
   @Mock private ModuleBootstrapListener listener2;
+  @Mock private ModulePermissionsService modulePermissionsService;
 
   @BeforeEach
   void setUp() {
     when(instanceRequestHandler.get()).thenReturn(requestHandler);
-    routingService = new RoutingService(appManagerService, instanceRequestHandler, List.of(listener1, listener2));
+    routingService = new RoutingService(appManagerService, instanceRequestHandler, List.of(listener1, listener2),
+      modulePermissionsService);
   }
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(appManagerService, requestHandler, listener1, listener2);
+    verifyNoMoreInteractions(appManagerService, requestHandler, listener1, listener2, modulePermissionsService);
   }
 
   @Test
@@ -69,6 +74,7 @@ class RoutingServiceTest {
     listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
     verify(router).route("/*");
     verify(route).handler(requestHandler);
+    verify(modulePermissionsService).putPermissions(anyList());
   }
 
   @Test
@@ -96,6 +102,7 @@ class RoutingServiceTest {
 
     listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), UPDATE);
     listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), UPDATE);
+    verify(modulePermissionsService, times(2)).putPermissions(anyList());
   }
 
   @Test
@@ -114,6 +121,7 @@ class RoutingServiceTest {
 
     listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
     listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
+    verify(modulePermissionsService).putPermissions(anyList());
   }
 
   @Test
