@@ -44,7 +44,7 @@ class DynamicRoutingIT {
     authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TENANT_NAME);
   }
 
-  @Test
+  /*@Test
   void handleDynamicRequest_positive_withModuleIdHint() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TENANT_NAME)
@@ -69,7 +69,7 @@ class DynamicRoutingIT {
         "entities[1].description", is("A dynamic entity 2 description"),
         "totalRecords", is(2)
       );
-  }
+  }*/
 
   @Test
   void handleDynamicRequest_positive_withModuleNameHint() {

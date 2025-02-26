@@ -2,11 +2,10 @@ package org.folio.sidecar.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.ThreadContext;
@@ -16,7 +15,7 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 @ApplicationScoped
 public class TransactionLogHandler {
 
-  public void log(RoutingContext rc, HttpResponse<Buffer> resp, HttpRequest<Buffer> req) {
+  public void log(RoutingContext rc, HttpClientResponse resp, HttpClientRequest req) {
     var request = rc.request();
     var end = System.currentTimeMillis();
     String forwardedFor = request.getHeader("X-Forwarded-For");
@@ -29,8 +28,7 @@ public class TransactionLogHandler {
     ThreadContext.put("uri", request.uri());
     ThreadContext.put("protocol", String.valueOf(request.version()));
     ThreadContext.put("status", String.valueOf(resp.statusCode()));
-    var bytes = String.valueOf(resp.body() == null ? 0 : resp.body().getBytes().length);
-    ThreadContext.put("bytes", bytes);
+    ThreadContext.put("bytes", "0");
     ThreadContext.put("user-agent", request.getHeader(HttpHeaders.USER_AGENT));
     ThreadContext.put("x-okapi-tenant", request.getHeader(OkapiHeaders.TENANT));
     ThreadContext.put("x-okapi-user-id", request.getHeader(OkapiHeaders.USER_ID));
