@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static java.lang.String.format;
@@ -31,7 +31,7 @@ import org.folio.sidecar.service.TransactionLogHandler;
 
 @Log4j2
 @ApplicationScoped
-public class RequestForwardingService {
+ class RequestForwardingService {
 
   /**
    * Predicate for removing headers from the request.
@@ -117,7 +117,7 @@ public class RequestForwardingService {
     Future<HttpClientRequest> request = httpClient.request(httpServerRequest.method(),
       httpUri.getPort(), httpUri.getHost(), encoder.toString());
     Future<HttpClientRequest> httpClientRequestFuture = request
-        .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
+      .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
     httpClientRequestFuture.onSuccess(httpClientRequest -> {
 
       httpClientRequest.headers().addAll(filterHeaders(httpServerRequest));

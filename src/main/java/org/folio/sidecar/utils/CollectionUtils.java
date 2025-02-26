@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.folio.sidecar.support.Ordered;
@@ -58,6 +59,17 @@ public class CollectionUtils {
 
   public static <T> List<T> safeList(List<T> list) {
     return list != null ? list : Collections.emptyList();
+  }
+
+  /**
+   * Returns a stream from nullable collection.
+   *
+   * @param source - nullable {@link Collection} object
+   * @param <T> - generic type for collection element
+   * @return a stream from nullable collection
+   */
+  public static <T> Stream<T> toStream(Collection<T> source) {
+    return isEmpty(source) ? Stream.empty() : source.stream();
   }
 
   /**

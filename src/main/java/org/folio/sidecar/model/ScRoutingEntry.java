@@ -9,6 +9,8 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 public class ScRoutingEntry {
 
   public static final String GATEWAY_INTERFACE_ID = "GATEWAY";
+  public static final String DYNAMIC_INTERFACE_ID = "DYNAMIC";
+
   /**
    * Module id.
    */
@@ -54,5 +56,9 @@ public class ScRoutingEntry {
 
   public static ScRoutingEntry gatewayRoutingEntry(String location, String moduleId) {
     return ScRoutingEntry.of(moduleId, location, GATEWAY_INTERFACE_ID, null);
+  }
+
+  public static ScRoutingEntry dynamicRoutingEntry(String location, String moduleId, ModuleBootstrapEndpoint endpoint) {
+    return ScRoutingEntry.of(moduleId, location, DYNAMIC_INTERFACE_ID, endpoint);
   }
 }

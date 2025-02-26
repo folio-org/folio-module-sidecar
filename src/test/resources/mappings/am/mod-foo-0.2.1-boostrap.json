@@ -54,22 +54,22 @@
               {
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/bar",
-                "permissionsRequired": []
+                "permissionsRequired": [ ]
               },
               {
                 "methods": [ "GET" ],
                 "pathPattern": "/bar/foo",
-                "permissionsDesired": ["bar.foo.desired.*", "bar.foo.item.get"]
+                "permissionsDesired": [ "bar.foo.desired.*", "bar.foo.item.get" ]
               },
               {
                 "methods": [ "POST" ],
                 "pathPattern": "/foo/expire/timer",
-                "permissionsRequired": []
+                "permissionsRequired": [ ]
               },
               {
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/no-module-id-header",
-                "permissionsRequired": ["foo.no-module-id-header.get"]
+                "permissionsRequired": [ "foo.no-module-id-header.get" ]
               }
             ]
           },
@@ -87,6 +87,20 @@
               }
             ]
           }
+        ],
+        "permissionSets": [
+          {
+            "permissionName": "foo.item.get"
+          },
+          {
+            "permissionName": "foo.item.post"
+          },
+          {
+            "permissionName": "foo.collection.get"
+          },
+          {
+            "permissionName": "foo.collection.all"
+          }
         ]
       },
       "requiredModules": [
@@ -102,17 +116,17 @@
                 {
                   "methods": [ "POST" ],
                   "pathPattern": "/bar/entities",
-                  "permissionsRequired": ["item.post"]
+                  "permissionsRequired": [ "item.post" ]
                 },
                 {
                   "methods": [ "GET" ],
                   "pathPattern": "/bar/entities",
-                  "permissionsRequired": ["collection.get"]
+                  "permissionsRequired": [ "collection.get" ]
                 },
                 {
                   "methods": [ "GET" ],
                   "pathPattern": "/bar/no-module-id-header",
-                  "permissionsRequired": ["bar.no-module-id-header.get"]
+                  "permissionsRequired": [ "bar.no-module-id-header.get" ]
                 }
               ]
             }
@@ -158,6 +172,31 @@
                   "pathPattern": "/entities",
                   "permissionsRequired": [
                     "item.get"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "bardez",
+              "version": "0.1",
+              "endpoints": [
+                {
+                  "methods": [
+                    "GET"
+                  ],
+                  "pathPattern": "/entities",
+                  "permissionsRequired": [
+                    "item.get"
+                  ]
+                },
+                {
+                  "methods": [
+                    "POST"
+                  ],
+                  "pathPattern": "/dez/items",
+                  "permissionsDesired": [
+                    "foo.item.*",
+                    "foo.collection.get"
                   ]
                 }
               ]

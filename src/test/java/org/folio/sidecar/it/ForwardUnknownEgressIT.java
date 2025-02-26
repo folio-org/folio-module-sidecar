@@ -147,7 +147,7 @@ class ForwardUnknownEgressIT {
     public Map<String, String> getConfigOverrides() {
       var result = new HashMap<>(super.getConfigOverrides());
 
-      result.put("sidecar.forward-unknown-requests", "true");
+      result.put("routing.forward-to-gateway.enabled", "true");
       result.put("web-client.keycloak.tls.enabled", "false");
       result.put("web-client.gateway.tls.enabled", "false");
       result.put("web-client.egress.tls.enabled", "false");

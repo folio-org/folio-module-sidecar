@@ -1,4 +1,4 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.http.HttpMethod.GET;

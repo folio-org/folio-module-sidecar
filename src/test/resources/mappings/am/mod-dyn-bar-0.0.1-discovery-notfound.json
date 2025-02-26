@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/modules/mod-dyn-bar-0.0.1/discovery",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "errors": [
+        {
+          "message": "Unable to find discovery of the module with id: mod-dyn-bar-0.0.1",
+          "type": "EntityNotFoundException",
+          "code": "not_found_error",
+          "parameters": []
+        }
+      ],
+      "total_records": 1
+    }
+  }
+}

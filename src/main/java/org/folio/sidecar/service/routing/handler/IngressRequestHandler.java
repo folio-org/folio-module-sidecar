@@ -1,10 +1,11 @@
-package org.folio.sidecar.service.routing;
+package org.folio.sidecar.service.routing.handler;
 
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
@@ -16,9 +17,10 @@ import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 
 @Log4j2
+@Named
 @ApplicationScoped
 @RequiredArgsConstructor
-public class IngressRequestHandler implements RequestHandler {
+class IngressRequestHandler implements RoutingEntryHandler {
 
   private final ErrorHandler errorHandler;
   private final PathProcessor pathProcessor;
@@ -33,7 +35,7 @@ public class IngressRequestHandler implements RequestHandler {
    * @param rc - routing context to handle
    */
   @Override
-  public void handle(RoutingContext rc, ScRoutingEntry scRoutingEntry) {
+  public void handle(ScRoutingEntry scRoutingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.info("Handling ingress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));

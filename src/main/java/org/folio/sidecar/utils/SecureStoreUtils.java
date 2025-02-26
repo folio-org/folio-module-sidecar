@@ -1,7 +1,7 @@
 package org.folio.sidecar.utils;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.sidecar.utils.FolioEnvironment.getFolioEnvName;
-import static org.folio.sidecar.utils.StringUtils.isBlank;
 
 import lombok.experimental.UtilityClass;
 

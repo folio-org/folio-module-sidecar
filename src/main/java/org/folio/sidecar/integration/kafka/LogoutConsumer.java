@@ -1,7 +1,7 @@
 package org.folio.sidecar.integration.kafka;
 
+import io.quarkus.arc.All;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
@@ -15,8 +15,8 @@ public class LogoutConsumer {
   private final List<CacheInvalidatable> caches;
 
   @Inject
-  public LogoutConsumer(Instance<CacheInvalidatable> caches) {
-    this.caches = caches.stream().toList();
+  public LogoutConsumer(@All List<CacheInvalidatable> caches) {
+    this.caches = caches;
   }
 
   @Incoming("logout")

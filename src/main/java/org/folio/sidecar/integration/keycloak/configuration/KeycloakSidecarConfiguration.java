@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
-import jakarta.enterprise.inject.Produces;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.jwt.openid.JsonWebTokenParser;
@@ -17,7 +16,6 @@ import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
 @Dependent
 public class KeycloakSidecarConfiguration {
 
-  @Produces
   @ApplicationScoped
   public Cache<String, JsonWebToken> kcAuthorizationCache(KeycloakProperties props, JsonWebTokenExpiry expiry) {
     return Caffeine.newBuilder()
@@ -28,7 +26,6 @@ public class KeycloakSidecarConfiguration {
       .build();
   }
 
-  @Produces
   @ApplicationScoped
   public Cache<String, TokenIntrospectionResponse> tokenIntrospectionCache(KeycloakProperties props,
     TokenIntrospectionExpiry expiry) {
@@ -40,7 +37,6 @@ public class KeycloakSidecarConfiguration {
       .build();
   }
 
-  @Produces
   @ApplicationScoped
   public JsonWebTokenParser jsonWebTokenParser(KeycloakProperties keycloakProperties,
     OpenidJwtParserProvider openidJwtParserProvider, ObjectMapper objectMapper) {
@@ -52,7 +48,6 @@ public class KeycloakSidecarConfiguration {
     return new JsonWebTokenParser(objectMapper, jwtParserConfiguration, openidJwtParserProvider);
   }
 
-  @Produces
   @ApplicationScoped
   public OpenidJwtParserProvider openidJwtParserProvider(KeycloakProperties keycloakProperties) {
     return new OpenidJwtParserProvider(

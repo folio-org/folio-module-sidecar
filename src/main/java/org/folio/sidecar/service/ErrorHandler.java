@@ -2,6 +2,7 @@ package org.folio.sidecar.service;
 
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
@@ -17,6 +18,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -41,41 +43,43 @@ public class ErrorHandler {
    * @param throwable - error as {@link Throwable} object
    */
   public void sendErrorResponse(RoutingContext rc, Throwable throwable) {
-    if (throwable instanceof ForbiddenException) {
-      sendErrorResponse(rc, throwable, FORBIDDEN, ErrorCode.AUTHORIZATION_ERROR, "Access Denied");
+    log.debug("Handling error from request processing", throwable);
+
+    var cause = (throwable instanceof CompletionException) ? getRootCause(throwable) : throwable;
+
+    if (cause instanceof ForbiddenException) {
+      sendErrorResponse(rc, cause, FORBIDDEN, ErrorCode.AUTHORIZATION_ERROR, "Access Denied");
       return;
     }
 
-    if (throwable instanceof UnauthorizedException) {
-      sendErrorResponse(rc, throwable, UNAUTHORIZED, ErrorCode.AUTHORIZATION_ERROR, "Unauthorized");
+    if (cause instanceof UnauthorizedException) {
+      sendErrorResponse(rc, cause, UNAUTHORIZED, ErrorCode.AUTHORIZATION_ERROR, "Unauthorized");
       return;
     }
 
-    var cause = throwable.getCause();
-    if (cause instanceof TimeoutException) {
-      sendErrorResponse(rc, cause, REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout");
+    if (cause.getCause() instanceof TimeoutException) {
+      sendErrorResponse(rc, cause.getCause(), REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout");
       return;
     }
 
-    if (throwable instanceof WebApplicationException webApplicationException) {
-      var errorCode = throwable instanceof NotFoundException ? ErrorCode.ROUTE_FOUND_ERROR : ErrorCode.SERVICE_ERROR;
+    if (cause instanceof WebApplicationException webApplicationException) {
+      var errorCode = cause instanceof NotFoundException ? ErrorCode.ROUTE_FOUND_ERROR : ErrorCode.SERVICE_ERROR;
       var statusCode = webApplicationException.getResponse().getStatus();
-      sendErrorResponse(rc, throwable, statusCode, errorCode, null);
+      sendErrorResponse(rc, cause, statusCode, errorCode, null);
       return;
     }
 
-    if (throwable instanceof TenantNotEnabledException) {
-      sendErrorResponse(rc, throwable, BAD_REQUEST, ErrorCode.UNKNOWN_TENANT, null);
+    if (cause instanceof TenantNotEnabledException) {
+      sendErrorResponse(rc, cause, BAD_REQUEST, ErrorCode.UNKNOWN_TENANT, null);
       return;
     }
 
-    sendErrorResponse(rc, throwable, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null);
+    sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null);
   }
 
   private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride) {
     sidecarSignatureService.removeSignature(rc);
-
-    log.debug("Handling error from request processing", error);
+    
     log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}",
       () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage);
 
