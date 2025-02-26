@@ -31,7 +31,7 @@ import org.folio.sidecar.service.TransactionLogHandler;
 
 @Log4j2
 @ApplicationScoped
- class RequestForwardingService {
+public class RequestForwardingService {
 
   /**
    * Predicate for removing headers from the request.
