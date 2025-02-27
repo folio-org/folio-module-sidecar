@@ -57,7 +57,8 @@
             "matches": "\\d{6}/dez"
           },
           "X-Okapi-Permissions": {
-            "equalTo": "[\"foo.item.get\",\"foo.item.post\",\"foo.collection.get\"]"
+            "equalToJson": "[\"dez.collection.get\",\"foo.item.get\",\"foo.item.post\",\"foo.collection.get\"]",
+            "ignoreArrayOrder": true
           }
         }
       },

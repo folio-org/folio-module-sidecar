@@ -3,7 +3,7 @@ package org.folio.sidecar.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
+import java.util.Set;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class ModulePermissionsServiceTest {
 
   @Test
   void putPermissions_updatesPermissionsCache() {
-    var permissions = List.of("perm1", "perm2");
+    var permissions = Set.of("perm1", "perm2");
     modulePermissionsService.putPermissions(permissions).result();
 
     var result = modulePermissionsService.getPermissions().result();
@@ -35,7 +35,7 @@ class ModulePermissionsServiceTest {
 
   @Test
   void putPermissions_handlesEmptyPermissionsList() {
-    modulePermissionsService.putPermissions(List.of()).result();
+    modulePermissionsService.putPermissions(Set.of()).result();
 
     var result = modulePermissionsService.getPermissions().result();
     assertTrue(result.isEmpty());
@@ -43,8 +43,8 @@ class ModulePermissionsServiceTest {
 
   @Test
   void getPermissions_positive_returnsUpdatedPermissions() {
-    var initialPermissions = List.of("perm1");
-    var updatedPermissions = List.of("perm1", "perm2");
+    var initialPermissions = Set.of("perm1");
+    var updatedPermissions = Set.of("perm1", "perm2");
 
     modulePermissionsService.putPermissions(initialPermissions).result();
     modulePermissionsService.putPermissions(updatedPermissions).result();

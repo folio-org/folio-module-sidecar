@@ -1,18 +1,24 @@
 package org.folio.sidecar.utils;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.toSet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.PERMISSIONS;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import lombok.experimental.UtilityClass;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
-import org.folio.sidecar.integration.am.model.Permission;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapInterface;
 
 @Log4j2
 @UtilityClass
@@ -44,11 +50,18 @@ public class PermissionsUtils {
     return new ArrayList<>(mergedPermissions);
   }
 
-  public static List<String> extractPermissions(ModuleBootstrap moduleBootstrap) {
-    var permissionSets = moduleBootstrap.getModule().getPermissionSets();
-    if (isEmpty(permissionSets)) {
-      return emptyList();
+  public static Set<String> findAllModulePermissions(ModuleBootstrap moduleBootstrap) {
+    var interfaces = moduleBootstrap.getModule().getInterfaces();
+    if (isEmpty(interfaces)) {
+      return emptySet();
     }
-    return permissionSets.stream().map(Permission::getPermissionName).toList();
+    return interfaces.stream()
+      .map(ModuleBootstrapInterface::getEndpoints)
+      .filter(Objects::nonNull)
+      .flatMap(Collection::stream)
+      .map(ModuleBootstrapEndpoint::getModulePermissions)
+      .filter(Objects::nonNull)
+      .flatMap(Collection::stream)
+      .collect(toSet());
   }
 }

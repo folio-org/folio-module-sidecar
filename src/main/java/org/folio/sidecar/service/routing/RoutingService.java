@@ -5,7 +5,7 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
-import static org.folio.sidecar.utils.PermissionsUtils.extractPermissions;
+import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 
 import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
@@ -78,7 +78,7 @@ public class RoutingService implements DiscoveryListener {
       listener.onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), INIT);
     });
 
-    modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
+    modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
 
     router.route("/*").handler(requestHandler);
 
@@ -100,7 +100,7 @@ public class RoutingService implements DiscoveryListener {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
         moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
-        modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
+        modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
         return;
       }
 
