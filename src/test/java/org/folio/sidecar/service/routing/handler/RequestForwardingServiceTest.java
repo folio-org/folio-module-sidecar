@@ -9,6 +9,7 @@ import static org.apache.http.HttpStatus.SC_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.when;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.smallrye.mutiny.TimeoutException;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -68,12 +70,19 @@ class RequestForwardingServiceTest {
   @Mock private HttpProperties httpProperties;
   @Mock private WebClientConfig webClientConfig;
   @Mock private TransactionLogHandler transactionLogHandler;
-
+  @Mock
+  private Buffer buffer;
   @Captor private ArgumentCaptor<MultiMap> requestHeadersMapCaptor;
   @Captor private ArgumentCaptor<MultiMap> responseHeadersMapCaptor;
+  @Captor private ArgumentCaptor<Handler<Void>> requestDrainHandlerCaptor;
+  @Captor private ArgumentCaptor<Handler<Void>> responseDrainHandlerCaptor;
+  @Captor private ArgumentCaptor<Handler<Buffer>> requestHandlerCaptor;
+  @Captor private ArgumentCaptor<Handler<Buffer>> responseHandlerCaptor;
   @Captor private ArgumentCaptor<String> queryParamCaptor;
   @Captor private ArgumentCaptor<String> headersCaptor;
   @Captor private ArgumentCaptor<String> requestIdCaptor;
+  @Captor private ArgumentCaptor<Handler<Void>> requestEndHandlerCaptor;
+  @Captor private ArgumentCaptor<Handler<Void>> responseEndHandlerCaptor;
 
   @Test
   void forward_positive() {
@@ -84,7 +93,7 @@ class RequestForwardingServiceTest {
     when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
       Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
-    prepareHttpResponseMocks(httpClientResponse);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
 
     var response = routingContext.response();
     when(response.headers()).thenReturn(headersResponse);
@@ -108,6 +117,40 @@ class RequestForwardingServiceTest {
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
+
+    // Trigger the captured handler manually
+    requestDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(routingContext.request()).resume();
+
+    // Simulate receiving a buffer
+    requestHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(routingContext.request()).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(httpClientRequest).write(buffer);
+
+    // Trigger the captured handler manually
+    requestEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(httpClientRequest).end();
+
+    // Trigger the captured handler manually
+    responseDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(httpClientResponse).resume();
+
+    // Simulate receiving a buffer
+    responseHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(httpClientResponse).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(routingContext.response()).write(buffer);
+
+    // Trigger the captured handler manually
+    responseEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(routingContext.response()).end();
   }
 
   @Test
@@ -126,7 +169,7 @@ class RequestForwardingServiceTest {
       Future.succeededFuture(httpClientRequest));
 
     prepareHttpRequestMocks(routingContext, httpClientRequest);
-    prepareHttpResponseMocks(httpClientResponse);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
 
     var response = routingContext.response();
     when(response.headers()).thenReturn(headersResponse);
@@ -149,6 +192,40 @@ class RequestForwardingServiceTest {
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
+
+    // Trigger the captured handler manually
+    requestDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(routingContext.request()).resume();
+
+    // Simulate receiving a buffer
+    requestHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(routingContext.request()).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(httpClientRequest).write(buffer);
+
+    // Trigger the captured handler manually
+    requestEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(httpClientRequest).end();
+
+    // Trigger the captured handler manually
+    responseDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(httpClientResponse).resume();
+
+    // Simulate receiving a buffer
+    responseHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(httpClientResponse).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(routingContext.response()).write(buffer);
+
+    // Trigger the captured handler manually
+    responseEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(routingContext.response()).end();
   }
 
   @Test
@@ -162,7 +239,7 @@ class RequestForwardingServiceTest {
     when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
       Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
-    prepareHttpResponseMocks(httpClientResponse);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
 
     var response = routingContext.response();
     when(response.headers()).thenReturn(headersResponse);
@@ -186,6 +263,40 @@ class RequestForwardingServiceTest {
     assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
 
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
+
+    // Trigger the captured handler manually
+    requestDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(routingContext.request()).resume();
+
+    // Simulate receiving a buffer
+    requestHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(routingContext.request()).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(httpClientRequest).write(buffer);
+
+    // Trigger the captured handler manually
+    requestEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(httpClientRequest).end();
+
+    // Trigger the captured handler manually
+    responseDrainHandlerCaptor.getValue().handle(null);
+    // Verify that resume() was called on httpServerRequest
+    verify(httpClientResponse).resume();
+
+    // Simulate receiving a buffer
+    responseHandlerCaptor.getValue().handle(buffer);
+    // Verify httpServerRequest.pause() is called
+    verify(httpClientResponse).pause();
+    // Verify that the buffer is still written to httpClientRequest
+    verify(routingContext.response()).write(buffer);
+
+    // Trigger the captured handler manually
+    responseEndHandlerCaptor.getValue().handle(null);
+    // Verify that end() was called on httpClientRequest
+    verify(routingContext.response()).end();
   }
 
   @Test
@@ -210,9 +321,20 @@ class RequestForwardingServiceTest {
     verify(errorHandler).sendErrorResponse(eq(routingContext), any(InternalServerErrorException.class));
   }
 
-  private void prepareHttpResponseMocks(HttpClientResponse httpClientResponse) {
+  private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {
     when(httpClientResponse.headers()).thenReturn(responseHeaders());
     when(httpClientResponse.statusCode()).thenReturn(SC_OK);
+
+    HttpServerResponse httpServerResponse = routingContext.response();
+    // Mock drainHandler method
+    when(httpServerResponse.drainHandler(responseDrainHandlerCaptor.capture())).thenReturn(httpServerResponse);
+    // Mock handler method
+    when(httpClientResponse.pause()).thenReturn(httpClientResponse);
+    doReturn(true).when(httpServerResponse).writeQueueFull(); // Simulate write queue being full
+    when(httpServerResponse.write(any(Buffer.class))).thenReturn(Future.succeededFuture());
+    when(httpClientResponse.handler(responseHandlerCaptor.capture())).thenReturn(httpClientResponse);
+    // Mock endHandler method
+    when(httpClientResponse.endHandler(responseEndHandlerCaptor.capture())).thenReturn(httpClientResponse);
   }
 
   private void prepareHttpRequestMocks(RoutingContext routingContext, HttpClientRequest httpClientRequest) {
@@ -221,6 +343,16 @@ class RequestForwardingServiceTest {
     when(headers.addAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
     when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(Future.succeededFuture(httpClientResponse));
+    // Mock drainHandler method
+    when(httpClientRequest.drainHandler(requestDrainHandlerCaptor.capture())).thenReturn(httpClientRequest);
+    // Mock handler method
+    HttpServerRequest httpServerRequest = routingContext.request();
+    when(httpServerRequest.pause()).thenReturn(httpServerRequest);
+    doReturn(true).when(httpClientRequest).writeQueueFull(); // Simulate write queue being full
+    when(httpClientRequest.write(any(Buffer.class))).thenReturn(Future.succeededFuture());
+    when(httpServerRequest.handler(requestHandlerCaptor.capture())).thenReturn(httpServerRequest);
+    // Mock endHandler method
+    when(httpServerRequest.endHandler(requestEndHandlerCaptor.capture())).thenReturn(httpServerRequest);
   }
 
   private static RoutingContext routingContext(Consumer<RoutingContext> rcConsumer) {
