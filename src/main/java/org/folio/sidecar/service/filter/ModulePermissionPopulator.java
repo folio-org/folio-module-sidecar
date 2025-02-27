@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.filter;
 
 import static io.vertx.core.Future.succeededFuture;
+import static java.util.stream.Collectors.toSet;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.PermissionsUtils.putPermissionsHeaderToRequest;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -8,7 +9,8 @@ import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ModulePermissionsService;
@@ -32,7 +34,7 @@ public class ModulePermissionPopulator implements EgressRequestFilter {
 
     return modulePermissionsService.getPermissions()
       .map(permissions -> findDesiredPermissions(getScRoutingEntry(ctx), permissions))
-      .map(permissions -> putPermissionsHeaderToRequest(ctx, permissions));
+      .map(permissions -> putPermissionsHeaderToRequest(ctx, new ArrayList<>(permissions)));
   }
 
   private static boolean shouldSkip(RoutingContext ctx) {
@@ -42,14 +44,14 @@ public class ModulePermissionPopulator implements EgressRequestFilter {
       || isEmpty(scRoutingEntry.getRoutingEntry().getPermissionsDesired());
   }
 
-  private static List<String> findDesiredPermissions(ScRoutingEntry re, List<String> modulePermissions) {
+  private static Set<String> findDesiredPermissions(ScRoutingEntry re, Set<String> modulePermissions) {
     var routingEntry = re.getRoutingEntry();
     var preparedForMatching = routingEntry.getPermissionsDesired().stream()
       .map(permission -> permission.replace("*", ""))
       .toList();
     return modulePermissions.stream()
       .filter(permission -> preparedForMatching.stream().anyMatch(permission::startsWith))
-      .toList();
+      .collect(toSet());
   }
 }
 

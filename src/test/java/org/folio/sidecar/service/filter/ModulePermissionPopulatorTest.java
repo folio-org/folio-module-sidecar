@@ -10,8 +10,11 @@ import static org.mockito.Mockito.when;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.RoutingContext;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.ModulePermissionsService;
@@ -51,15 +54,18 @@ class ModulePermissionPopulatorTest {
   void filter_positive_addPermissionsHeader() {
     when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(scRoutingEntry);
     when(scRoutingEntry.getRoutingEntry()).thenReturn(moduleBootstrapEndpoint);
-    when(moduleBootstrapEndpoint.getPermissionsDesired()).thenReturn(List.of("perm1", "perm2"));
-    when(modulePermissionsService.getPermissions()).thenReturn(succeededFuture(List.of("perm1", "perm2", "perm3")));
+    var permissions = List.of("perm1", "perm2");
+    when(moduleBootstrapEndpoint.getPermissionsDesired()).thenReturn(permissions);
+    var modulePermissions = new LinkedHashSet<>(List.of("perm1", "perm2", "perm3"));
+    when(modulePermissionsService.getPermissions()).thenReturn(succeededFuture(modulePermissions));
     when(routingContext.request()).thenReturn(request);
     when(request.headers()).thenReturn(headers);
 
     var result = modulePermissionPopulator.filter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
-    verify(routingContext.request().headers()).set(PERMISSIONS, "[\"perm1\",\"perm2\"]");
+    var expectedHeader = new JsonArray(permissions).encode();
+    verify(routingContext.request().headers()).set(PERMISSIONS, expectedHeader);
   }
 
   @Test
@@ -67,7 +73,7 @@ class ModulePermissionPopulatorTest {
     when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(scRoutingEntry);
     when(scRoutingEntry.getRoutingEntry()).thenReturn(moduleBootstrapEndpoint);
     when(moduleBootstrapEndpoint.getPermissionsDesired()).thenReturn(List.of("perm1", "perm2"));
-    when(modulePermissionsService.getPermissions()).thenReturn(succeededFuture(List.of()));
+    when(modulePermissionsService.getPermissions()).thenReturn(succeededFuture(Set.of()));
     when(routingContext.request()).thenReturn(request);
     when(request.headers()).thenReturn(headers);
 

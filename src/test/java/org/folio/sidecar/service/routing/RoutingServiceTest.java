@@ -4,7 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -74,7 +74,7 @@ class RoutingServiceTest {
     listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
     verify(router).route("/*");
     verify(route).handler(requestHandler);
-    verify(modulePermissionsService).putPermissions(anyList());
+    verify(modulePermissionsService).putPermissions(anySet());
   }
 
   @Test
@@ -102,7 +102,7 @@ class RoutingServiceTest {
 
     listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), UPDATE);
     listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), UPDATE);
-    verify(modulePermissionsService, times(2)).putPermissions(anyList());
+    verify(modulePermissionsService, times(2)).putPermissions(anySet());
   }
 
   @Test
@@ -121,7 +121,7 @@ class RoutingServiceTest {
 
     listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
     listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
-    verify(modulePermissionsService).putPermissions(anyList());
+    verify(modulePermissionsService).putPermissions(anySet());
   }
 
   @Test
