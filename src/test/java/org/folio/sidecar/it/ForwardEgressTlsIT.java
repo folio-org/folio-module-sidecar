@@ -42,12 +42,10 @@ class ForwardEgressTlsIT {
   private String authToken;
 
   @BeforeAll
-  static void beforeAll() throws InterruptedException {
+  static void beforeAll() {
     var transaction = TRANSACTION_LOGGER.getHandlers()[0];
     MEMORY_LOG_HANDLER.setFormatter(transaction.getFormatter());
     TRANSACTION_LOGGER.addHandler(MEMORY_LOG_HANDLER);
-
-    Thread.sleep(1000);
   }
 
   @AfterAll
