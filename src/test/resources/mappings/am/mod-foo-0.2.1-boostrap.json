@@ -70,6 +70,18 @@
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/no-module-id-header",
                 "permissionsRequired": [ "foo.no-module-id-header.get" ]
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/module-permissions-storage",
+                "permissionsRequired": [ "foo.module-permissions-storage.get" ],
+                "modulePermissions": [
+                  "foo.item.get",
+                  "foo.item.post",
+                  "foo.collection.get",
+                  "foo.collection.all",
+                  "dez.collection.get"
+                ]
               }
             ]
           },
@@ -196,7 +208,8 @@
                   "pathPattern": "/dez/items",
                   "permissionsDesired": [
                     "foo.item.*",
-                    "foo.collection.get"
+                    "foo.collection.get",
+                    "dez.collection.get"
                   ]
                 }
               ]
