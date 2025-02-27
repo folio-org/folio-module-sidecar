@@ -2,7 +2,7 @@ package org.folio.sidecar.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.PERMISSIONS;
-import static org.folio.sidecar.utils.PermissionsUtils.extractPermissions;
+import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 import static org.folio.sidecar.utils.PermissionsUtils.mergePermissions;
 import static org.folio.sidecar.utils.PermissionsUtils.parsePermissionsHeader;
 import static org.folio.sidecar.utils.PermissionsUtils.putPermissionsHeaderToRequest;
@@ -18,7 +18,8 @@ import java.util.List;
 import java.util.Set;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
-import org.folio.sidecar.integration.am.model.Permission;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapInterface;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 
@@ -74,29 +75,49 @@ class PermissionsUtilsTest {
   }
 
   @Test
-  void extractPermissions_positive_returnsEmptyListWhenPermissionSetsAreEmpty() {
+  void findAllModulePermissions_positive_returnsEmptySetWhenModulePermissionSetsAreEmpty() {
     var moduleBootstrap = new ModuleBootstrap();
     var moduleDescriptor = new ModuleBootstrapDiscovery();
     moduleBootstrap.setModule(moduleDescriptor);
 
-    var result = extractPermissions(moduleBootstrap);
+    var result = findAllModulePermissions(moduleBootstrap);
 
     assertThat(result).isEmpty();
   }
 
   @Test
-  void extractPermissions_positive_returnsPermissionNames() {
-    var permission1 = new Permission();
-    permission1.setPermissionName("perm1");
-    var permission2 = new Permission();
-    permission2.setPermissionName("perm2");
-    var moduleBootstrap = new ModuleBootstrap();
+  void findAllModulePermissions_positive_returnsModulePermissions() {
     var moduleDescriptor = new ModuleBootstrapDiscovery();
-    moduleDescriptor.setPermissionSets(List.of(permission1, permission2));
+    moduleDescriptor.setInterfaces(List.of(
+      moduleBootstrapInterface(List.of()),
+      moduleBootstrapInterface(null),
+      moduleBootstrapInterface(List.of(
+        moduleBootstrapEndpoint(List.of("perm1")),
+        moduleBootstrapEndpoint(null),
+        moduleBootstrapEndpoint(List.of("perm2"))
+      )),
+      moduleBootstrapInterface(List.of(
+        moduleBootstrapEndpoint(List.of("perm3", "perm1"))
+      ))
+    ));
+    var moduleBootstrap = new ModuleBootstrap();
     moduleBootstrap.setModule(moduleDescriptor);
 
-    var result = extractPermissions(moduleBootstrap);
+    var result = findAllModulePermissions(moduleBootstrap);
 
-    assertThat(result).containsExactlyInAnyOrder("perm1", "perm2");
+    assertThat(result).containsExactlyInAnyOrder("perm1", "perm2", "perm3");
+  }
+
+  private static ModuleBootstrapInterface moduleBootstrapInterface(
+    List<ModuleBootstrapEndpoint> moduleBootstrapEndpoint) {
+    var moduleBootstrapInterface = new ModuleBootstrapInterface();
+    moduleBootstrapInterface.setEndpoints(moduleBootstrapEndpoint);
+    return moduleBootstrapInterface;
+  }
+
+  private static ModuleBootstrapEndpoint moduleBootstrapEndpoint(List<String> modulePermissions) {
+    var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint();
+    moduleBootstrapEndpoint.setModulePermissions(modulePermissions);
+    return moduleBootstrapEndpoint;
   }
 }

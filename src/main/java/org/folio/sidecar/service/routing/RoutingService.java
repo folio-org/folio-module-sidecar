@@ -5,9 +5,9 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
 import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
-import static org.folio.sidecar.utils.PermissionsUtils.extractPermissions;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
+import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 
 import io.quarkus.runtime.Quarkus;
 import io.vertx.codegen.annotations.Nullable;
@@ -72,7 +72,7 @@ public class RoutingService {
 
     requestMatchingService.bootstrapModule(moduleBootstrap);
 
-    modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
+    modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
 
     var routerRequestHandler = createRequestHandler();
 
@@ -109,7 +109,7 @@ public class RoutingService {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
         requestMatchingService.updateIngressRoutes(moduleBootstrap.getModule());
-        modulePermissionsService.putPermissions(extractPermissions(moduleBootstrap));
+        modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
         return;
       }
 

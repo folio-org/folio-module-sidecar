@@ -33,10 +33,4 @@ public class ModuleBootstrapDiscovery {
    */
   @JsonProperty
   private List<ModuleBootstrapInterface> interfaces = new ArrayList<>();
-
-  /**
-   * Permission sets.
-   */
-  @JsonProperty
-  private List<Permission> permissionSets = new ArrayList<>();
 }

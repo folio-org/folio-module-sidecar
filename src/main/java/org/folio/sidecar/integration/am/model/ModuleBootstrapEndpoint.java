@@ -15,6 +15,7 @@ public class ModuleBootstrapEndpoint {
   private String path;
   private List<String> permissionsRequired;
   private List<String> permissionsDesired;
+  private List<String> modulePermissions;
 
   /**
    * Constructor.
