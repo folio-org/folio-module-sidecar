@@ -23,7 +23,6 @@ import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
