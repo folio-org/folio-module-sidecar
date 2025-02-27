@@ -23,6 +23,7 @@ import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
@@ -44,13 +45,14 @@ class DynamicRoutingIT {
     authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TENANT_NAME);
   }
 
-  /*@Test
+  @Test
   void handleDynamicRequest_positive_withModuleIdHint() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_ID)
+      .body("{}")
       .get("/dyn-foo/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -69,7 +71,7 @@ class DynamicRoutingIT {
         "entities[1].description", is("A dynamic entity 2 description"),
         "totalRecords", is(2)
       );
-  }*/
+  }
 
   @Test
   void handleDynamicRequest_positive_withModuleNameHint() {
