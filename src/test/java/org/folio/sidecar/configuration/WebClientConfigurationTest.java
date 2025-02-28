@@ -23,7 +23,7 @@ class WebClientConfigurationTest {
 
   @Test
   void webClient_positive() {
-    var webClient = webClientConfiguration.webClient(vertx);
+    var webClient = webClientConfiguration.httpClient(vertx);
     assertThat(webClient).isNotNull();
   }
 
@@ -57,7 +57,7 @@ class WebClientConfigurationTest {
 
   @Test
   void webClientEgress_positive_withTruststore() {
-    var webClient = webClientConfiguration.webClientEgress(vertx);
+    var webClient = webClientConfiguration.httpClientEgress(vertx);
     assertThat(webClient).isNotNull();
   }
 
@@ -74,7 +74,7 @@ class WebClientConfigurationTest {
 
   @Test
   void webClientGateway_positive_withTruststore() {
-    var webClient = webClientConfiguration.webClientGateway(vertx);
+    var webClient = webClientConfiguration.httpClientGateway(vertx);
     assertThat(webClient).isNotNull();
   }
 
