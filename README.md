@@ -53,7 +53,7 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 ```shell script
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-17
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 ```
 
 You can then execute your native executable with: `./target/folio-module-sidecar-1.0.0-SNAPSHOT.jar`
@@ -110,7 +110,7 @@ native (no JVM) mode. Before building the container image run:
 ```shell
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-17
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 ```
 
 Then, build the image with:
@@ -137,7 +137,7 @@ docker build -f docker/Dockerfile.fips -t {{image-tag}}:{{image-version}}
 #### Using Docker
 
 To build a native executable in a container using a Linux image
-(e.g. quay.io/quarkus/ubi-quarkus-native-image:22.2-java17 with size 1.29Gb) with the required build tools,
+(e.g. quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 with size 1.29Gb) with the required build tools,
 use the following command:
 
 ```
