@@ -51,6 +51,7 @@ class DynamicRoutingIT {
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_ID)
+      .body("{}")
       .get("/dyn-foo/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
