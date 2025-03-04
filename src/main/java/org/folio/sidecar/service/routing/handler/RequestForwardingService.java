@@ -10,6 +10,7 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
@@ -19,6 +20,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import jakarta.ws.rs.InternalServerErrorException;
 import java.net.URI;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
@@ -133,12 +135,16 @@ public class RequestForwardingService {
       });
 
       // If the write queue is full, pause the ReadStream
-      httpServerRequest.handler(buffer -> {
-        if (httpClientRequest.writeQueueFull()) {
-          httpServerRequest.pause();
-        }
-        httpClientRequest.write(buffer);
-      });
+      Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
+
+      if (!nonBodyMethods.contains(httpClientRequest.getMethod())) {
+        httpServerRequest.handler(buffer -> {
+          if (httpClientRequest.writeQueueFull()) {
+            httpServerRequest.pause();
+          }
+          httpClientRequest.write(buffer);
+        });
+      }
 
       // End the request when the file stream finishes
       httpServerRequest.endHandler(v -> {
