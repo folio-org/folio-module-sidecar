@@ -137,7 +137,7 @@ public class RequestForwardingService {
       // If the write queue is full, pause the ReadStream
       Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
 
-      if (!nonBodyMethods.contains(httpClientRequest.getMethod())) {
+      if (!nonBodyMethods.contains(httpServerRequest.method())) {
         httpServerRequest.handler(buffer -> {
           if (httpClientRequest.writeQueueFull()) {
             httpServerRequest.pause();
