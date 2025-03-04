@@ -1,7 +1,7 @@
 package org.folio.sidecar.service.routing;
 
 import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.http.HttpMethod.GET;
+import static io.vertx.core.http.HttpMethod.POST;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -90,7 +90,7 @@ class RequestForwardingServiceTest {
     QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
       Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
@@ -165,7 +165,7 @@ class RequestForwardingServiceTest {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
       Future.succeededFuture(httpClientRequest));
 
     prepareHttpRequestMocks(routingContext, httpClientRequest);
@@ -236,7 +236,7 @@ class RequestForwardingServiceTest {
 
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString())).thenReturn(
+    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
       Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
@@ -307,7 +307,7 @@ class RequestForwardingServiceTest {
     QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(GET, 8081, "sc-foo", encoder.toString()))
+    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString()))
       .thenReturn(Future.succeededFuture(httpClientRequest));
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
@@ -360,7 +360,7 @@ class RequestForwardingServiceTest {
     var request = mock(HttpServerRequest.class);
 
     when(routingContext.request()).thenReturn(request);
-    when(request.method()).thenReturn(GET);
+    when(request.method()).thenReturn(POST);
     when(request.path()).thenReturn(PATH);
     when(request.headers()).thenReturn(requestHeaders());
     when(request.params()).thenReturn(requestParams());
