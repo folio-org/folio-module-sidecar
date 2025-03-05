@@ -9,7 +9,6 @@ import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
 import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
@@ -97,14 +96,9 @@ class EgressRequestHandler implements RoutingEntryHandler {
     log.info("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
       rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
 
-    var promise = Promise.<Void>promise();
-    if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
-      requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath, promise);
-    } else {
-      requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath, promise);
-    }
-
-    return promise.future();
+    return (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId()))
+      ? requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath)
+      : requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
   }
 
   private static Function<String, Void> setSysUserTokenIfAvailable(RoutingContext rc) {

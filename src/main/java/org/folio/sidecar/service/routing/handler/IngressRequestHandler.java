@@ -4,7 +4,6 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
@@ -56,10 +55,6 @@ class IngressRequestHandler implements RoutingEntryHandler {
 
     var absUri = moduleProperties.getUrl() + path;
 
-    var promise = Promise.<Void>promise();
-
-    requestForwardingService.forwardIngress(rc, absUri, promise);
-
-    return promise.future();
+    return requestForwardingService.forwardIngress(rc, absUri);
   }
 }
