@@ -1,10 +1,13 @@
 package org.folio.sidecar.service.routing;
 
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import io.vertx.ext.web.RoutingContext;
 import org.folio.sidecar.service.ErrorHandler;
@@ -34,10 +37,11 @@ class ScRequestHandlerTest {
 
   @Test
   void handle_positive() {
+    when(chainedHandler.handle(rc)).thenReturn(succeededFuture(true));
+
     requestHandler.handle(rc);
 
     verify(rc).put(eq("rt"), anyLong());
-    verify(chainedHandler).handle(rc);
   }
 
   @Test
@@ -49,6 +53,17 @@ class ScRequestHandlerTest {
 
     verify(rc).put(eq("rt"), anyLong());
     verify(chainedHandler).handle(rc);
+    verify(errorHandler).sendErrorResponse(rc, exception);
+  }
+
+  @Test
+  void handle_negative_chainedHandlerFailed() {
+    RuntimeException exception = new RuntimeException("error");
+    when(chainedHandler.handle(rc)).thenReturn(failedFuture(exception));
+
+    requestHandler.handle(rc);
+
+    verify(rc).put(eq("rt"), anyLong());
     verify(errorHandler).sendErrorResponse(rc, exception);
   }
 }

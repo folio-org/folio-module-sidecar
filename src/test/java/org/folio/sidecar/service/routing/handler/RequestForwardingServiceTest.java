@@ -19,6 +19,7 @@ import io.smallrye.mutiny.TimeoutException;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
@@ -34,7 +35,6 @@ import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
 import org.folio.sidecar.support.TestConstants;
@@ -57,7 +57,6 @@ class RequestForwardingServiceTest {
 
   @InjectMocks private RequestForwardingService service;
   @Mock private HttpClient httpClient;
-  @Mock private ErrorHandler errorHandler;
   @Mock private HttpRequest<Buffer> httpRequest;
 
   @Mock private HttpClientRequest httpClientRequest;
@@ -99,7 +98,8 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    service.forwardIngress(routingContext, absoluteUrl);
+    var result = Promise.<Void>promise();
+    service.forwardIngress(routingContext, absoluteUrl, result);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -175,7 +175,8 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    service.forwardEgress(routingContext, absoluteUrl);
+    var result = Promise.<Void>promise();
+    service.forwardEgress(routingContext, absoluteUrl, result);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -245,7 +246,8 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    service.forwardIngress(routingContext, absoluteUrl);
+    var result = Promise.<Void>promise();
+    service.forwardIngress(routingContext, absoluteUrl, result);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -316,9 +318,11 @@ class RequestForwardingServiceTest {
     when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
-    service.forwardIngress(routingContext, absoluteUrl);
+    var result = Promise.<Void>promise();
+    service.forwardIngress(routingContext, absoluteUrl, result);
 
-    verify(errorHandler).sendErrorResponse(eq(routingContext), any(InternalServerErrorException.class));
+    assertThat(result.future().failed()).isTrue();
+    assertThat(result.future().cause()).isInstanceOf(InternalServerErrorException.class);
   }
 
   private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {

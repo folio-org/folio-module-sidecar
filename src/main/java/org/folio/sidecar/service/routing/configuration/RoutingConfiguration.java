@@ -38,17 +38,15 @@ public class RoutingConfiguration {
   @Named
   @ApplicationScoped
   public ChainedHandler basicIngressHandler(@Named("ingressLookup") RoutingLookup lookup,
-    @Named("ingressRequestHandler") RoutingEntryHandler handler,
-    PathProcessor pathProcessor, ErrorHandler errorHandler) {
-    return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
+    @Named("ingressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
+    return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
   }
 
   @Named
   @ApplicationScoped
   public ChainedHandler basicEgressHandler(@Named("egressLookup") RoutingLookup lookup,
-    @Named("egressRequestHandler") RoutingEntryHandler handler,
-    PathProcessor pathProcessor, ErrorHandler errorHandler) {
-    return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
+    @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
+    return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
   }
 
   @Named
@@ -124,9 +122,8 @@ public class RoutingConfiguration {
     @ApplicationScoped
     @LookupIfProperty(name = "routing.dynamic.enabled", stringValue = "true")
     public ChainedHandler dynamicEgressHandler(@Named("dynamicLookup") RoutingLookup lookup,
-      @Named("egressRequestHandler") RoutingEntryHandler handler,
-      PathProcessor pathProcessor, ErrorHandler errorHandler) {
-      return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
+      @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
+      return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
     }
   }
 
@@ -144,9 +141,8 @@ public class RoutingConfiguration {
     @ApplicationScoped
     @LookupIfProperty(name = "routing.forward-to-gateway.enabled", stringValue = "true")
     public ChainedHandler gatewayEgressHandler(@Named("gatewayLookup") RoutingLookup lookup,
-      @Named("egressRequestHandler") RoutingEntryHandler handler,
-      PathProcessor pathProcessor, ErrorHandler errorHandler) {
-      return new RoutingHandlerWithLookup(lookup, handler, pathProcessor, errorHandler);
+      @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
+      return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
     }
   }
 }

@@ -4,7 +4,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestValues.scGatewayEntry;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -16,12 +15,10 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.inject.Instance;
-import jakarta.ws.rs.BadRequestException;
 import java.util.stream.Stream;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.EgressRequestFilter;
 import org.folio.sidecar.service.filter.RequestFilterService;
@@ -53,7 +50,6 @@ class EgressRequestHandlerTest {
   @Mock private HttpServerRequest request;
   @Mock private MultiMap requestHeaders;
   @Mock private HttpServerResponse response;
-  @Mock private ErrorHandler errorHandler;
   @Mock private PathProcessor pathProcessor;
   @Mock private TestEgressFilter testEgressFilter;
   @Mock private RequestForwardingService requestForwardingService;
@@ -66,12 +62,12 @@ class EgressRequestHandlerTest {
   void setUp() {
     when(egressRequestFilters.stream()).thenReturn(Stream.of(testEgressFilter));
     egressRequestHandler = new EgressRequestHandler(
-      errorHandler, pathProcessor, requestFilterService, requestForwardingService, tokenProvider, systemUserService);
+      pathProcessor, requestFilterService, requestForwardingService, tokenProvider, systemUserService);
   }
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(errorHandler, testEgressFilter, requestForwardingService,
+    verifyNoMoreInteractions(testEgressFilter, requestForwardingService,
       egressRequestFilters, requestHeaders, systemUserService);
   }
 
@@ -91,7 +87,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
   }
 
   @Test
@@ -110,7 +106,7 @@ class EgressRequestHandlerTest {
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).contains(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
   }
 
   @Test
@@ -130,7 +126,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
   }
 
   @Test
@@ -146,9 +142,8 @@ class EgressRequestHandlerTest {
 
     egressRequestHandler.handle(routingEntry(), rc);
 
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
   }
 
   @Test
@@ -159,7 +154,6 @@ class EgressRequestHandlerTest {
     var routingEntry = ScRoutingEntry.of(MODULE_ID, null, "foo", new ModuleBootstrapEndpoint());
     egressRequestHandler.handle(routingEntry, rc);
 
-    verify(errorHandler).sendErrorResponse(eq(rc), any(BadRequestException.class));
     verifyNoInteractions(requestForwardingService);
   }
 
@@ -179,7 +173,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardToGateway(rc, TestConstants.GATEWAY_URL + fooEntitiesPath);
+    verify(requestForwardingService).forwardToGateway(rc, TestConstants.GATEWAY_URL + fooEntitiesPath, any());
   }
 
   @Test

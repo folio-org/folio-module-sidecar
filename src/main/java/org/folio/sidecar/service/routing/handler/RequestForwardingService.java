@@ -7,6 +7,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
@@ -27,7 +28,6 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
 
@@ -48,7 +48,6 @@ public class RequestForwardingService {
   private final HttpClient httpClient;
   private final HttpClient httpClientEgress;
   private final HttpClient httpClientGateway;
-  private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final HttpProperties httpProperties;
   private final WebClientConfig webClientConfig;
@@ -56,12 +55,11 @@ public class RequestForwardingService {
 
   public RequestForwardingService(@Named("httpClient") HttpClient httpClient,
     @Named("httpClientEgress") HttpClient httpClientEgress, @Named("httpClientGateway") HttpClient httpClientGateway,
-    ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
+    SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
     WebClientConfig webClientConfig, TransactionLogHandler transactionLogHandler) {
     this.httpClient = httpClient;
     this.httpClientEgress = httpClientEgress;
     this.httpClientGateway = httpClientGateway;
-    this.errorHandler = errorHandler;
     this.sidecarSignatureService = sidecarSignatureService;
     this.httpProperties = httpProperties;
     this.webClientConfig = webClientConfig;
@@ -71,43 +69,46 @@ public class RequestForwardingService {
   /**
    * Forwards incoming (ingress) request.
    *
-   * @param rc - {@link RoutingContext} object to forward request
-   * @param absUri - absolute uri as {@link String} object
+   * @param rc      - {@link RoutingContext} object to forward request
+   * @param absUri  - absolute uri as {@link String} object
+   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardIngress(RoutingContext rc, String absUri) {
-    forwardRequest(rc, absUri, httpClient);
+  public void forwardIngress(RoutingContext rc, String absUri, Promise<Void> result) {
+    forwardRequest(rc, absUri, httpClient, result);
   }
 
   /**
    * Forwards outgoing (egress) request under HTTPS if TLS is enabled.
    *
-   * @param rc - {@link RoutingContext} object to forward request
-   * @param absUri - absolute uri as {@link String} object
+   * @param rc      - {@link RoutingContext} object to forward request
+   * @param absUri  - absolute uri as {@link String} object
+   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardEgress(RoutingContext rc, String absUri) {
+  public void forwardEgress(RoutingContext rc, String absUri, Promise<Void> result) {
     if (webClientConfig.egress().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, httpClientEgress);
+    forwardRequest(rc, absUri, httpClientEgress, result);
   }
 
   /**
    * Forwards outgoing (egress) request to Gateway under HTTPS if TLS is enabled.
    *
-   * @param rc - {@link RoutingContext} object to forward request
-   * @param absUri - absolute uri as {@link String} object
+   * @param rc      - {@link RoutingContext} object to forward request
+   * @param absUri  - absolute uri as {@link String} object
+   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardToGateway(RoutingContext rc, String absUri) {
+  public void forwardToGateway(RoutingContext rc, String absUri, Promise<Void> result) {
     if (webClientConfig.gateway().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, httpClientGateway);
+    forwardRequest(rc, absUri, httpClientGateway, result);
   }
 
-  private void forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
+  private void forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient, Promise<Void> result) {
 
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);
@@ -156,12 +157,12 @@ public class RequestForwardingService {
       httpClientRequest.response()
         .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS).onSuccess(response -> {
           log.trace("Handle the HTTP client response by streaming the output back to the server");
-          handleSuccessfulResponse(rc, response);
+          handleSuccessfulResponse(rc, response, result);
           transactionLogHandler.log(rc, response, httpClientRequest);
-        }).onFailure(error -> errorHandler.sendErrorResponse(
-          rc, new InternalServerErrorException("Failed to proxy request", error)));
-    }).onFailure(error -> errorHandler.sendErrorResponse(
-      rc, new InternalServerErrorException("Failed to proxy request", error)));
+        }).onFailure(error ->
+          result.fail(new InternalServerErrorException("Failed to proxy request: response timeout", error)));
+    }).onFailure(error ->
+      result.fail(new InternalServerErrorException("Failed to proxy request: request timeout", error)));
   }
 
   private String toHttpsUri(String uri) {
@@ -185,13 +186,13 @@ public class RequestForwardingService {
     return headers;
   }
 
-  private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp) {
+  private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp, Promise<Void> result) {
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
     rc.addHeadersEndHandler(event -> rc.put("uht", System.currentTimeMillis()));
 
-    removeSidecarSignatureThenEndResponse(resp, response);
+    removeSidecarSignatureThenEndResponse(resp, response, result);
   }
 
   /**
@@ -199,9 +200,10 @@ public class RequestForwardingService {
    *
    * @param httpClientResponse - {@link HttpResponse} object
    * @param httpServerResponse - {@link HttpServerResponse} object
+   * @param result             - result promise
    */
   private void removeSidecarSignatureThenEndResponse(HttpClientResponse httpClientResponse,
-    HttpServerResponse httpServerResponse) {
+    HttpServerResponse httpServerResponse, Promise<Void> result) {
     sidecarSignatureService.removeSignature(httpServerResponse);
 
     // Set the maximum write queue size to prevent memory overflow
@@ -225,6 +227,10 @@ public class RequestForwardingService {
     httpClientResponse.endHandler(v -> {
       log.trace("Response to the server  complete, ending request.");
       httpServerResponse.end();
+      result.complete();
     });
+
+    httpClientResponse.exceptionHandler(error ->
+      result.fail(new InternalServerErrorException("Failed to proxy request: upstream issue", error)));
   }
 }

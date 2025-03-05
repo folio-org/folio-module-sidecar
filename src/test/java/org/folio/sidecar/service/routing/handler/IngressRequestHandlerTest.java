@@ -22,7 +22,6 @@ import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.support.TestConstants;
@@ -43,7 +42,6 @@ class IngressRequestHandlerTest {
 
   @InjectMocks private IngressRequestHandler ingressRequestHandler;
 
-  @Mock private ErrorHandler errorHandler;
   @Mock private PathProcessor pathProcessor;
   @Mock private RequestFilterService requestFilterService;
   @Mock private RequestForwardingService requestForwardingService;
@@ -53,7 +51,7 @@ class IngressRequestHandlerTest {
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(requestForwardingService, requestFilterService, errorHandler, sidecarProperties);
+    verifyNoMoreInteractions(requestForwardingService, requestFilterService, sidecarProperties);
   }
 
   @Test
@@ -74,7 +72,8 @@ class IngressRequestHandlerTest {
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
-    verify(requestForwardingService).forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath);
+    verify(requestForwardingService)
+      .forwardIngress(eq(routingContext), eq(TestConstants.MODULE_URL + routingPath), any());
 
     assertThat(headers).hasSize(1);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
@@ -90,10 +89,12 @@ class IngressRequestHandlerTest {
     var error = new ForbiddenException("Access Denied");
     when(requestFilterService.filterIngressRequest(rc)).thenReturn(failedFuture(error));
 
-    ingressRequestHandler.handle(requestRoutingEntry, rc);
+    var result = ingressRequestHandler.handle(requestRoutingEntry, rc);
 
-    verify(errorHandler).sendErrorResponse(eq(rc), any(Throwable.class));
     verifyNoInteractions(requestForwardingService);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isEqualTo(error);
   }
 
   private static RoutingContext routingContext(Consumer<RoutingContext> modifier) {

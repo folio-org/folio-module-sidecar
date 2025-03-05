@@ -3,6 +3,8 @@ package org.folio.sidecar.service.routing.handler;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
@@ -12,7 +14,6 @@ import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 
@@ -22,7 +23,6 @@ import org.folio.sidecar.service.filter.RequestFilterService;
 @RequiredArgsConstructor
 class IngressRequestHandler implements RoutingEntryHandler {
 
-  private final ErrorHandler errorHandler;
   private final PathProcessor pathProcessor;
   private final ModuleProperties moduleProperties;
   private final SidecarProperties sidecarProperties;
@@ -35,17 +35,16 @@ class IngressRequestHandler implements RoutingEntryHandler {
    * @param rc - routing context to handle
    */
   @Override
-  public void handle(ScRoutingEntry scRoutingEntry, RoutingContext rc) {
+  public Future<Void> handle(ScRoutingEntry scRoutingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.info("Handling ingress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
     
-    requestFilterService.filterIngressRequest(rc)
-      .onSuccess(authResponse -> forwardRequest(rc))
-      .onFailure(error -> errorHandler.sendErrorResponse(rc, error));
+    return requestFilterService.filterIngressRequest(rc)
+      .compose(authResponse -> forwardRequest(rc));
   }
 
-  private void forwardRequest(RoutingContext rc) {
+  private Future<Void> forwardRequest(RoutingContext rc) {
     var request = rc.request();
 
     var headers = request.headers();
@@ -56,6 +55,11 @@ class IngressRequestHandler implements RoutingEntryHandler {
     log.info("Forwarding ingress request to underlying module: [method: {}, uri: {}]", request::method, dumpUri(rc));
 
     var absUri = moduleProperties.getUrl() + path;
-    requestForwardingService.forwardIngress(rc, absUri);
+
+    var promise = Promise.<Void>promise();
+
+    requestForwardingService.forwardIngress(rc, absUri, promise);
+
+    return promise.future();
   }
 }
