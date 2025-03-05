@@ -3,8 +3,6 @@ package org.folio.sidecar.service.routing.handler;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -63,17 +61,18 @@ class IngressRequestHandlerTest {
       when(rc.request().headers()).thenReturn(headers);
     });
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
-    var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
     when(pathProcessor.getModulePath(routingPath)).thenReturn(routingPath);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
+    when(requestForwardingService.forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath))
+      .thenReturn(succeededFuture());
+
+    var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
     ingressRequestHandler.handle(requestRoutingEntry, routingContext);
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
-    verify(requestForwardingService)
-      .forwardIngress(eq(routingContext), eq(TestConstants.MODULE_URL + routingPath), any());
 
     assertThat(headers).hasSize(1);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);

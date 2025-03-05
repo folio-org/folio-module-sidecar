@@ -87,7 +87,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
   @Test
@@ -106,7 +106,7 @@ class EgressRequestHandlerTest {
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).contains(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
   @Test
@@ -126,7 +126,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
   @Test
@@ -143,7 +143,7 @@ class EgressRequestHandlerTest {
     egressRequestHandler.handle(routingEntry(), rc);
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
-    verify(requestForwardingService).forwardEgress(rc, absoluteUrl, any());
+    verify(requestForwardingService).forwardEgress(rc, absoluteUrl);
   }
 
   @Test
@@ -173,7 +173,7 @@ class EgressRequestHandlerTest {
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SERVICE_TOKEN);
     verify(requestHeaders).set(OkapiHeaders.TOKEN, USER_TOKEN);
     verify(requestHeaders).remove(OkapiHeaders.USER_ID);
-    verify(requestForwardingService).forwardToGateway(rc, TestConstants.GATEWAY_URL + fooEntitiesPath, any());
+    verify(requestForwardingService).forwardToGateway(rc, TestConstants.GATEWAY_URL + fooEntitiesPath);
   }
 
   @Test

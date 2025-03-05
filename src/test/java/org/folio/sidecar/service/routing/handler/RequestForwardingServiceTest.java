@@ -19,7 +19,6 @@ import io.smallrye.mutiny.TimeoutException;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
@@ -98,8 +97,7 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    var result = Promise.<Void>promise();
-    service.forwardIngress(routingContext, absoluteUrl, result);
+    service.forwardIngress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -175,8 +173,7 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    var result = Promise.<Void>promise();
-    service.forwardEgress(routingContext, absoluteUrl, result);
+    service.forwardEgress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -246,8 +243,7 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    var result = Promise.<Void>promise();
-    service.forwardIngress(routingContext, absoluteUrl, result);
+    service.forwardIngress(routingContext, absoluteUrl);
 
     var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
     assertThat(capturedRequestHeaders).hasSize(3);
@@ -318,11 +314,10 @@ class RequestForwardingServiceTest {
     when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
-    var result = Promise.<Void>promise();
-    service.forwardIngress(routingContext, absoluteUrl, result);
+    var result = service.forwardIngress(routingContext, absoluteUrl);
 
-    assertThat(result.future().failed()).isTrue();
-    assertThat(result.future().cause()).isInstanceOf(InternalServerErrorException.class);
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
   }
 
   private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {

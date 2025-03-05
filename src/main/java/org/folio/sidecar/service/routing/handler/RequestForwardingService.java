@@ -71,11 +71,10 @@ public class RequestForwardingService {
    *
    * @param rc      - {@link RoutingContext} object to forward request
    * @param absUri  - absolute uri as {@link String} object
-   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardIngress(RoutingContext rc, String absUri, Promise<Void> result) {
-    forwardRequest(rc, absUri, httpClient, result);
+  public Future<Void> forwardIngress(RoutingContext rc, String absUri) {
+    return forwardRequest(rc, absUri, httpClient);
   }
 
   /**
@@ -83,14 +82,13 @@ public class RequestForwardingService {
    *
    * @param rc      - {@link RoutingContext} object to forward request
    * @param absUri  - absolute uri as {@link String} object
-   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardEgress(RoutingContext rc, String absUri, Promise<Void> result) {
+  public Future<Void> forwardEgress(RoutingContext rc, String absUri) {
     if (webClientConfig.egress().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, httpClientEgress, result);
+    return forwardRequest(rc, absUri, httpClientEgress);
   }
 
   /**
@@ -98,17 +96,17 @@ public class RequestForwardingService {
    *
    * @param rc      - {@link RoutingContext} object to forward request
    * @param absUri  - absolute uri as {@link String} object
-   * @param result  - result promise
    */
   @SneakyThrows
-  public void forwardToGateway(RoutingContext rc, String absUri, Promise<Void> result) {
+  public Future<Void> forwardToGateway(RoutingContext rc, String absUri) {
     if (webClientConfig.gateway().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, httpClientGateway, result);
+    return forwardRequest(rc, absUri, httpClientGateway);
   }
 
-  private void forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient, Promise<Void> result) {
+  private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
+    var result = Promise.<Void>promise();
 
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);
@@ -167,6 +165,8 @@ public class RequestForwardingService {
           result.fail(new InternalServerErrorException("Failed to proxy request: response timeout", error)));
     }).onFailure(error ->
       result.fail(new InternalServerErrorException("Failed to proxy request: request timeout", error)));
+
+    return result.future();
   }
 
   private String toHttpsUri(String uri) {
