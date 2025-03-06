@@ -3,8 +3,6 @@ package org.folio.sidecar.service.routing.handler;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -22,7 +20,6 @@ import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.support.TestConstants;
@@ -43,7 +40,6 @@ class IngressRequestHandlerTest {
 
   @InjectMocks private IngressRequestHandler ingressRequestHandler;
 
-  @Mock private ErrorHandler errorHandler;
   @Mock private PathProcessor pathProcessor;
   @Mock private RequestFilterService requestFilterService;
   @Mock private RequestForwardingService requestForwardingService;
@@ -53,7 +49,7 @@ class IngressRequestHandlerTest {
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(requestForwardingService, requestFilterService, errorHandler, sidecarProperties);
+    verifyNoMoreInteractions(requestForwardingService, requestFilterService, sidecarProperties);
   }
 
   @Test
@@ -65,16 +61,18 @@ class IngressRequestHandlerTest {
       when(rc.request().headers()).thenReturn(headers);
     });
     var moduleBootstrapEndpoint = new ModuleBootstrapEndpoint(routingPath, "GET");
-    var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
     when(pathProcessor.getModulePath(routingPath)).thenReturn(routingPath);
     when(requestFilterService.filterIngressRequest(routingContext)).thenReturn(succeededFuture(routingContext));
+    when(requestForwardingService.forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath))
+      .thenReturn(succeededFuture());
+
+    var requestRoutingEntry = ScRoutingEntry.of(TestConstants.MODULE_ID, SIDECAR_URL, "foo", moduleBootstrapEndpoint);
 
     ingressRequestHandler.handle(requestRoutingEntry, routingContext);
 
     verify(sidecarProperties).getUrl();
     verify(moduleProperties).getUrl();
-    verify(requestForwardingService).forwardIngress(routingContext, TestConstants.MODULE_URL + routingPath);
 
     assertThat(headers).hasSize(1);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
@@ -90,10 +88,12 @@ class IngressRequestHandlerTest {
     var error = new ForbiddenException("Access Denied");
     when(requestFilterService.filterIngressRequest(rc)).thenReturn(failedFuture(error));
 
-    ingressRequestHandler.handle(requestRoutingEntry, rc);
+    var result = ingressRequestHandler.handle(requestRoutingEntry, rc);
 
-    verify(errorHandler).sendErrorResponse(eq(rc), any(Throwable.class));
     verifyNoInteractions(requestForwardingService);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isEqualTo(error);
   }
 
   private static RoutingContext routingContext(Consumer<RoutingContext> modifier) {

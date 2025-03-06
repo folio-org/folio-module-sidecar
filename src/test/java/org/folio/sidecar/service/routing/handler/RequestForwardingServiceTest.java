@@ -34,7 +34,6 @@ import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
 import org.folio.sidecar.support.TestConstants;
@@ -57,7 +56,6 @@ class RequestForwardingServiceTest {
 
   @InjectMocks private RequestForwardingService service;
   @Mock private HttpClient httpClient;
-  @Mock private ErrorHandler errorHandler;
   @Mock private HttpRequest<Buffer> httpRequest;
 
   @Mock private HttpClientRequest httpClientRequest;
@@ -316,9 +314,10 @@ class RequestForwardingServiceTest {
     when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
-    service.forwardIngress(routingContext, absoluteUrl);
+    var result = service.forwardIngress(routingContext, absoluteUrl);
 
-    verify(errorHandler).sendErrorResponse(eq(routingContext), any(InternalServerErrorException.class));
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
   }
 
   private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {

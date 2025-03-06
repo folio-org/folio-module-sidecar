@@ -46,7 +46,7 @@ public class RequestFilterService {
       return Future.succeededFuture(rc);
     }
 
-    var filter = filters.get(0);
+    var filter = filters.getFirst();
     var filterFuture = filter.applyFilter(rc);
     for (int i = 1; i < filters.size(); i++) {
       var currentFilter = filters.get(i);
