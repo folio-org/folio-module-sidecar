@@ -134,26 +134,21 @@ public class RequestForwardingService {
       });
 
       // If the write queue is full, pause the ReadStream
-      Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET,  HttpMethod.HEAD);
+      Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
+      if (!nonBodyMethods.contains(httpServerRequest.method())) {
+        httpServerRequest.handler(buffer -> {
+          if (httpClientRequest.writeQueueFull()) {
+            httpServerRequest.pause();
+          }
+          httpClientRequest.write(buffer);
+        });
+      }
 
       // End the request when the file stream finishes
       httpServerRequest.endHandler(v -> {
         log.trace("End the request when the file stream finishes");
         httpClientRequest.end();
       });
-
-      if (!nonBodyMethods.contains(httpServerRequest.method())) {
-        try {
-          httpServerRequest.handler(buffer -> {
-            if (httpClientRequest.writeQueueFull()) {
-              httpServerRequest.pause();
-            }
-            httpClientRequest.write(buffer);
-          });
-        } catch (Exception e) {
-          log.warn("The body handler already registered skip this exception for now ", e);
-        }
-      }
 
       //Handle the HTTP client response by streaming the output back to the server.
       httpClientRequest.response()
