@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
-import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.service.filter.RequestFilterService;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
@@ -31,7 +30,6 @@ import org.folio.sidecar.utils.RoutingUtils;
 @RequiredArgsConstructor
 class EgressRequestHandler implements RoutingEntryHandler {
 
-  private final ErrorHandler errorHandler;
   private final PathProcessor pathProcessor;
   private final RequestFilterService requestFilterService;
   private final RequestForwardingService requestForwardingService;
@@ -44,17 +42,16 @@ class EgressRequestHandler implements RoutingEntryHandler {
    * @param rc - {@link RoutingContext} object to handle
    */
   @Override
-  public void handle(ScRoutingEntry routingEntry, RoutingContext rc) {
+  public Future<Void> handle(ScRoutingEntry routingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.info("Handling egress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
 
-    requestFilterService.filterEgressRequest(rc)
+    return requestFilterService.filterEgressRequest(rc)
       .map(v -> validateRoutingModuleId(routingEntry))
       .compose(v -> populateSystemToken(rc))
       .compose(v -> populateSystemUserToken(rc))
-      .onSuccess(v -> forwardEgressRequest(rc, routingEntry))
-      .onFailure(error -> errorHandler.sendErrorResponse(rc, error));
+      .compose(v -> forwardEgressRequest(rc, routingEntry));
   }
 
   private Void validateRoutingModuleId(ScRoutingEntry routingEntry) {
@@ -92,17 +89,16 @@ class EgressRequestHandler implements RoutingEntryHandler {
     return !hasHeaderWithValue(rc, OkapiHeaders.TOKEN, true);
   }
 
-  private void forwardEgressRequest(RoutingContext rc, ScRoutingEntry routingEntry) {
+  private Future<Void> forwardEgressRequest(RoutingContext rc, ScRoutingEntry routingEntry) {
     var rq = rc.request();
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
     log.info("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
       rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
-    if (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId())) {
-      requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath);
-    } else {
-      requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
-    }
+
+    return (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId()))
+      ? requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath)
+      : requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
   }
 
   private static Function<String, Void> setSysUserTokenIfAvailable(RoutingContext rc) {

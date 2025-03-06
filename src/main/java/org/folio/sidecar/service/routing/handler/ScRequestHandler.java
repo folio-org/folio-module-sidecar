@@ -15,7 +15,7 @@ public class ScRequestHandler implements Handler<RoutingContext> {
   public void handle(RoutingContext rc) {
     try {
       rc.put("rt", System.currentTimeMillis());
-      handler.handle(rc);
+      handler.handle(rc).onFailure(error -> errorHandler.sendErrorResponse(rc, error));
     } catch (Exception error) {
       errorHandler.sendErrorResponse(rc, error);
     }
