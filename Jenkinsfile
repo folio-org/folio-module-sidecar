@@ -5,7 +5,7 @@ import org.jenkinsci.plugins.workflow.libs.Library
 buildMvn {
   publishModDescriptor = false
   mvnDeploy = true
-  buildNode = 'jenkins-agent-java21'
+  buildNode = 'jenkins-agent-java21-bigmem'
 
   doDocker = {
     buildJavaDocker {
