@@ -312,8 +312,8 @@ class RequestForwardingServiceTest {
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpClientRequest.headers()).thenReturn(headers);
-    when(headers.addAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
-    when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+    when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+    when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
     service.forwardIngress(routingContext, absoluteUrl);
@@ -340,8 +340,8 @@ class RequestForwardingServiceTest {
   private void prepareHttpRequestMocks(RoutingContext routingContext, HttpClientRequest httpClientRequest) {
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpClientRequest.headers()).thenReturn(headers);
-    when(headers.addAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
-    when(headers.add(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+    when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+    when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
     when(httpClientRequest.response()).thenReturn(Future.succeededFuture(httpClientResponse));
     // Mock drainHandler method
     when(httpClientRequest.drainHandler(requestDrainHandlerCaptor.capture())).thenReturn(httpClientRequest);

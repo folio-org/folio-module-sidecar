@@ -122,11 +122,12 @@ public class RequestForwardingService {
       .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
     httpClientRequestFuture.onSuccess(httpClientRequest -> {
 
-      httpClientRequest.headers().addAll(filterHeaders(httpServerRequest));
-      httpClientRequest.headers().add(REQUEST_ID, getRequestId(rc));
+      httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
+      httpClientRequest.headers().set(REQUEST_ID, getRequestId(rc));
 
       // Set the maximum write queue size to prevent memory overflow
       httpClientRequest.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
+      httpClientRequest.setChunked(true);
 
       // Attach drainHandler to resume reading when the queue has space
       httpClientRequest.drainHandler(v -> {
@@ -206,6 +207,7 @@ public class RequestForwardingService {
 
     // Set the maximum write queue size to prevent memory overflow
     httpServerResponse.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
+    httpServerResponse.setChunked(true);
 
     // Attach drainHandler to resume reading when the queue has space
     httpServerResponse.drainHandler(v -> {
