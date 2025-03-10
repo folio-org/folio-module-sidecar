@@ -121,8 +121,8 @@ public class RequestForwardingService {
       .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
     httpClientRequestFuture.onSuccess(httpClientRequest -> {
 
-      httpClientRequest.headers().addAll(filterHeaders(httpServerRequest));
-      httpClientRequest.headers().add(REQUEST_ID, getRequestId(rc));
+      httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
+      httpClientRequest.headers().set(REQUEST_ID, getRequestId(rc));
 
       // Set the maximum write queue size to prevent memory overflow
       httpClientRequest.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
