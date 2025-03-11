@@ -207,7 +207,6 @@ public class RequestForwardingService {
 
     // Set the maximum write queue size to prevent memory overflow
     httpServerResponse.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
-    httpServerResponse.setChunked(true);
 
     // Attach drainHandler to resume reading when the queue has space
     httpServerResponse.drainHandler(v -> {
