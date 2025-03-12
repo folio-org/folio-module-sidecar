@@ -4,6 +4,7 @@ import static java.lang.String.format;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -87,16 +88,16 @@ public class WebClientConfiguration {
   }
 
   private WebClient createWebClient(WebClientSettings settings, Vertx vertx) {
-    var options = populateOptionsFrom(settings);
+    var options = populateOptionsFromWebClient(settings);
     return WebClient.create(vertx, options);
   }
 
   private HttpClient createHttpClient(WebClientSettings settings, Vertx vertx) {
-    var options = populateOptionsFrom(settings);
+    var options = populateOptionsFromHttpClient(settings);
     return vertx.createHttpClient(options);
   }
 
-  private WebClientOptions populateOptionsFrom(WebClientSettings settings) {
+  private WebClientOptions populateOptionsFromWebClient(WebClientSettings settings) {
     var result = new WebClientOptions()
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
@@ -134,7 +135,45 @@ public class WebClientConfiguration {
     return result;
   }
 
-  private static String optionsToString(WebClientOptions result) {
+  private HttpClientOptions populateOptionsFromHttpClient(WebClientSettings settings) {
+    var result = new HttpClientOptions()
+      .setName(settings.name())
+      .setDecompressionSupported(settings.decompression())
+      // timeouts
+      .setConnectTimeout(settings.timeout().connect())
+      .setKeepAliveTimeout(settings.timeout().keepAlive())
+      .setIdleTimeout(settings.timeout().idle())
+      .setReadIdleTimeout(settings.timeout().readIdle())
+      .setWriteIdleTimeout(settings.timeout().writeIdle())
+      // pool settings
+      .setMaxPoolSize(settings.pool().maxSize())
+      .setHttp2MaxPoolSize(settings.pool().maxSizeHttp2())
+      .setPoolCleanerPeriod(settings.pool().cleanerPeriod())
+      .setPoolEventLoopSize(settings.pool().eventLoopSize())
+      .setMaxWaitQueueSize(settings.pool().maxWaitQueueSize());
+    log.info("Creating web client with options: clientName = {}, options = {}", settings::name,
+      () -> optionsToString(result));
+
+    var tls = settings.tls();
+    if (tls.enabled()) {
+      if (tls.trustStorePath().isEmpty()) {
+        log.debug("Creating web client for Public Trusted Certificates: clientName = {}", settings.name());
+        result.setSsl(true).setTrustAll(false);
+      } else {
+        result.setVerifyHost(tls.verifyHostname())
+          .setSsl(true).setTrustAll(false)
+          .setTrustOptions(new KeyStoreOptions()
+            .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
+            .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
+            .setType(getRequired(tls.trustStoreFileType(), "trust-store-file-type", settings.name()))
+            .setProvider(getRequired(tls.trustStoreProvider(), "trust-store-provider", settings.name())));
+      }
+    }
+
+    return result;
+  }
+
+  private static String optionsToString(HttpClientOptions result) {
     return new ToStringBuilder(result)
       .append("isDecompressionSupported", result.isDecompressionSupported())
       .append("connectTimeout", result.getConnectTimeout())
