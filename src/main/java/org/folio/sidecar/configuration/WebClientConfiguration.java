@@ -136,7 +136,7 @@ public class WebClientConfiguration {
   }
 
   private HttpClientOptions populateOptionsFromHttpClient(WebClientSettings settings) {
-    var result = new HttpClientOptions()
+    var result = new WebClientOptions()
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
       // timeouts
