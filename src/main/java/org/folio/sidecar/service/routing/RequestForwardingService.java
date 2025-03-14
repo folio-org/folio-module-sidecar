@@ -5,17 +5,23 @@ import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
-import io.vertx.core.buffer.Buffer;
+import io.netty.handler.codec.http.QueryStringEncoder;
+import io.vertx.core.Future;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import jakarta.ws.rs.InternalServerErrorException;
 import java.net.URI;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -39,22 +45,22 @@ public class RequestForwardingService {
    */
   private static final Predicate<String> HEADERS_PREDICATE = header -> !USER_AGENT.equalsIgnoreCase(header);
 
-  private final WebClient webClient;
-  private final WebClient webClientEgress;
-  private final WebClient webClientGateway;
+  private final HttpClient httpClient;
+  private final HttpClient httpClientEgress;
+  private final HttpClient httpClientGateway;
   private final ErrorHandler errorHandler;
   private final SidecarSignatureService sidecarSignatureService;
   private final HttpProperties httpProperties;
   private final WebClientConfig webClientConfig;
   private final TransactionLogHandler transactionLogHandler;
 
-  public RequestForwardingService(@Named("webClient") WebClient webClient,
-    @Named("webClientEgress") WebClient webClientEgress, @Named("webClientGateway") WebClient webClientGateway,
+  public RequestForwardingService(@Named("httpClient") HttpClient httpClient,
+    @Named("httpClientEgress") HttpClient httpClientEgress, @Named("httpClientGateway") HttpClient httpClientGateway,
     ErrorHandler errorHandler, SidecarSignatureService sidecarSignatureService, HttpProperties httpProperties,
     WebClientConfig webClientConfig, TransactionLogHandler transactionLogHandler) {
-    this.webClient = webClient;
-    this.webClientEgress = webClientEgress;
-    this.webClientGateway = webClientGateway;
+    this.httpClient = httpClient;
+    this.httpClientEgress = httpClientEgress;
+    this.httpClientGateway = httpClientGateway;
     this.errorHandler = errorHandler;
     this.sidecarSignatureService = sidecarSignatureService;
     this.httpProperties = httpProperties;
@@ -70,7 +76,7 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public void forwardIngress(RoutingContext rc, String absUri) {
-    forwardRequest(rc, absUri, webClient);
+    forwardRequest(rc, absUri, httpClient);
   }
 
   /**
@@ -84,7 +90,7 @@ public class RequestForwardingService {
     if (webClientConfig.egress().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, webClientEgress);
+    forwardRequest(rc, absUri, httpClientEgress);
   }
 
   /**
@@ -98,27 +104,65 @@ public class RequestForwardingService {
     if (webClientConfig.gateway().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    forwardRequest(rc, absUri, webClientGateway);
+    forwardRequest(rc, absUri, httpClientGateway);
   }
 
-  private void forwardRequest(RoutingContext rc, String absUri, WebClient webClient) {
-    var request = rc.request();
+  private void forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
 
-    var bufferHttpRequest = webClient
-      .requestAbs(request.method(), absUri)
-      .timeout(httpProperties.getTimeout())
-      .putHeaders(filterHeaders(request))
-      .putHeader(REQUEST_ID, getRequestId(rc));
+    HttpServerRequest httpServerRequest = rc.request();
+    URI httpUri = URI.create(absUri);
 
-    request.params().forEach(bufferHttpRequest::addQueryParam);
+    QueryStringEncoder encoder = new QueryStringEncoder(httpUri.getPath());
+    httpServerRequest.params().forEach(encoder::addParam);
 
-    bufferHttpRequest.sendStream(request)
-      .onSuccess(resp -> {
-        handleSuccessfulResponse(rc, resp);
-        transactionLogHandler.log(rc, resp, bufferHttpRequest);
-      })
-      .onFailure(error -> errorHandler.sendErrorResponse(
-        rc, new InternalServerErrorException("Failed to proxy request", error)));
+    // Create an HTTP request
+    Future<HttpClientRequest> request = httpClient.request(httpServerRequest.method(),
+      httpUri.getPort(), httpUri.getHost(), encoder.toString());
+    Future<HttpClientRequest> httpClientRequestFuture = request
+      .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
+    httpClientRequestFuture.onSuccess(httpClientRequest -> {
+
+      httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
+      httpClientRequest.headers().set(REQUEST_ID, getRequestId(rc));
+
+      // Set the maximum write queue size to prevent memory overflow
+      httpClientRequest.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
+      httpClientRequest.setChunked(true);
+
+      // Attach drainHandler to resume reading when the queue has space
+      httpClientRequest.drainHandler(v -> {
+        log.trace("Write queue has space again, resuming  read from server requests.");
+        httpServerRequest.resume();
+      });
+
+      // If the write queue is full, pause the ReadStream
+      Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
+
+      if (!nonBodyMethods.contains(httpServerRequest.method())) {
+        httpServerRequest.handler(buffer -> {
+          if (httpClientRequest.writeQueueFull()) {
+            httpServerRequest.pause();
+          }
+          httpClientRequest.write(buffer);
+        });
+      }
+
+      // End the request when the file stream finishes
+      httpServerRequest.endHandler(v -> {
+        log.trace("End the request when the file stream finishes");
+        httpClientRequest.end();
+      });
+
+      //Handle the HTTP client response by streaming the output back to the server.
+      httpClientRequest.response()
+        .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS).onSuccess(response -> {
+          log.trace("Handle the HTTP client response by streaming the output back to the server");
+          handleSuccessfulResponse(rc, response);
+          transactionLogHandler.log(rc, response, httpClientRequest);
+        }).onFailure(error -> errorHandler.sendErrorResponse(
+          rc, new InternalServerErrorException("Failed to proxy request", error)));
+    }).onFailure(error -> errorHandler.sendErrorResponse(
+      rc, new InternalServerErrorException("Failed to proxy request", error)));
   }
 
   private String toHttpsUri(String uri) {
@@ -142,31 +186,46 @@ public class RequestForwardingService {
     return headers;
   }
 
-  private void handleSuccessfulResponse(RoutingContext rc, HttpResponse<Buffer> resp) {
+  private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp) {
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
     rc.addHeadersEndHandler(event -> rc.put("uht", System.currentTimeMillis()));
 
-    removeSidecarSignatureThenEndResponse(resp, response, rc);
+    removeSidecarSignatureThenEndResponse(resp, response);
   }
 
   /**
    * Removes sidecar signature from the response and ends it.
    *
-   * @param resp - {@link HttpResponse} object
-   * @param response - {@link HttpServerResponse} object
+   * @param httpClientResponse - {@link HttpResponse} object
+   * @param httpServerResponse - {@link HttpServerResponse} object
    */
-  private void removeSidecarSignatureThenEndResponse(HttpResponse<Buffer> resp, HttpServerResponse response,
-    RoutingContext rc) {
-    sidecarSignatureService.removeSignature(response);
-    var responseBodyBuffer = resp.bodyAsBuffer();
-    rc.addBodyEndHandler(event -> rc.put("urt", System.currentTimeMillis()));
-    if (responseBodyBuffer == null) {
-      response.end();
-      return;
-    }
+  private void removeSidecarSignatureThenEndResponse(HttpClientResponse httpClientResponse,
+    HttpServerResponse httpServerResponse) {
+    sidecarSignatureService.removeSignature(httpServerResponse);
 
-    response.end(responseBodyBuffer);
+    // Set the maximum write queue size to prevent memory overflow
+    httpServerResponse.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
+
+    // Attach drainHandler to resume reading when the queue has space
+    httpServerResponse.drainHandler(v -> {
+      log.trace("Write queue has space again, resuming  read.");
+      httpClientResponse.resume();
+    });
+
+    // If the write queue is full, pause the ReadStream
+    httpClientResponse.handler(buffer -> {
+      if (httpServerResponse.writeQueueFull()) {
+        httpClientResponse.pause();
+      }
+      httpServerResponse.write(buffer);
+    });
+
+    // End the request when the file stream finishes
+    httpClientResponse.endHandler(v -> {
+      log.trace("Response to the server  complete, ending request.");
+      httpServerResponse.end();
+    });
   }
 }
