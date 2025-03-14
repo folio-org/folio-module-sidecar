@@ -4,6 +4,7 @@ import static java.lang.String.format;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -87,28 +88,29 @@ public class WebClientConfiguration {
   }
 
   private WebClient createWebClient(WebClientSettings settings, Vertx vertx) {
-    var options = populateOptionsFrom(settings);
+    var options = populateOptionsFromHttpClient(settings);
     return WebClient.create(vertx, options);
   }
 
   private HttpClient createHttpClient(WebClientSettings settings, Vertx vertx) {
-    var options = populateOptionsFrom(settings);
+    var options = populateOptionsFromHttpClient(settings);
     return vertx.createHttpClient(options);
   }
 
-  private WebClientOptions populateOptionsFrom(WebClientSettings settings) {
+  private WebClientOptions populateOptionsFromHttpClient(WebClientSettings settings) {
     var result = new WebClientOptions()
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
+      .setKeepAlive(true)
       // timeouts
       .setConnectTimeout(settings.timeout().connect())
       .setKeepAliveTimeout(settings.timeout().keepAlive())
-      .setIdleTimeout(settings.timeout().idle())
+      .setIdleTimeout(1800)
       .setReadIdleTimeout(settings.timeout().readIdle())
       .setWriteIdleTimeout(settings.timeout().writeIdle())
       // pool settings
       .setMaxPoolSize(settings.pool().maxSize())
-      .setHttp2MaxPoolSize(settings.pool().maxSizeHttp2())
+      .setHttp2MaxPoolSize(500)
       .setPoolCleanerPeriod(settings.pool().cleanerPeriod())
       .setPoolEventLoopSize(settings.pool().eventLoopSize())
       .setMaxWaitQueueSize(settings.pool().maxWaitQueueSize());
@@ -119,10 +121,20 @@ public class WebClientConfiguration {
     if (tls.enabled()) {
       if (tls.trustStorePath().isEmpty()) {
         log.debug("Creating web client for Public Trusted Certificates: clientName = {}", settings.name());
-        result.setSsl(true).setTrustAll(false);
+        result.setSsl(true)
+          .setReuseAddress(true)
+          .setReusePort(true)
+          .setUseAlpn(true)
+          .setTcpKeepAlive(true)
+          .setTrustAll(false);
       } else {
         result.setVerifyHost(tls.verifyHostname())
-          .setSsl(true).setTrustAll(false)
+          .setSsl(true)
+          .setReuseAddress(true)
+          .setUseAlpn(true)
+          .setReusePort(true)
+          .setTcpKeepAlive(true)
+          .setTrustAll(false)
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
             .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
@@ -134,7 +146,7 @@ public class WebClientConfiguration {
     return result;
   }
 
-  private static String optionsToString(WebClientOptions result) {
+  private static String optionsToString(HttpClientOptions result) {
     return new ToStringBuilder(result)
       .append("isDecompressionSupported", result.isDecompressionSupported())
       .append("connectTimeout", result.getConnectTimeout())
