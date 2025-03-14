@@ -143,7 +143,7 @@ public class WebClientConfiguration {
       // timeouts
       .setConnectTimeout(settings.timeout().connect())
       .setKeepAliveTimeout(settings.timeout().keepAlive())
-      .setIdleTimeout(600)
+      .setIdleTimeout(1800)
       .setReadIdleTimeout(settings.timeout().readIdle())
       .setWriteIdleTimeout(settings.timeout().writeIdle())
       // pool settings
@@ -162,12 +162,16 @@ public class WebClientConfiguration {
         result.setSsl(true)
           .setReuseAddress(true)
           .setReusePort(true)
+          .setUseAlpn(true)
+          .setTcpKeepAlive(true)
           .setTrustAll(false);
       } else {
         result.setVerifyHost(tls.verifyHostname())
           .setSsl(true)
           .setReuseAddress(true)
+          .setUseAlpn(true)
           .setReusePort(true)
+          .setTcpKeepAlive(true)
           .setTrustAll(false)
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
