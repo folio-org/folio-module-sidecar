@@ -104,8 +104,8 @@ public class WebClientConfiguration {
       .setKeepAlive(true)
       // timeouts
       .setConnectTimeout(settings.timeout().connect())
-      .setKeepAliveTimeout(settings.timeout().keepAlive())
-      .setIdleTimeout(1800)
+      .setKeepAliveTimeout(60)
+      .setIdleTimeout(60)
       .setReadIdleTimeout(settings.timeout().readIdle())
       .setWriteIdleTimeout(settings.timeout().writeIdle())
       // pool settings
@@ -135,6 +135,8 @@ public class WebClientConfiguration {
           .setReusePort(true)
           .setTcpKeepAlive(true)
           .setTrustAll(false)
+          .addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
+          .addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
             .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
