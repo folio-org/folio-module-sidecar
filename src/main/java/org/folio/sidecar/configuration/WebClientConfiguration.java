@@ -135,8 +135,6 @@ public class WebClientConfiguration {
           .setReusePort(true)
           .setTcpKeepAlive(true)
           .setTrustAll(false)
-          .addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
-          .addEnabledCipherSuite("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
             .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
