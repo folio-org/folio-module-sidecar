@@ -68,10 +68,6 @@ public class ServiceTokenProvider {
     return getTokenInternal(tenantName, rc);
   }
 
-  public String getTokenSync(RoutingContext rc) {
-    return getToken(rc).result();
-  }
-
   private Future<String> getTokenInternal(String tenant, RoutingContext rc) {
     var rq = rc.request();
     var requestId = rq.getHeader(REQUEST_ID);
@@ -86,14 +82,11 @@ public class ServiceTokenProvider {
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
   }
 
-  private TokenResponse retrieveToken(String tenant) {
+  TokenResponse retrieveToken(String tenant) throws Exception {
     var tokenFuture = obtainToken(tenant)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant)));
 
-    return executeAndGet(tokenFuture, throwable -> {
-      log.warn("Failed to obtain service token: message = {}", throwable.getMessage(), throwable);
-      return null;
-    });
+    return executeAndGet(tokenFuture);
   }
 
   private Future<TokenResponse> obtainToken(String tenant) {

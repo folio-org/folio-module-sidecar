@@ -68,20 +68,13 @@ public class SystemUserTokenProvider {
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
   }
 
-  public String getTokenSync(RoutingContext rc) {
-    return getToken(rc).result();
-  }
-
-  private TokenResponse retrieveToken(String tenant) {
+  TokenResponse retrieveToken(String tenant) throws Exception {
     var username = moduleProperties.getName();
 
     var tokenFuture = obtainToken(tenant, username)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant, username)));
 
-    return executeAndGet(tokenFuture, throwable -> {
-      log.warn("Failed to obtain system user token: message = {}", throwable.getMessage(), throwable);
-      return null;
-    });
+    return executeAndGet(tokenFuture);
   }
 
   private Future<TokenResponse> obtainToken(String tenant, String username) {
