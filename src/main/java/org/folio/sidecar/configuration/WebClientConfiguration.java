@@ -131,6 +131,8 @@ public class WebClientConfiguration {
         result.setVerifyHost(tls.verifyHostname())
           .setSsl(true)
           .setReuseAddress(true)
+          .removeEnabledSecureTransportProtocol("TLSv1.3")
+          .addEnabledSecureTransportProtocol("TLSv1.2")
           .setUseAlpn(true)
           .setReusePort(true)
           .setTcpKeepAlive(true)
