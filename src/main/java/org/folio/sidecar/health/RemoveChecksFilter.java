@@ -4,13 +4,11 @@ import static org.folio.sidecar.health.HealthCheckPayloadConstants.CHECKS_KEY;
 import static org.folio.sidecar.health.HealthCheckPayloadConstants.STATUS_KEY;
 
 import io.smallrye.health.api.HealthContentFilter;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
-@ApplicationScoped
 public class RemoveChecksFilter implements HealthContentFilter {
 
   @Override

@@ -7,12 +7,10 @@ import static org.folio.sidecar.health.HealthCheckPayloadUtils.removeCheckData;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.replaceCheckWithName;
 
 import io.smallrye.health.api.HealthContentFilter;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 
-@ApplicationScoped
 @RequiredArgsConstructor
 public class RemoveDataFromNamedCheckFilter implements HealthContentFilter {
 
