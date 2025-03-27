@@ -11,7 +11,6 @@ Provide a brief technical summary of the changes.
 - [ ] **Self-reviewed Code** — Reviewed code for issues, unnecessary parts, and overall quality.
 - [ ] **Change Notes** — NEWS.md updated with clear description and issue key.
 - [ ] **Testing** — Confirmed changes were tested locally or on dev environment.
-- [ ] **Breaking Changes** — Handled all required actions if changes affect API.
-  - [ ] API/schema changes
-- [ ] **New Properties / Environment Variables** — Updated README.md if new configs were added.
+- [ ] **New Properties / Environment Variables**— Updated README.md if new configs were added.
+- [ ] **Breaking Changes (if any)** — Identified and handled if changes affect integrations or contracts with other services.
 - [ ] **Environment Recreation Test (if needed)** — Verified that environment can be recreated successfully.
