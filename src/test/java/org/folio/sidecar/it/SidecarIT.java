@@ -34,6 +34,7 @@ import org.jboss.logmanager.LogManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
@@ -453,6 +454,7 @@ class SidecarIT {
   }
 
   @Test
+  @Disabled("Move the test to dedicated class")
   void moduleHealthCheck_up() {
     TestUtils.givenJson()
       .get("/admin/health")
