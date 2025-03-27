@@ -31,7 +31,8 @@ public class HealthCheckPayloadUtils {
   }
 
   public static JsonObject removeCheckData(JsonObject check) {
-    // copy only name and status fields from the original check
+    // copy only name and status fields from the original check,
+    // there shouldn't be any other fields in the check besides name, status, data
     return Json.createObjectBuilder()
       .add(NAME_KEY, check.getString(NAME_KEY))
       .add(STATUS_KEY, check.getString(STATUS_KEY))
