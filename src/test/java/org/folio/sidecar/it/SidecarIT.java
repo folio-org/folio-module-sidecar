@@ -34,7 +34,6 @@ import org.jboss.logmanager.LogManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
@@ -450,23 +449,6 @@ class SidecarIT {
         "errors[0].type", is("ForbiddenException"),
         "errors[0].code", is("authorization_error"),
         "errors[0].message", is("Access Denied")
-      );
-  }
-
-  @Test
-  @Disabled("Move the test to dedicated class")
-  void moduleHealthCheck_up() {
-    TestUtils.givenJson()
-      .get("/admin/health")
-      .then()
-      .log().ifValidationFails(LogDetail.ALL)
-      .assertThat()
-      .statusCode(is(SC_OK))
-      .body(
-        "status", is("UP"),
-        "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'Module health check'}.data.host",
-        Matchers.matchesPattern("GET http://localhost:\\d+" + TestConstants.MODULE_HEALTH_PATH)
       );
   }
 
