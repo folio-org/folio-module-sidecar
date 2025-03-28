@@ -103,7 +103,7 @@ class RemoveDataFromNamedCheckFilterTest {
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).containsKey("data")).isFalse();
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).getString(NAME_KEY)).isEqualTo(TEST_CHECK_NAME);
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).getString(STATUS_KEY)).isEqualTo("DOWN");
-    assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(1).containsKey("data")).isTrue();
+    assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(1)).containsKey("data");
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(1).getString(NAME_KEY)).isEqualTo("other-check");
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(1).getString(STATUS_KEY)).isEqualTo("UP");
   }
@@ -131,7 +131,7 @@ class RemoveDataFromNamedCheckFilterTest {
       .build();
 
     JsonObject result = filter.filter(payload);
-    assertThat(result.containsKey(CHECKS_KEY)).isTrue();
+    assertThat(result).containsKey(CHECKS_KEY);
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).containsKey("data")).isFalse();
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).getString(NAME_KEY)).isEqualTo(TEST_CHECK_NAME);
     assertThat(result.getJsonArray(CHECKS_KEY).getJsonObject(0).getString(STATUS_KEY)).isEqualTo("DOWN");

@@ -3,7 +3,7 @@ package org.folio.sidecar.health;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.findCheckByName;
-import static org.folio.sidecar.health.HealthCheckPayloadUtils.removeCheckData;
+import static org.folio.sidecar.health.HealthCheckPayloadUtils.copyNameAndStatus;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.replaceCheckWithName;
 
 import jakarta.json.Json;
@@ -81,7 +81,8 @@ class HealthCheckPayloadUtilsTest {
 
   @Test
   void findCheckByName_negative_blankName() {
-    assertThatThrownBy(() -> findCheckByName(Json.createObjectBuilder().build(), ""))
+    var check = Json.createObjectBuilder().build();
+    assertThatThrownBy(() -> findCheckByName(check, ""))
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessage("Check name cannot be blank");
   }
@@ -151,14 +152,14 @@ class HealthCheckPayloadUtilsTest {
   }
 
   @Test
-  void removeCheckData_positive() {
+  void copyNameAndStatus_positive() {
     var check = Json.createObjectBuilder()
       .add("name", TEST_CHECK_NAME)
       .add("status", "DOWN")
       .add("data", Json.createObjectBuilder().add("key1", "value1").add("key2", "value2"))
       .build();
 
-    var result = removeCheckData(check);
+    var result = copyNameAndStatus(check);
     assertThat(result.getString("name")).isEqualTo(TEST_CHECK_NAME);
     assertThat(result.getString("status")).isEqualTo("DOWN");
     assertThat(result.containsKey("data")).isFalse();

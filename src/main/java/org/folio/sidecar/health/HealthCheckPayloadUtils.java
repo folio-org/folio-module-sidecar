@@ -25,12 +25,12 @@ public class HealthCheckPayloadUtils {
     }
 
     return payload.getJsonArray(CHECKS_KEY).stream()
-      .map(cast -> (JsonObject) cast)
+      .map(JsonObject.class::cast)
       .filter(check -> hasNameWithValue(check, name))
       .findFirst();
   }
 
-  public static JsonObject removeCheckData(JsonObject check) {
+  public static JsonObject copyNameAndStatus(JsonObject check) {
     // copy only name and status fields from the original check,
     // there shouldn't be any other fields in the check besides name, status, data
     return Json.createObjectBuilder()
