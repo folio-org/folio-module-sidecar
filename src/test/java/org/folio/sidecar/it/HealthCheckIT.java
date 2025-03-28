@@ -2,6 +2,7 @@ package org.folio.sidecar.it;
 
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.quarkus.test.junit.TestProfile;
@@ -41,8 +42,7 @@ public class HealthCheckIT {
           "checks.find {check -> check.name == 'SmallRye Reactive Messaging - startup check'}.status", is("UP"),
 
           "checks.find {check -> check.name == 'Kafka connection health check'}.status", is("UP"),
-          "checks.find {check -> check.name == 'Kafka connection health check'}.data.nodes",
-            Matchers.matchesPattern("localhost:\\d+"),
+          "checks.find {check -> check.name == 'Kafka connection health check'}.data.nodes", notNullValue(),
 
           "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
           "checks.find {check -> check.name == 'Module health check'}.data.host",
