@@ -2,8 +2,8 @@ package org.folio.sidecar.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.folio.sidecar.health.HealthCheckPayloadUtils.findCheckByName;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.copyNameAndStatus;
+import static org.folio.sidecar.health.HealthCheckPayloadUtils.findCheckByName;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.replaceCheckWithName;
 
 import jakarta.json.Json;

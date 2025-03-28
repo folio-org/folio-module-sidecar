@@ -2,8 +2,8 @@ package org.folio.sidecar.health;
 
 import static org.folio.sidecar.health.HealthCheckPayloadConstants.CHECKS_KEY;
 import static org.folio.sidecar.health.HealthCheckPayloadConstants.STATUS_KEY;
-import static org.folio.sidecar.health.HealthCheckPayloadUtils.findCheckByName;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.copyNameAndStatus;
+import static org.folio.sidecar.health.HealthCheckPayloadUtils.findCheckByName;
 import static org.folio.sidecar.health.HealthCheckPayloadUtils.replaceCheckWithName;
 
 import io.smallrye.health.api.HealthContentFilter;
