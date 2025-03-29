@@ -1,4 +1,4 @@
-package org.folio.sidecar.service;
+package org.folio.sidecar.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.MODULE_HEALTH_PATH;
@@ -6,6 +6,7 @@ import static org.folio.sidecar.support.TestConstants.MODULE_NAME;
 import static org.folio.sidecar.support.TestConstants.MODULE_URL;
 import static org.mockito.Mockito.when;
 
+import org.folio.sidecar.service.PathProcessor;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @UnitTest
 @ExtendWith(MockitoExtension.class)
 class ModuleHealthCheckTest {
-
-  private static final String SIDECAR_NAME = "sc-test";
-  private static final String SIDECAR_URL = "http://sc-test";
 
   @Mock private PathProcessor pathProcessor;
 
