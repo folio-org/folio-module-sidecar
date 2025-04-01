@@ -20,7 +20,7 @@ class RetryTemplateTest {
   private RetryProperties retryProperties;
 
   @BeforeEach
-  public void setup() {
+  void setup() {
     retryProperties = new RetryProperties();
     retryProperties.setAttempts(3);
     retryProperties.setBackOffFactor(1);
@@ -30,7 +30,7 @@ class RetryTemplateTest {
   }
 
   @Test
-  public void callAsync_positive() {
+  void callAsync_positive() {
     var resultFuture = retryTemplate.callAsync(() -> succeededFuture("success"));
     var result = resultFuture.toCompletionStage().toCompletableFuture().join();
 
@@ -38,7 +38,7 @@ class RetryTemplateTest {
   }
 
   @Test
-  public void callAsync_positive_retryThenSuccess() {
+  void callAsync_positive_retryThenSuccess() {
     var counter = new AtomicInteger(0);
     var resultFuture = retryTemplate.callAsync(() -> {
       if (counter.getAndIncrement() < 2) {
@@ -55,7 +55,7 @@ class RetryTemplateTest {
   }
 
   @Test
-  public void callAsync_negative_illegalArgException() {
+  void callAsync_negative_illegalArgException() {
     var counter = new AtomicInteger(0);
     var resultFuture = retryTemplate.callAsync(() -> {
       counter.incrementAndGet();
@@ -69,7 +69,7 @@ class RetryTemplateTest {
   }
 
   @Test
-  public void callAsync_negative_toMuchRetries() {
+  void callAsync_negative_toMuchRetries() {
     var counter = new AtomicInteger(0);
     var resultFuture = retryTemplate.callAsync(() -> {
       counter.incrementAndGet();
