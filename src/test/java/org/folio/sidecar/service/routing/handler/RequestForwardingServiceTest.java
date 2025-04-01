@@ -40,11 +40,15 @@ import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -149,6 +153,42 @@ class RequestForwardingServiceTest {
     responseEndHandlerCaptor.getValue().handle(null);
     // Verify that end() was called on httpClientRequest
     verify(routingContext.response()).end();
+  }
+
+  @CsvSource({
+    "http://sc-foo, false",
+    "https://sc-foo, false",
+    "http://sc-foo:8081, true",
+    "https://sc-foo:8081, true"
+  })
+  @ParameterizedTest
+  @MockitoSettings(strictness = Strictness.LENIENT)
+  void forward_positive_urlHasNoPort(String baseUrl, boolean hasPort) {
+    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    if (hasPort) {
+      when(httpClient.request(POST, 8081, "sc-foo", encoder.toString()))
+        .thenReturn(Future.succeededFuture(httpClientRequest));
+    } else {
+      when(httpClient.request(POST, "sc-foo", encoder.toString())).thenReturn(
+        Future.succeededFuture(httpClientRequest));
+    }
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
+
+    var response = routingContext.response();
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
+
+    service.forwardIngress(routingContext, baseUrl + PATH);
+
+    if (hasPort) {
+      verify(httpClient).request(POST, 8081, "sc-foo", encoder.toString());
+    } else {
+      verify(httpClient).request(POST, "sc-foo", encoder.toString());
+    }
   }
 
   @Test
