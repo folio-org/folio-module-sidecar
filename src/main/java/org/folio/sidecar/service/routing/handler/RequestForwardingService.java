@@ -115,11 +115,9 @@ public class RequestForwardingService {
     httpServerRequest.params().forEach(encoder::addParam);
 
     // Create an HTTP request
-    Future<HttpClientRequest> request = httpClient.request(httpServerRequest.method(),
-      httpUri.getPort(), httpUri.getHost(), encoder.toString());
-    Future<HttpClientRequest> httpClientRequestFuture = request
+    Future<HttpClientRequest> request = createHttpClientRequestFuture(httpClient, httpServerRequest, httpUri, encoder)
       .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
-    httpClientRequestFuture.onSuccess(httpClientRequest -> {
+    request.onSuccess(httpClientRequest -> {
 
       httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
       httpClientRequest.headers().set(REQUEST_ID, getRequestId(rc));
@@ -158,7 +156,8 @@ public class RequestForwardingService {
 
       //Handle the HTTP client response by streaming the output back to the server.
       httpClientRequest.response()
-        .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS).onSuccess(response -> {
+        .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS)
+        .onSuccess(response -> {
           log.trace("Handle the HTTP client response by streaming the output back to the server");
           handleSuccessfulResponse(rc, response, result);
           transactionLogHandler.log(rc, response, httpClientRequest);
@@ -170,9 +169,18 @@ public class RequestForwardingService {
     return result.future();
   }
 
+  private static Future<HttpClientRequest> createHttpClientRequestFuture(HttpClient httpClient,
+    HttpServerRequest httpServerRequest, URI httpUri, QueryStringEncoder encoder) {
+    return httpUri.getPort() == -1
+      ? httpClient.request(httpServerRequest.method(), httpUri.getHost(), encoder.toString())
+      : httpClient.request(httpServerRequest.method(), httpUri.getPort(), httpUri.getHost(), encoder.toString());
+  }
+
   private String toHttpsUri(String uri) {
-    URI httpUri = URI.create(uri);
-    return format("https://%s:%s%s", httpUri.getHost(), httpUri.getPort(), httpUri.getPath());
+    var httpUri = URI.create(uri);
+    return httpUri.getPort() == -1
+      ? format("https://%s%s", httpUri.getHost(), httpUri.getPath())
+      : format("https://%s:%s%s", httpUri.getHost(), httpUri.getPort(), httpUri.getPath());
   }
 
   /**
