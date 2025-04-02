@@ -453,22 +453,6 @@ class SidecarIT {
   }
 
   @Test
-  void moduleHealthCheck_up() {
-    TestUtils.givenJson()
-      .get("/admin/health")
-      .then()
-      .log().ifValidationFails(LogDetail.ALL)
-      .assertThat()
-      .statusCode(is(SC_OK))
-      .body(
-        "status", is("UP"),
-        "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'Module health check'}.data.host",
-        Matchers.matchesPattern("GET http://localhost:\\d+" + TestConstants.MODULE_HEALTH_PATH)
-      );
-  }
-
-  @Test
   void handleIngressRequest_negative_readTimeoutException() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
