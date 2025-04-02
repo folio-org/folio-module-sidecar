@@ -4,10 +4,11 @@ import static io.vertx.core.Future.fromCompletionStage;
 import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.time.temporal.ChronoUnit.MINUTES;
 
-import io.smallrye.faulttolerance.api.FaultTolerance;
+import io.smallrye.faulttolerance.api.TypedGuard;
 import io.vertx.core.Future;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.ResolutionException;
+import jakarta.enterprise.util.TypeLiteral;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionStage;
@@ -24,15 +25,16 @@ public class RetryTemplate {
   private final RetryProperties retryProperties;
 
   public <T> Future<T> callAsync(Supplier<Future<T>> futureSupplier) {
-    FaultTolerance<CompletionStage<T>> retry = buildFaultTolerance();
+    TypedGuard<CompletionStage<T>> retry = buildTypedGuard();
 
     return fromCompletionStage(retry.get(() -> futureSupplier.get().toCompletionStage()));
   }
 
-  private <T> FaultTolerance<CompletionStage<T>> buildFaultTolerance() {
+  private <T> TypedGuard<CompletionStage<T>> buildTypedGuard() {
     long minDelayMillis = retryProperties.getMinDelay().toMillis();
     long maxDelayMillis = retryProperties.getMaxDelay().toMillis();
-    return FaultTolerance.<T>createAsync()
+
+    return TypedGuard.create(new TypeLiteral<CompletionStage<T>>() {})
       .withRetry()
       .delay(minDelayMillis, MILLIS)
       .maxRetries(retryProperties.getAttempts())
