@@ -24,7 +24,7 @@ COPY --chown=185 ${BUILD_DIR}/app/ ${JAVA_APP_DIR}/app/
 COPY --chown=185 ${BUILD_DIR}/quarkus/ ${JAVA_APP_DIR}/quarkus/
 
 ARG JAVA_OPTS_BASIC="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
-ARG JAVA_OPTS_FIPS="-Dorg.bouncycastle.fips.approved_only=true -Djava.security.properties=/deployments/config/java.security.fips --add-exports java.base/sun.security.provider=ALL-UNNAMED --add-opens java.base/java.security=ALL-UNNAMED"
+ARG JAVA_OPTS_FIPS="-Dhttps.protocols=TLSv1.2 -Dorg.bouncycastle.fips.approved_only=true -Djava.security.properties=/deployments/config/java.security.fips --add-exports java.base/sun.security.provider=ALL-UNNAMED --add-opens java.base/java.security=ALL-UNNAMED"
 ARG JAVA_OPTS_PROFILES="-Dquarkus.profile=prod,fips"
 
 ENV JAVA_OPTS_APPEND="${JAVA_OPTS_PROFILES} ${JAVA_OPTS_BASIC} ${JAVA_OPTS_FIPS}"
