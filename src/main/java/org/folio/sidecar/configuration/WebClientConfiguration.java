@@ -100,6 +100,7 @@ public class WebClientConfiguration {
     var result = new WebClientOptions()
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
+      .setKeepAlive(true)
       // timeouts
       .setConnectTimeout(settings.timeout().connect())
       .setKeepAliveTimeout(settings.timeout().keepAlive())
@@ -119,10 +120,20 @@ public class WebClientConfiguration {
     if (tls.enabled()) {
       if (tls.trustStorePath().isEmpty()) {
         log.debug("Creating web client for Public Trusted Certificates: clientName = {}", settings.name());
-        result.setSsl(true).setTrustAll(false);
+        result.setSsl(true)
+          .setReuseAddress(true)
+          .setReusePort(true)
+          .setTcpKeepAlive(true)
+          .setTrustAll(false);
       } else {
         result.setVerifyHost(tls.verifyHostname())
-          .setSsl(true).setTrustAll(false)
+          .setSsl(true)
+          .setReuseAddress(true)
+          .removeEnabledSecureTransportProtocol("TLSv1.3")
+          .addEnabledSecureTransportProtocol("TLSv1.2")
+          .setReusePort(true)
+          .setTcpKeepAlive(true)
+          .setTrustAll(false)
           .setTrustOptions(new KeyStoreOptions()
             .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
             .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
