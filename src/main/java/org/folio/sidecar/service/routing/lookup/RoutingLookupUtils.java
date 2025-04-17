@@ -123,12 +123,14 @@ class RoutingLookupUtils {
 
   private static boolean matchModuleIdForMultipleInterface(ScRoutingEntry candidate, HttpServerRequest request,
     boolean isSupportMultipleInterface) {
-    if (!isSupportMultipleInterface) {
-      return true;
-    }
 
     var moduleIdHeader = request.getHeader(OkapiHeaders.MODULE_ID);
     var interfaceType = candidate.getInterfaceType();
+
+    if (!isSupportMultipleInterface && !isEmpty(moduleIdHeader)) {
+      return !Objects.equals(MULTIPLE_INTERFACE_TYPE, interfaceType)
+        || Objects.equals(moduleIdHeader, candidate.getModuleId());
+    }
 
     if (isEmpty(moduleIdHeader)) {
       return !Objects.equals(MULTIPLE_INTERFACE_TYPE, interfaceType);

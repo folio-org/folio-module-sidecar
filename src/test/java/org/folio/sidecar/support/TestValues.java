@@ -41,6 +41,13 @@ public class TestValues {
       TestConstants.MODULE_ID, TestConstants.MODULE_URL, interfaceId, "system", routingEntry(pathPattern, methods));
   }
 
+  public static ScRoutingEntry scRoutingEntryMultiInterface(String interfaceId, String pathPattern,
+                                                          HttpMethod... httpMethods) {
+    var methods = Arrays.stream(httpMethods).map(HttpMethod::name).toArray(String[]::new);
+    return ScRoutingEntry.of(
+      TestConstants.MODULE_ID, TestConstants.MODULE_URL, interfaceId, "multiple", routingEntry(pathPattern, methods));
+  }
+
   public static ModuleBootstrapEndpoint routingEntry(String pathPattern, String[] methods) {
     var routingEntry = new ModuleBootstrapEndpoint();
     routingEntry.setPathPattern(pathPattern);

@@ -30,6 +30,8 @@ public class TestConstants {
   public static final String APPLICATION_ID = "application-0.0.1";
   public static final ModuleBootstrap MODULE_BOOTSTRAP =
     parse(readString("json/module-bootstrap.json"), ModuleBootstrap.class);
+  public static final ModuleBootstrap MODULE_BOOTSTRAP_MULTI =
+    parse(readString("json/module-bootstrap-multi.json"), ModuleBootstrap.class);
   public static final ModuleBootstrap MODULE_BOOTSTRAP_EGRESS =
     parse(readString("json/module-bootstrap-egress.json"), ModuleBootstrap.class);
   public static final String AUTH_TOKEN = "dGVzdC1hY2Nlc3MtdG9rZW4=";
