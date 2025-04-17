@@ -259,9 +259,9 @@ public class RequestForwardingService {
 
   private static int getPortOrElseDefault(URI httpUri) {
     int port;
-    if (httpUri.getPort() == -1 && "http".equals(httpUri.getScheme())) {
+    if (httpUri.getPort() == -1 && "http".equalsIgnoreCase(httpUri.getScheme())) {
       port = 80;
-    } else if (httpUri.getPort() == -1 && "https".equals(httpUri.getScheme())) {
+    } else if (httpUri.getPort() == -1 && "https".equalsIgnoreCase(httpUri.getScheme())) {
       port = 443;
     } else {
       port = httpUri.getPort();
