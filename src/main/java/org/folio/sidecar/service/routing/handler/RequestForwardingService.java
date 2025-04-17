@@ -14,6 +14,7 @@ import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.RequestOptions;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
@@ -171,9 +172,18 @@ public class RequestForwardingService {
 
   private static Future<HttpClientRequest> createHttpClientRequestFuture(HttpClient httpClient,
     HttpServerRequest httpServerRequest, URI httpUri, QueryStringEncoder encoder) {
-    return httpUri.getPort() == -1
-      ? httpClient.request(httpServerRequest.method(), httpUri.getHost(), encoder.toString())
-      : httpClient.request(httpServerRequest.method(), httpUri.getPort(), httpUri.getHost(), encoder.toString());
+
+    var requestOptions = new RequestOptions()
+      .setHost(httpUri.getHost())
+      .setPort(getPortOrElseDefault(httpUri))
+      .setURI(encoder.toString())
+      .setMethod(httpServerRequest.method());
+
+    if (httpUri.getScheme() != null && "https".equalsIgnoreCase(httpUri.getScheme())) {
+      requestOptions.setSsl(true);
+    }
+
+    return httpClient.request(requestOptions);
   }
 
   private String toHttpsUri(String uri) {
@@ -245,5 +255,17 @@ public class RequestForwardingService {
 
     httpClientResponse.exceptionHandler(error ->
       result.fail(new InternalServerErrorException("Failed to proxy request: upstream issue", error)));
+  }
+
+  private static int getPortOrElseDefault(URI httpUri) {
+    int port;
+    if (httpUri.getPort() == -1 && "http".equalsIgnoreCase(httpUri.getScheme())) {
+      port = 80;
+    } else if (httpUri.getPort() == -1 && "https".equalsIgnoreCase(httpUri.getScheme())) {
+      port = 443;
+    } else {
+      port = httpUri.getPort();
+    }
+    return port;
   }
 }
