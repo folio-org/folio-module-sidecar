@@ -1,13 +1,16 @@
 package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.http.HttpMethod.POST;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -89,11 +92,15 @@ class RequestForwardingServiceTest {
   @Test
   void forward_positive() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
-    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    var encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
-      Future.succeededFuture(httpClientRequest));
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
 
@@ -156,25 +163,26 @@ class RequestForwardingServiceTest {
   }
 
   @CsvSource({
-    "http://sc-foo, false",
-    "https://sc-foo, false",
-    "http://sc-foo:8081, true",
-    "https://sc-foo:8081, true"
+    "http://sc-foo, false, 80",
+    "https://sc-foo, true, 443",
+    "http://sc-foo:8081, false, 8081",
+    "https://sc-foo:8081, true, 8081"
   })
   @ParameterizedTest
   @MockitoSettings(strictness = Strictness.LENIENT)
-  void forward_positive_urlHasNoPort(String baseUrl, boolean hasPort) {
+  void forward_positive_urlHasNoPort(String baseUrl, boolean sslEnabled, int port) {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
     QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    if (hasPort) {
-      when(httpClient.request(POST, 8081, "sc-foo", encoder.toString()))
-        .thenReturn(Future.succeededFuture(httpClientRequest));
-    } else {
-      when(httpClient.request(POST, "sc-foo", encoder.toString())).thenReturn(
-        Future.succeededFuture(httpClientRequest));
-    }
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+      && port == options.getPort()
+      && encoder.toString().equals(options.getURI())
+      && POST == options.getMethod()
+      && sslEnabled == isTrue(options.isSsl())
+    ))).thenReturn(succeededFuture(httpClientRequest));
+
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
 
@@ -183,12 +191,6 @@ class RequestForwardingServiceTest {
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
     service.forwardIngress(routingContext, baseUrl + PATH);
-
-    if (hasPort) {
-      verify(httpClient).request(POST, 8081, "sc-foo", encoder.toString());
-    } else {
-      verify(httpClient).request(POST, "sc-foo", encoder.toString());
-    }
   }
 
   @Test
@@ -199,12 +201,16 @@ class RequestForwardingServiceTest {
     var egressTlsMock = mock(WebClientConfig.TlsSettings.class);
     when(egressSettingsMock.tls()).thenReturn(egressTlsMock);
     when(egressTlsMock.enabled()).thenReturn(true);
-    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    var encoder = new QueryStringEncoder(PATH);
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
-      Future.succeededFuture(httpClientRequest));
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(succeededFuture(httpClientRequest));
 
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
@@ -270,12 +276,15 @@ class RequestForwardingServiceTest {
   void forward_positive_nullBodyBuffer() {
     var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
 
-    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
-
+    var encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString())).thenReturn(
-      Future.succeededFuture(httpClientRequest));
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
     prepareHttpRequestMocks(routingContext, httpClientRequest);
     prepareHttpResponseMocks(routingContext, httpClientResponse);
 
@@ -345,8 +354,12 @@ class RequestForwardingServiceTest {
     QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(POST, 8081, "sc-foo", encoder.toString()))
-      .thenReturn(Future.succeededFuture(httpClientRequest));
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(succeededFuture(httpClientRequest));
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
     when(httpClientRequest.headers()).thenReturn(headers);
@@ -370,7 +383,7 @@ class RequestForwardingServiceTest {
     // Mock handler method
     when(httpClientResponse.pause()).thenReturn(httpClientResponse);
     doReturn(true).when(httpServerResponse).writeQueueFull(); // Simulate write queue being full
-    when(httpServerResponse.write(any(Buffer.class))).thenReturn(Future.succeededFuture());
+    when(httpServerResponse.write(any(Buffer.class))).thenReturn(succeededFuture());
     when(httpClientResponse.handler(responseHandlerCaptor.capture())).thenReturn(httpClientResponse);
     // Mock endHandler method
     when(httpClientResponse.endHandler(responseEndHandlerCaptor.capture())).thenReturn(httpClientResponse);
@@ -381,14 +394,14 @@ class RequestForwardingServiceTest {
     when(httpClientRequest.headers()).thenReturn(headers);
     when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
     when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
-    when(httpClientRequest.response()).thenReturn(Future.succeededFuture(httpClientResponse));
+    when(httpClientRequest.response()).thenReturn(succeededFuture(httpClientResponse));
     // Mock drainHandler method
     when(httpClientRequest.drainHandler(requestDrainHandlerCaptor.capture())).thenReturn(httpClientRequest);
     // Mock handler method
     HttpServerRequest httpServerRequest = routingContext.request();
     when(httpServerRequest.pause()).thenReturn(httpServerRequest);
     doReturn(true).when(httpClientRequest).writeQueueFull(); // Simulate write queue being full
-    when(httpClientRequest.write(any(Buffer.class))).thenReturn(Future.succeededFuture());
+    when(httpClientRequest.write(any(Buffer.class))).thenReturn(succeededFuture());
     when(httpServerRequest.handler(requestHandlerCaptor.capture())).thenReturn(httpServerRequest);
     // Mock endHandler method
     when(httpServerRequest.endHandler(requestEndHandlerCaptor.capture())).thenReturn(httpServerRequest);
