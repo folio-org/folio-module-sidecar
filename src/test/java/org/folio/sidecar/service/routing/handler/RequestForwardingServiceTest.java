@@ -190,7 +190,12 @@ class RequestForwardingServiceTest {
     when(response.headers()).thenReturn(headersResponse);
     when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    service.forwardIngress(routingContext, baseUrl + PATH);
+    verify(httpClient).request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && port == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod()
+        && sslEnabled == isTrue(options.isSsl())));
   }
 
   @Test
