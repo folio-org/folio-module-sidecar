@@ -1,5 +1,6 @@
-## Version `v2.0.10` (in progress)
+## Version `v2.0.10` (22.04.2025)
 ### Changes:
+* Support flexible request schema (MODSIDECAR-108)
 
 ## Version `v2.0.9` (11.04.2025)
 ### Changes:
