@@ -18,7 +18,9 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
+import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestValues;
@@ -44,6 +46,28 @@ class IngressRoutingLookupTest {
     ingressLookup.onModuleBootstrap(TestConstants.MODULE_BOOTSTRAP.getModule(), INIT);
 
     var actual = ingressLookup.lookupRoute(path, routingContext(method));
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEqualTo(ofNullable(expected));
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}: {1}")
+  @MethodSource("ingressRequestMultiDataProvider")
+  @DisplayName("lookupForIngressRequestMulti_parameterized")
+  void lookupForIngressRequestMulti_parameterized(HttpMethod method, String path, ScRoutingEntry expected) {
+    ingressLookup.onModuleBootstrap(TestConstants.MODULE_BOOTSTRAP_MULTI.getModule(), INIT);
+    var actual = ingressLookup.lookupRoute(path, routingContext(method, "mod-target-1.0.0"));
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEqualTo(ofNullable(expected));
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}: {1}")
+  @MethodSource("ingressRequestMultiMatchDataProvider")
+  @DisplayName("lookupForIngressRequestMulti_parameterized")
+  void lookupForIngressRequestMultiMatch_parameterized(HttpMethod method, String path, ScRoutingEntry expected) {
+    ingressLookup.onModuleBootstrap(TestConstants.MODULE_BOOTSTRAP_MULTI.getModule(), INIT);
+    var actual = ingressLookup.lookupRoute(path, routingContext(method, "mod-foo-0.2.1"));
 
     assertThat(actual.succeeded()).isTrue();
     assertThat(actual.result()).isEqualTo(ofNullable(expected));
@@ -121,11 +145,34 @@ class IngressRoutingLookupTest {
     );
   }
 
+  private static Stream<Arguments> ingressRequestMultiMatchDataProvider() {
+    return Stream.of(
+      arguments(GET, "/foo/entities", TestValues.scRoutingEntryMultiInterface("foo", "/foo/entities", GET, POST)),
+      arguments(POST, "/foo/entities", TestValues.scRoutingEntryMultiInterface("foo", "/foo/entities", GET, POST)),
+      arguments(null, "/foo/entities", TestValues.scRoutingEntryMultiInterface("foo", "/foo/entities", GET, POST))
+    );
+  }
+
+  private static Stream<Arguments> ingressRequestMultiDataProvider() {
+    return Stream.of(
+      arguments(GET, "/foo/entities", null),
+      arguments(POST, "/foo/entities", null),
+      arguments(null, "/foo/entities", null)
+    );
+  }
+
   private static RoutingContext routingContext(HttpMethod method) {
+    return routingContext(method, null);
+  }
+
+  private static RoutingContext routingContext(HttpMethod method, String targetModule) {
     var routingContext = mock(RoutingContext.class);
     var request = mock(HttpServerRequest.class);
     when(routingContext.request()).thenReturn(request);
     when(request.method()).thenReturn(method);
+    if (StringUtils.isNoneBlank(targetModule)) {
+      when(request.getHeader(OkapiHeaders.MODULE_ID)).thenReturn(targetModule);
+    }
     return routingContext;
   }
 }
