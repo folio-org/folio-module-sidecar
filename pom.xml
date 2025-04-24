@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.folio</groupId>
   <artifactId>folio-module-sidecar</artifactId>
-  <version>3.0.3-SNAPSHOT</version>
+  <version>3.0.3</version>
   <description>A sidecar application responsible for Folio modules</description>
   <packaging>jar</packaging>
 
@@ -616,6 +616,6 @@
     <url>https://https://github.com/folio-org/folio-module-sidecar</url>
     <connection>scm:git:git://github.com:folio-org/folio-module-sidecar.git</connection>
     <developerConnection>scm:git:git@github.com:folio-org/folio-module-sidecar.git</developerConnection>
-    <tag>v3.0.0</tag>
+    <tag>v3.0.3</tag>
   </scm>
 </project>
