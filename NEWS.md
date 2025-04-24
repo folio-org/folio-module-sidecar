@@ -1,5 +1,7 @@
-## Version `v3.0.3` (in progress)
+## Version `v3.0.3` (24.04.2025)
 ### Changes:
+* Support flexible request schema (MODSIDECAR-108)
+* Fixed problems routing requests to interfaces of type multiple (MODSIDECAR-117)
 
 ## Version `v3.0.2` (11.04.2025)
 ### Changes:
