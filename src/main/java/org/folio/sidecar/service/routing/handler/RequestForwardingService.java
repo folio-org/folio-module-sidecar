@@ -125,7 +125,6 @@ public class RequestForwardingService {
 
       // Set the maximum write queue size to prevent memory overflow
       httpClientRequest.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
-      httpClientRequest.setChunked(true);
 
       // Attach drainHandler to resume reading when the queue has space
       httpClientRequest.drainHandler(v -> {
@@ -136,6 +135,7 @@ public class RequestForwardingService {
       // If the write queue is full, pause the ReadStream
       Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
       if (!nonBodyMethods.contains(httpServerRequest.method())) {
+        httpClientRequest.setChunked(true);
         httpServerRequest.handler(buffer -> {
           if (httpClientRequest.writeQueueFull()) {
             httpServerRequest.pause();
