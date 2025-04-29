@@ -1,3 +1,7 @@
+## Version `v3.0.4` (29.04.2025)
+### Changes:
+* The AWS Load Balancer closes connections from Sidecars immediately after sending the HTTP response (MODSIDECAR-120)
+
 ## Version `v3.0.3` (24.04.2025)
 ### Changes:
 * Support flexible request schema (MODSIDECAR-108)
