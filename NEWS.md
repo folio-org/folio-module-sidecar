@@ -1,5 +1,6 @@
-## Version `v2.0.11` (in progress)
+## Version `v2.0.11` (29.04.2025)
 ### Changes:
+* The AWS Load Balancer closes connections from Sidecars immediately after sending the HTTP response (MODSIDECAR-120)
 
 ## Version `v2.0.10` (22.04.2025)
 ### Changes:
