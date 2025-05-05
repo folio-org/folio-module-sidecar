@@ -638,6 +638,17 @@ class SidecarIT {
   }
 
   @Test
+  void authorizeTimerRequest_noHeader_validToken() {
+    var authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TestConstants.TENANT_NAME, USER_ID);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TOKEN, authToken)
+      .post("/foo/expire/timer")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .statusCode(is(SC_OK));
+  }
+
+  @Test
   void handleIngressRequest_positive_noModuleIdHeader() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
