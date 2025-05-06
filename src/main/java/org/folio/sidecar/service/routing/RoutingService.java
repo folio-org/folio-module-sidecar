@@ -13,7 +13,6 @@ import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,16 +29,21 @@ import org.folio.sidecar.service.routing.configuration.RequestHandler;
 public class RoutingService implements DiscoveryListener {
 
   private final ApplicationManagerService appManagerService;
-  private final Handler<RoutingContext> requestHandler;
+  private final List<Handler<RoutingContext>> requestHandlers;
   private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
   private final ModulePermissionsService modulePermissionsService;
 
   public RoutingService(ApplicationManagerService appManagerService,
-    @RequestHandler Instance<Handler<RoutingContext>> requestHandler, @All List<ModuleBootstrapListener> mbListeners,
+    @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
     ModulePermissionsService modulePermissionsService) {
     this.appManagerService = appManagerService;
-    this.requestHandler = requestHandler.get();
+
+    if (requestHandlers.isEmpty()) {
+      throw new IllegalArgumentException("Request handlers are not configured");
+    }
+    this.requestHandlers = requestHandlers;
+
     this.moduleBootstrapListeners = mbListeners;
     this.modulePermissionsService = modulePermissionsService;
   }
@@ -80,7 +84,8 @@ public class RoutingService implements DiscoveryListener {
 
     modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
 
-    router.route("/*").handler(requestHandler);
+    var route = router.route("/*");
+    requestHandlers.forEach(route::handler);
 
     registerKnownModules(moduleBootstrap);
   }
