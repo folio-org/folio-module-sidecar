@@ -1,3 +1,7 @@
+## Version `v2.0.12` (06.05.2025)
+### Changes:
+* Problems routing requests to interfaces of type multiple (MODSIDECAR-117)
+
 ## Version `v2.0.11` (29.04.2025)
 ### Changes:
 * The AWS Load Balancer closes connections from Sidecars immediately after sending the HTTP response (MODSIDECAR-120)
