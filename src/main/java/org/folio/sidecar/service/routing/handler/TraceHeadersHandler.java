@@ -23,7 +23,7 @@ public class TraceHeadersHandler implements Handler<RoutingContext> {
   public void handle(RoutingContext rc) {
     var req = rc.request();
     if (pathMatched(req.path())) {
-      log.debug("""
+      log.info("""
         \n======================================
         Request: method = {}, uri = {}
         Current state of request context:

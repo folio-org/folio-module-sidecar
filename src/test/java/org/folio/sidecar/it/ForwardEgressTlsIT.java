@@ -213,4 +213,22 @@ class ForwardEgressTlsIT {
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .body("message", is("permissions sets in x-okapi-permissions"));
   }
+
+  @Test
+  void handleEgressRequest_positive_responseWithTimeHeader() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .get("/bar/entities")
+      .then()
+      .log().headers()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
+      .contentType(is(APPLICATION_JSON));
+  }
 }

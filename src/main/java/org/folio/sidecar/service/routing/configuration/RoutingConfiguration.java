@@ -7,6 +7,10 @@ import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.arc.lookup.LookupUnlessProperty;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.LoggerFormat;
+import io.vertx.ext.web.handler.LoggerHandler;
+import io.vertx.ext.web.handler.ResponseTimeHandler;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Named;
@@ -88,6 +92,22 @@ public class RoutingConfiguration {
     log.info("Header tracing is activated: paths = {}", isEmpty(paths) ? "<all>" : paths);
 
     return new TraceHeadersHandler(new ScRequestHandler(chainedHandler, errorHandler), paths);
+  }
+
+  @RequestHandler
+  @Priority(10)
+  @ApplicationScoped
+  @LookupIfProperty(name = "routing.logger.enabled", stringValue = "true")
+  public Handler<RoutingContext> loggerHandler() {
+    return LoggerHandler.create(true, LoggerFormat.DEFAULT);
+  }
+
+  @RequestHandler
+  @Priority(9)
+  @ApplicationScoped
+  @LookupIfProperty(name = "routing.response-time.enabled", stringValue = "true")
+  public Handler<RoutingContext> responseTimeHandler() {
+    return ResponseTimeHandler.create();
   }
 
   public static class Dynamic {
