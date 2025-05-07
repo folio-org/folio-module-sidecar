@@ -21,6 +21,7 @@ import jakarta.ws.rs.NotFoundException;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
+import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -78,13 +80,8 @@ class RoutingServiceTest {
 
     routingService.initRoutes(router);
 
-    listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
-    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
-    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-
-    routeOrder.verify(route).handler(requestHandler1);
-    routeOrder.verify(route).handler(requestHandler2);
+    verifyListeners(listenersOrder, bootstrap);
+    verifyHandlers(routeOrder);
 
     verify(modulePermissionsService).putPermissions(anySet());
   }
@@ -140,5 +137,17 @@ class RoutingServiceTest {
   void updateModuleRoutes_negative_moduleNotFound() {
     routingService.updateModuleRoutes("unknown_module");
     verifyNoInteractions(appManagerService, listener1, listener2, router, route);
+  }
+
+  private void verifyHandlers(InOrder routeOrder) {
+    routeOrder.verify(route).handler(requestHandler1);
+    routeOrder.verify(route).handler(requestHandler2);
+  }
+
+  private void verifyListeners(InOrder listenersOrder, ModuleBootstrap bootstrap) {
+    listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
   }
 }
