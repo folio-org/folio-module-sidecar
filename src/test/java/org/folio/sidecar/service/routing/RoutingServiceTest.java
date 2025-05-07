@@ -62,8 +62,11 @@ class RoutingServiceTest {
 
   @Test
   void constructor_negative_noRequestHandlers() {
-    Assertions.assertThatThrownBy(() -> new RoutingService(appManagerService, List.of(),
-        List.of(listener1, listener2), modulePermissionsService))
+    var listeners = List.of(listener1, listener2);
+    var handlers = List.<Handler<RoutingContext>>of();
+    
+    Assertions.assertThatThrownBy(() -> new RoutingService(appManagerService, handlers,
+        listeners, modulePermissionsService))
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessage("Request handlers are not configured");
   }
