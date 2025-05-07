@@ -5,6 +5,7 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.PRIMARY;
 import static org.folio.sidecar.service.routing.RoutingService.ModuleType.REQUIRED;
+import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 
 import io.quarkus.arc.All;
@@ -39,7 +40,7 @@ public class RoutingService implements DiscoveryListener {
     ModulePermissionsService modulePermissionsService) {
     this.appManagerService = appManagerService;
 
-    if (requestHandlers.isEmpty()) {
+    if (isEmpty(requestHandlers)) {
       throw new IllegalArgumentException("Request handlers are not configured");
     }
     this.requestHandlers = requestHandlers;

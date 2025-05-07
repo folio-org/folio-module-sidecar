@@ -650,4 +650,20 @@ class SidecarIT {
       .statusCode(is(SC_OK))
       .contentType(is(APPLICATION_JSON));
   }
+
+  @Test
+  void handleIngressRequest_positive_responseWithTimeHeader() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/entities")
+      .then()
+      .log().headers()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
+      .contentType(is(APPLICATION_JSON));
+  }
 }
