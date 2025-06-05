@@ -423,7 +423,7 @@
       <properties>
         <skipITs>false</skipITs>
         <quarkus.native.additional-build-args>
-          -march=x86_64_v1,\
+          -march=X86_64_V1,\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
           -H:ReflectionConfigurationFiles=reflection-config.json
