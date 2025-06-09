@@ -8,7 +8,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import io.quarkus.test.common.QuarkusTestResourceConfigurableLifecycleManager;
 import java.util.Map;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
 @Getter
@@ -31,10 +30,8 @@ public class WireMockExtension implements QuarkusTestResourceConfigurableLifecyc
   }
 
   @Override
-  @SneakyThrows
   public Map<String, String> start() {
     serverManager.start();
-    Thread.sleep(2000);
     var wiremockUrl = serverManager.getServerUrl();
 
     return Map.ofEntries(
