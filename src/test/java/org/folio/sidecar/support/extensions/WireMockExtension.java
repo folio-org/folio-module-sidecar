@@ -32,6 +32,7 @@ public class WireMockExtension implements QuarkusTestResourceConfigurableLifecyc
   @Override
   public Map<String, String> start() {
     serverManager.start();
+
     var wiremockUrl = serverManager.getServerUrl();
 
     return Map.ofEntries(
