@@ -427,8 +427,6 @@
       ${native.march},
       --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,
       --initialize-at-run-time=com.bettercloud.vault.rest.Rest,
-      --initialize-at-run-time=javax.net.ssl.SSLContext,
-      --initialize-at-run-time=java.security.SecureRandom,
       -H:ReflectionConfigurationFiles=reflection-config.json
     </native.additional.builder.args>
     <quarkus.native.enabled>true</quarkus.native.enabled>
