@@ -6,14 +6,15 @@ import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.quarkus.test.InMemoryLogHandler;
 import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Formatter;
-import lombok.SneakyThrows;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.support.TestConstants;
@@ -43,9 +44,8 @@ class ForwardEgressTlsIT {
   private String authToken;
 
   @BeforeAll
-  @SneakyThrows
   static void beforeAll() {
-    Thread.sleep(2000);
+    await().atLeast(2, TimeUnit.SECONDS);
     var transaction = TRANSACTION_LOGGER.getHandlers()[0];
     MEMORY_LOG_HANDLER.setFormatter(transaction.getFormatter());
     TRANSACTION_LOGGER.addHandler(MEMORY_LOG_HANDLER);
