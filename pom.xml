@@ -414,21 +414,22 @@
 
   <profiles>
     <profile>
-      <id>native</id>
-      <activation>
-        <property>
-          <name>native</name>
-        </property>
-      </activation>
-      <properties>
-        <skipITs>false</skipITs>
-        <native.additional.build.args>
-          -march=native,--initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,--initialize-at-run-time=com.bettercloud.vault.rest.Rest,-H:ReflectionConfigurationFiles=reflection-config.json
-        </native.additional.build.args>
-        <quarkus.native.enabled>true</quarkus.native.enabled>
-        <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
-      </properties>
-    </profile>
+  <id>native</id>
+  <activation>
+    <property>
+      <name>native</name>
+    </property>
+  </activation>
+  <properties>
+    <skipITs>false</skipITs>
+    <native.march>-march=native</native.march>
+    <native.additional.build.args>
+      ${native.march},--initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,--initialize-at-run-time=com.bettercloud.vault.rest.Rest,-H:ReflectionConfigurationFiles=reflection-config.json
+    </native.additional.build.args>
+    <quarkus.native.enabled>true</quarkus.native.enabled>
+    <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
+  </properties>
+</profile>
 
     <profile>
       <id>fips</id>
