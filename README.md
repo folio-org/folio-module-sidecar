@@ -42,10 +42,16 @@ The application is packaged as an _uber-jar,_ and it is now runnable using `java
 
 ### Creating a native executable
 
-You can create a native executable using:
+You can create a native executable using(for default native build):
 
 ```shell script
 mvn package -Pnative
+```
+
+If target and build nodes are having different CPU(but same manufacturer, such as AMD(zenv1,2), Intel etc.) and features, you may build portable native image using:
+
+```shell script
+mvn package -Pnative -Dnative.march=-march=compatibility
 ```
 
 Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
