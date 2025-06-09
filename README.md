@@ -48,7 +48,7 @@ You can create a native executable using(for default native build):
 mvn package -Pnative
 ```
 
-If target and build nodes has different CPU(but same manufacturer, such AMD(zenv1,2), Intel etc.) and features, you may build portable native image using:
+If target and build nodes are different CPU(but same manufacturer, such AMD(zenv1,2), Intel etc.) and features, you may build portable native image using:
 
 ```shell script
 mvn package -Pnative -Dnative.march=-march=compatibility
