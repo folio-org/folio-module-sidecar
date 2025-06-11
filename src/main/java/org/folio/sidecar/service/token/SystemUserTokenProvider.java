@@ -30,9 +30,7 @@ import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
-@RegisterForReflection(targets = {
-  org.folio.sidecar.service.token.SystemUserTokenProvider.class
-})
+@RegisterForReflection
 public class SystemUserTokenProvider {
 
   private final KeycloakService keycloakService;

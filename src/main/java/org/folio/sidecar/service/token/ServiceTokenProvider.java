@@ -27,9 +27,7 @@ import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
-@RegisterForReflection(targets = {
-  org.folio.sidecar.service.token.ServiceTokenProvider.class
-})
+@RegisterForReflection
 public class ServiceTokenProvider {
 
   private static final String SUPER_TENANT = "master";
