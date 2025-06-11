@@ -427,8 +427,9 @@
       </activation>
       <properties>
         <skipITs>false</skipITs>
+        <native.march>-march=native</native.march>
         <quarkus.native.additional-build-args>
-          -march=native,\
+          ${native.march},\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
           -H:ReflectionConfigurationFiles=reflection-config.json
