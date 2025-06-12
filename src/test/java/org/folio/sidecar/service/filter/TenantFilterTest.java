@@ -69,6 +69,7 @@ class TenantFilterTest {
     assertThat(result.cause())
       .isInstanceOf(TenantNotEnabledException.class)
       .hasMessage("Application is not enabled for tenant: %s", TestConstants.TENANT_NAME);
+    verify(tenantService).executeTenantsAndEntitlementsTask();
   }
 
   @Test

@@ -3,6 +3,8 @@ package org.folio.sidecar.service;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import io.quarkus.runtime.StartupEvent;
+import io.quarkus.scheduler.Scheduled;
+import io.vertx.core.Future;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -10,6 +12,8 @@ import jakarta.enterprise.event.Observes;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
@@ -33,9 +37,11 @@ public class TenantService {
   private final ModuleProperties moduleProperties;
   private final EventBus eventBus;
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
+  private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
+  private final AtomicReference<Future<List<Tenant>>> tenantsAndEntitlementsTask = new AtomicReference<>(null);
 
   public void init(@Observes StartupEvent event) {
-    loadTenantsAndEntitlements();
+    tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
   }
 
   public void enableTenant(String tenantName) {
@@ -52,8 +58,8 @@ public class TenantService {
     }
   }
 
-  public void loadTenantsAndEntitlements() {
-    retryTemplate.callAsync(() ->
+  public Future<List<Tenant>> loadTenantsAndEntitlements() {
+    return retryTemplate.callAsync(() ->
       tokenProvider.getAdminToken().compose(token ->
         tenantEntitlementClient.getModuleEntitlements(moduleProperties.getId(), token)
           .map(TenantService::getTenantIds)
@@ -73,6 +79,27 @@ public class TenantService {
       return false;
     }
     return enabledTenants.contains(name);
+  }
+
+  /**
+    * This logic is implemented in scope of MODSIDECAR-126.
+    * Should be removed after design long term solution.
+  */
+  public void executeTenantsAndEntitlementsTask() {
+    var currentTask = tenantsAndEntitlementsTask.get();
+    if (canExecuteTenantsAndEntitlementsTask.get() && currentTask != null && currentTask.isComplete()) {
+      canExecuteTenantsAndEntitlementsTask.set(false);
+      tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
+      log.info("Task to load tenants and entitlements started");
+    }
+  }
+
+  @Scheduled(cron = "{tenant-service.reset-task.cron-definition}")
+  void resetTaskFlag() {
+    if (!canExecuteTenantsAndEntitlementsTask.get()) {
+      log.info("Resetting task flag for loading tenants and entitlements to true");
+      canExecuteTenantsAndEntitlementsTask.set(true);
+    }
   }
 
   private static List<String> getTenantIds(ResultList<Entitlement> resultList) {

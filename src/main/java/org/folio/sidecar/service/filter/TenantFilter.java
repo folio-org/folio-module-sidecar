@@ -27,7 +27,7 @@ public class TenantFilter implements IngressRequestFilter {
     var tenant = rc.request().headers().get(OkapiHeaders.TENANT);
     return tenantService.isEnabledTenant(tenant)
       ? succeededFuture(rc)
-      : failedFuture(new TenantNotEnabledException(tenant));
+      : getFailedFuture(tenant);
   }
 
   @Override
@@ -38,5 +38,10 @@ public class TenantFilter implements IngressRequestFilter {
   @Override
   public int getOrder() {
     return TENANT.getOrder();
+  }
+
+  private Future<RoutingContext> getFailedFuture(String tenant) {
+    tenantService.executeTenantsAndEntitlementsTask();
+    return failedFuture(new TenantNotEnabledException(tenant));
   }
 }
