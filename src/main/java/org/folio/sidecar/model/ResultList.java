@@ -3,6 +3,7 @@ package org.folio.sidecar.model;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.folio.sidecar.utils.CollectionUtils;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor(staticName = "of")
+@RegisterForReflection
 public class ResultList<T> {
 
   /**

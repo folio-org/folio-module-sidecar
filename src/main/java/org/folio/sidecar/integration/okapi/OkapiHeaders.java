@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.okapi;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
  */
 @SuppressWarnings("unused")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@RegisterForReflection
 public class OkapiHeaders {
 
   /**

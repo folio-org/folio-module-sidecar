@@ -1,11 +1,13 @@
 package org.folio.sidecar.model;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 
 @Data
 @RequiredArgsConstructor(staticName = "of")
+@RegisterForReflection
 public class ScRoutingEntry {
 
   public static final String GATEWAY_INTERFACE_ID = "GATEWAY";
