@@ -5,3 +5,4 @@
 * Support flexible request schema (MODSIDECAR-108)
 * Fixed problems routing requests to interfaces of type multiple (MODSIDECAR-117)
 * Improve request tracing by adding response time header and Apache-like logging (BF-1070)
+* Register classes for reflection (MODSIDECAR-128)
