@@ -8,18 +8,26 @@ import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.SneakyThrows;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestUtils;
 import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
 @TestProfile(ComprehensiveHealthCheckIT.ComprehensiveHealthCheckTestProfile.class)
 @EnableWireMock(verbose = true)
 class ComprehensiveHealthCheckIT {
+
+  @BeforeAll
+  @SneakyThrows
+  static void beforeAll() {
+    Thread.sleep(2000);
+  }
 
   @Test
   void healthCheck_positive() {
