@@ -1,3 +1,7 @@
+## Version `v3.0.12` (13.10.2025)
+### Changes:
+* Support FSSP type of Secure Store (APPPOCTOOL-59)
+
 ## Version `v3.0.11` (13.10.2025)
 ### Changes:
 * Register classes for reflection (MODSIDECAR-128)
