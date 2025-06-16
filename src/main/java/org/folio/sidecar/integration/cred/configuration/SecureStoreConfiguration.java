@@ -12,9 +12,11 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.tools.store.SecureStore;
 import org.folio.tools.store.impl.AwsStore;
 import org.folio.tools.store.impl.EphemeralStore;
+import org.folio.tools.store.impl.FsspStore;
 import org.folio.tools.store.impl.VaultStore;
 import org.folio.tools.store.properties.AwsConfigProperties;
 import org.folio.tools.store.properties.EphemeralConfigProperties;
+import org.folio.tools.store.properties.FsspConfigProperties;
 import org.folio.tools.store.properties.VaultConfigProperties;
 
 @Log4j2
@@ -24,8 +26,10 @@ public class SecureStoreConfiguration {
   private static final String EPHEMERAL_TYPE = "EPHEMERAL";
   private static final String AWS_TYPE = "AWS_SSM";
   private static final String VAULT_TYPE = "VAULT";
+  private static final String FSSP_TYPE = "FSSP";
   private static final String AWS_PREFIX = "secret-store.aws-ssm.";
   private static final String VAULT_PREFIX = "secret-store.vault.";
+  private static final String FSSP_PREFIX = "secret-store.fssp.";
 
   @Produces
   @LookupIfProperty(name = SECURE_STORE_TYPE_PROP, stringValue = EPHEMERAL_TYPE)
@@ -83,9 +87,28 @@ public class SecureStoreConfiguration {
       .build();
   }
 
+  @Produces
+  @LookupIfProperty(name = SECURE_STORE_TYPE_PROP, stringValue = FSSP_TYPE)
+  public SecureStore fsspStore(FsspConfigProperties properties) {
+    return new FsspStore(properties);
+  }
+
+  @Produces
+  @LookupIfProperty(name = SECURE_STORE_TYPE_PROP, stringValue = FSSP_TYPE)
+  public FsspConfigProperties fsspProperties() {
+    return FsspConfigProperties.builder()
+      .address(getRequiredValue(FSSP_PREFIX, "address"))
+      .secretPath(getValue(FSSP_PREFIX, "secret-path"))
+      .enableSsl(getRequiredValue(FSSP_PREFIX, "enable-ssl", Boolean.class))
+      .trustStorePath(getValue(FSSP_PREFIX, "trust-store-path"))
+      .trustStoreFileType(getValue(FSSP_PREFIX, "trust-store-file-type"))
+      .trustStorePassword(getValue(FSSP_PREFIX, "trust-store-password"))
+      .build();
+  }
+
   @ConfigMapping(prefix = "secret-store.ephemeral")
   @LookupIfProperty(name = SECURE_STORE_TYPE_PROP, stringValue = EPHEMERAL_TYPE)
-  private interface EphemeralProperties {
+  interface EphemeralProperties {
 
     Map<String, String> content();
   }
