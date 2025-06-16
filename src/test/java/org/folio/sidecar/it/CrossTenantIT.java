@@ -17,6 +17,7 @@ import io.restassured.filter.log.LogDetail;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import lombok.SneakyThrows;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.it.CrossTenantIT.CrossTenantTestProfile;
@@ -27,6 +28,7 @@ import org.folio.sidecar.support.extensions.InjectWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +42,12 @@ class CrossTenantIT {
   @ConfigProperty(name = "keycloak.url") String keycloakUrl;
   @InjectWireMock WireMockServer wireMockServer;
   private String authToken;
+
+  @BeforeAll
+  @SneakyThrows
+  static void beforeAll() {
+    Thread.sleep(2000);
+  }
 
   @BeforeEach
   void init() {
