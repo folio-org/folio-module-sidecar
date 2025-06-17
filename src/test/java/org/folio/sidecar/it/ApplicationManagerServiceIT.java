@@ -14,6 +14,7 @@ import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import java.net.ConnectException;
+import lombok.SneakyThrows;
 import org.folio.sidecar.integration.am.ApplicationManagerClient;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.support.TestConstants;
@@ -21,6 +22,7 @@ import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.profile.CommonIntegrationTestProfile;
 import org.folio.support.types.IntegrationTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest
@@ -30,6 +32,12 @@ class ApplicationManagerServiceIT {
 
   @InjectMock ApplicationManagerClient amClient;
   @Inject ApplicationManagerService service;
+
+  @BeforeAll
+  @SneakyThrows
+  static void beforeAll() {
+    Thread.sleep(2000);
+  }
 
   @Test
   void getModuleBootstrap_positive_applyRetries() {
