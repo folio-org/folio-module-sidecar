@@ -7,3 +7,5 @@
 * Improve request tracing by adding response time header and Apache-like logging (BF-1070)
 * Register classes for reflection (MODSIDECAR-128)
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
+* Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
+
