@@ -215,6 +215,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | SC_CLIENT_TLS_TRUSTSTORE_PROVIDER            |                         |  false   | Truststore provider for egress web client                                                                                                                                                                                                                      |
 | WEB_CLIENT_TLS_VERIFY_HOSTNAME               | false                   |  false   | Defines whether verify hostname for web client or not.                                                                                                                                                                                                         |
 | ROUTING_DYNAMIC_ENABLED                      | false                   |  false   | Enables/disables dynamic route feature. If `ROUTING_DYNAMIC_ENABLED` is enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` should be disabled.                                                                                                                        |
+| TENANT_SERVICE_RESET_TASK_CRON_DEFINITION    | 0 */5 * * * ?           |  false   | Property defines a cron expression that schedules a periodic task for resetting tenant services to load tenants and entitlements                                                                                                                               |
 
 ### Logging configuration
 

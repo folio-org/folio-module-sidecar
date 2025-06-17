@@ -1,3 +1,8 @@
+## Version `v3.0.5` (27.06.2025)
+### Changes:
+* Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
+* Bump application-poc-tools to 3.0.1 version
+
 ## Version `v3.0.4` (29.04.2025)
 ### Changes:
 * The AWS Load Balancer closes connections from Sidecars immediately after sending the HTTP response (MODSIDECAR-120)
