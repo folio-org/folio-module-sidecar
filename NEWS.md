@@ -8,4 +8,4 @@
 * Register classes for reflection (MODSIDECAR-128)
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
 * Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
-
+* Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))
