@@ -1,7 +1,9 @@
 package org.folio.sidecar.configuration;
 
 import io.quarkus.runtime.Startup;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.BodyHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class RouterConfiguration {
    */
   public void onStart(@Observes Router router) {
     log.info("Initializing sidecar: {}", sidecarProperties::getName);
+    router.route().method(HttpMethod.GET).handler(BodyHandler.create());
     routingService.initRoutes(router);
   }
 }
