@@ -144,6 +144,31 @@ class TenantServiceTest {
     verifyNoInteractions(eventBus);
   }
 
+  @Test
+  void executeTenantsAndEntitlementsTask_positive() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    // at first call, tokenProvider returns failed future, then succeeded future
+    when(tokenProvider.getAdminToken())
+      .thenReturn(failedFuture("Failed message"))
+      .thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    tenantService.init(STARTUP_EVENT);
+    tenantService.resetTaskFlag();
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
+  }
+
   @SuppressWarnings("unchecked")
   private void mockRetryTemplate() {
     when(retryTemplate.callAsync(any(Supplier.class))).thenAnswer(invocation -> {

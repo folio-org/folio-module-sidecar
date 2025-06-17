@@ -1,3 +1,7 @@
+## Version `v2.0.13` (08.07.2025)
+### Changes:
+* Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
+
 ## Version `v2.0.12` (06.05.2025)
 ### Changes:
 * Problems routing requests to interfaces of type multiple (MODSIDECAR-117)
