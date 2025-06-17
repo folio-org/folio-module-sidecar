@@ -7,3 +7,4 @@
 * Improve request tracing by adding response time header and Apache-like logging (BF-1070)
 * Register classes for reflection (MODSIDECAR-128)
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
+* Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))
