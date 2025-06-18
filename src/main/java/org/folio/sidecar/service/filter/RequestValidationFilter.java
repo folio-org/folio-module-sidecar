@@ -10,10 +10,8 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.BadRequestException;
-import lombok.RequiredArgsConstructor;
 
 @ApplicationScoped
-@RequiredArgsConstructor
 public class RequestValidationFilter implements IngressRequestFilter {
 
   private static final String CONTENT_LENGTH_HEADER = "Content-Length";
