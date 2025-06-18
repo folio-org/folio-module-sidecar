@@ -8,4 +8,4 @@
 * Register classes for reflection (MODSIDECAR-128)
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
 * Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
-
+* GET Requests With Bodies Are Not Forwarded Properly (MODSIDECAR-125)

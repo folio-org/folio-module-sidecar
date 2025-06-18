@@ -669,4 +669,23 @@ class SidecarIT {
       .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
       .contentType(is(APPLICATION_JSON));
   }
+
+  @Test
+  void handleIngressRequest_negative_bodyExistForGetRequest() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .body("body")
+      .get("/foo/bar")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_BAD_REQUEST))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("BadRequestException"),
+        "errors[0].code", is("service_error"),
+        "errors[0].message", is("GET requests should not have a body")
+      );
+  }
 }

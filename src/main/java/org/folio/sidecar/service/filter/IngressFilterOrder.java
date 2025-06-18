@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public enum IngressFilterOrder {
 
+  REQUEST_VALIDATION(90),
   SELF_REQUEST(100),
   KEYCLOAK_SYSTEM_JWT(110),
   KEYCLOAK_JWT(120),
