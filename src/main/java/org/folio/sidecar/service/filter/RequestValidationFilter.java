@@ -22,7 +22,7 @@ public class RequestValidationFilter implements IngressRequestFilter {
 
   @Override
   public Future<RoutingContext> filter(RoutingContext rc) {
-    if (HttpMethod.GET.equals(rc.request().method()) && isContentLengthHeaderExist(rc.request().headers())) {
+    if (HttpMethod.GET.equals(rc.request().method()) && isContentLengthByHeaderExist(rc.request().headers())) {
       return failedFuture(new BadRequestException("GET requests should not have a body"));
     }
     return succeededFuture(rc);
@@ -33,7 +33,7 @@ public class RequestValidationFilter implements IngressRequestFilter {
     return REQUEST_VALIDATION.getOrder();
   }
 
-  private boolean isContentLengthHeaderExist(MultiMap headers) {
+  private boolean isContentLengthByHeaderExist(MultiMap headers) {
     if (headers.contains(CONTENT_LENGTH_HEADER)) {
       var length = headers.get(CONTENT_LENGTH_HEADER);
       return Integer.parseInt(length) > 0;
