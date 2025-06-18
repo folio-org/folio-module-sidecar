@@ -23,7 +23,7 @@ class RequestValidationFilterTest {
   @Mock private HttpServerRequest request;
   @Mock private MultiMap headers;
 
-  private final RequestValidationFilter filter = new RequestValidationFilter();
+  private final RequestValidationFilter requestValidationFilter = new RequestValidationFilter();
 
   @Test
   void filter_positive_noBodyForGetRequestWhenContentLengthDoesNotExist() {
@@ -32,7 +32,7 @@ class RequestValidationFilterTest {
     when(request.headers()).thenReturn(headers);
     when(headers.contains("Content-Length")).thenReturn(false);
 
-    var result = filter.filter(routingContext);
+    var result = requestValidationFilter.filter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
   }
@@ -45,7 +45,7 @@ class RequestValidationFilterTest {
     when(headers.contains("Content-Length")).thenReturn(true);
     when(headers.get("Content-Length")).thenReturn("0");
 
-    var result = filter.filter(routingContext);
+    var result = requestValidationFilter.filter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
   }
@@ -58,7 +58,7 @@ class RequestValidationFilterTest {
     when(headers.contains("Content-Length")).thenReturn(true);
     when(headers.get("Content-Length")).thenReturn("1");
 
-    var result = filter.filter(routingContext);
+    var result = requestValidationFilter.filter(routingContext);
 
     assertThat(result.failed()).isTrue();
     assertThat(result.cause())
@@ -68,7 +68,7 @@ class RequestValidationFilterTest {
 
   @Test
   void getOrder_positive() {
-    var order = filter.getOrder();
+    var order = requestValidationFilter.getOrder();
 
     assertThat(order).isEqualTo(REQUEST_VALIDATION.getOrder());
   }

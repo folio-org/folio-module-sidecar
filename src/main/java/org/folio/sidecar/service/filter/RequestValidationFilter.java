@@ -11,9 +11,7 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.BadRequestException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 
-@Log4j2
 @ApplicationScoped
 @RequiredArgsConstructor
 public class RequestValidationFilter implements IngressRequestFilter {
