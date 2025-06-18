@@ -9,6 +9,7 @@ import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.security.UnauthorizedException;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.Future;
@@ -29,6 +30,7 @@ import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
+@RegisterForReflection
 public class SystemUserTokenProvider {
 
   private final KeycloakService keycloakService;

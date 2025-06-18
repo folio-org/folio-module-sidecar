@@ -1,10 +1,12 @@
 package org.folio.sidecar.model;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
+@RegisterForReflection
 public enum ModulePrefixStrategy {
 
   /**

@@ -221,6 +221,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | SC_CLIENT_TLS_TRUSTSTORE_PROVIDER            |                         |  false   | Truststore provider for egress web client                                                                                                                                                                                                                      |
 | WEB_CLIENT_TLS_VERIFY_HOSTNAME               | false                   |  false   | Defines whether verify hostname for web client or not.                                                                                                                                                                                                         |
 | ROUTING_DYNAMIC_ENABLED                      | false                   |  false   | Enables/disables dynamic route feature. If `ROUTING_DYNAMIC_ENABLED` is enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` should be disabled.                                                                                                                        |
+| TENANT_SERVICE_RESET_TASK_CRON_DEFINITION    | 0 */5 * * * ?           |  false   | Property defines a cron expression that schedules a periodic task for resetting tenant services to load tenants and entitlements                                                                                                                               |
 
 ### Logging configuration
 
@@ -341,9 +342,9 @@ Default transaction/access log format:
 
 ### Secure storage environment variables
 
-| Name              | Default value | Required | Description                                                            |
-|:------------------|:--------------|:--------:|:-----------------------------------------------------------------------|
-| SECRET_STORE_TYPE | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT` |
+| Name              | Default value | Required | Description                                                                    |
+|:------------------|:--------------|:--------:|:-------------------------------------------------------------------------------|
+| SECRET_STORE_TYPE | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP` |
 
 #### AWS-SSM
 
@@ -375,6 +376,19 @@ Required when `SECRET_STORE_TYPE=VAULT`
 | SECRET_STORE_VAULT_KEYSTORE_PASSWORD    | -             | the password used to access the JKS keystore (optional)                             |
 | SECRET_STORE_VAULT_KEYSTORE_FILE_PATH   | -             | the path to a JKS keystore file containing a client cert and private key            |
 | SECRET_STORE_VAULT_TRUSTSTORE_FILE_PATH | -             | the path to a JKS truststore file containing Vault server certs that can be trusted |
+
+#### FSSP (Folio Secure Store Proxy)
+
+Required when `SECRET_STORE_TYPE=FSSP`
+
+| Name                                   | Default value         | Description                                 |
+|:---------------------------------------|:----------------------|:--------------------------------------------|
+| SECRET_STORE_FSSP_ADDRESS              | -                     | The address (URL) of the FSSP service.      |
+| SECRET_STORE_FSSP_SECRET_PATH          | secure-store/entries  | The path in FSSP where secrets are stored.  |
+| SECRET_STORE_FSSP_ENABLE_SSL           | false                 | Whether to use SSL for the FSSP connection. |
+| SECRET_STORE_FSSP_TRUSTSTORE_PATH      | -                     | Truststore file path for SSL connections.   |
+| SECRET_STORE_FSSP_TRUSTSTORE_FILE_TYPE | -                     | Truststore file type (e.g., JKS, PKCS12).   |
+| SECRET_STORE_FSSP_TRUSTSTORE_PASSWORD  | -                     | Truststore password for SSL connections.    |
 
 ## Security
 
