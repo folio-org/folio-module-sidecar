@@ -12,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Future;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import java.util.Collections;
@@ -40,8 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TenantServiceTest {
 
-  private static final StartupEvent STARTUP_EVENT = new StartupEvent();
-
   @Mock private ServiceTokenProvider tokenProvider;
   @Mock private RetryTemplate retryTemplate;
   @Mock private TenantManagerClient tenantManagerClient;
@@ -64,7 +61,7 @@ class TenantServiceTest {
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(List.of(tenant)));
 
-    tenantService.init(STARTUP_EVENT);
+    tenantService.init();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
     assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
@@ -79,7 +76,7 @@ class TenantServiceTest {
     when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(failedFuture(new RuntimeException()));
 
-    tenantService.init(STARTUP_EVENT);
+    tenantService.init();
 
     verifyNoInteractions(tenantManagerClient);
 
@@ -98,7 +95,7 @@ class TenantServiceTest {
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN)).thenReturn(
       failedFuture(new RuntimeException()));
 
-    tenantService.init(STARTUP_EVENT);
+    tenantService.init();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
     assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isFalse();
@@ -160,7 +157,7 @@ class TenantServiceTest {
     when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
       .thenReturn(succeededFuture(List.of(tenant)));
 
-    tenantService.init(STARTUP_EVENT);
+    tenantService.init();
     tenantService.resetTaskFlag();
     tenantService.executeTenantsAndEntitlementsTask();
 

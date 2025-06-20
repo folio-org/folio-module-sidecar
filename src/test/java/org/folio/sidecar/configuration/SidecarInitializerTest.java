@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import io.vertx.ext.web.Router;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.service.routing.RoutingService;
+import org.folio.sidecar.startup.SidecarInitializer;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class RouterConfigurationTest {
+class SidecarInitializerTest {
 
-  @InjectMocks private RouterConfiguration routerConfiguration;
+  @InjectMocks private SidecarInitializer routerConfiguration;
 
   @Mock private Router router;
   @Mock private RoutingService routingService;

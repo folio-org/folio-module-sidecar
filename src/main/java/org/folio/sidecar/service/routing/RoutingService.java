@@ -10,6 +10,7 @@ import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 
 import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -49,8 +50,8 @@ public class RoutingService implements DiscoveryListener {
     this.modulePermissionsService = modulePermissionsService;
   }
 
-  public void initRoutes(Router router) {
-    loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+  public Future<Void> initRoutes(Router router) {
+    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
   }
 
   @Override
@@ -66,9 +67,12 @@ public class RoutingService implements DiscoveryListener {
     }
   }
 
-  private void loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
-    appManagerService.getModuleBootstrap()
-      .onSuccess(consumer::accept)
+  private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
+    return appManagerService.getModuleBootstrap()
+      .map(moduleBootstrap -> {
+        consumer.accept(moduleBootstrap);
+        return (Void) null;
+      })
       .onFailure(error -> {
         log.error("Failed to initialize routes", error);
         Quarkus.asyncExit(0);

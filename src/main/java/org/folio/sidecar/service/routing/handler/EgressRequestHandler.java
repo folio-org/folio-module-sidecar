@@ -1,7 +1,6 @@
 package org.folio.sidecar.service.routing.handler;
 
 import static io.vertx.core.Future.succeededFuture;
-import static org.apache.logging.log4j.util.Strings.isNotBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
@@ -13,9 +12,11 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import jakarta.ws.rs.BadRequestException;
+import java.util.Optional;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.PathProcessor;
@@ -35,6 +36,7 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private final RequestForwardingService requestForwardingService;
   private final ServiceTokenProvider serviceTokenProvider;
   private final SystemUserTokenProvider systemUserTokenProvider;
+  private final ModuleProperties moduleProperties;
 
   /**
    * Handles outgoing (egress) request.
@@ -77,12 +79,7 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private Future<Void> populateSystemUserToken(RoutingContext rc) {
     return !requireSystemUserToken(rc)
       ? succeededFuture()
-      : systemUserTokenProvider.getToken(rc)
-        .map(setSysUserTokenIfAvailable(rc))
-        .otherwise(error -> {
-          log.debug("Failed to get system user token: {}", error.getMessage(), error);
-          return null;
-        }); // any errors to get token are ignored
+      : systemUserTokenProvider.getToken(rc).map(setSysUserToken(rc));
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
@@ -101,17 +98,18 @@ class EgressRequestHandler implements RoutingEntryHandler {
       : requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
   }
 
-  private static Function<String, Void> setSysUserTokenIfAvailable(RoutingContext rc) {
-    return token -> {
+  private Function<Optional<String>, Void> setSysUserToken(RoutingContext rc) {
+    return t -> {
+      var token = t.orElseThrow(() -> new BadRequestException("System user token is required"
+        + " if the request doesn't contain " + OkapiHeaders.TOKEN
+        + ". Check that system user is configured for the module: " + moduleProperties.getId()));
+
       String requestId = rc.request().getHeader(REQUEST_ID);
 
-      if (isNotBlank(token)) {
-        RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
-        log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
-          () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
-      } else {
-        log.debug("System user token is not available [requestId: {}]", requestId);
-      }
+      RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
+      log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
+        () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
+
       return null;
     };
   }

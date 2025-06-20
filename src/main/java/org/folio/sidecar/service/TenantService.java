@@ -2,13 +2,11 @@ package org.folio.sidecar.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import io.quarkus.runtime.StartupEvent;
 import io.quarkus.scheduler.Scheduled;
 import io.vertx.core.Future;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -40,7 +38,7 @@ public class TenantService {
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
   private final AtomicReference<Future<List<Tenant>>> tenantsAndEntitlementsTask = new AtomicReference<>(null);
 
-  public void init(@Observes StartupEvent event) {
+  public void init() {
     tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
   }
 

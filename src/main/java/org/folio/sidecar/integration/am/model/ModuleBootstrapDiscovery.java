@@ -29,6 +29,12 @@ public class ModuleBootstrapDiscovery {
   private String location;
 
   /**
+   * Either or not system user is required by the module.
+   */
+  @JsonProperty
+  private boolean systemUserRequired = false;
+
+  /**
    * Provided interfaces.
    */
   @JsonProperty

@@ -22,6 +22,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.inject.Instance;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
@@ -76,7 +77,7 @@ class EgressRequestHandlerTest {
 
     when(request.headers()).thenReturn(requestHeaders);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
-    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_USER_TOKEN));
+    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.of(SYS_USER_TOKEN)));
 
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
     when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(succeededFuture());
@@ -162,7 +163,7 @@ class EgressRequestHandlerTest {
 
     when(request.headers()).thenReturn(requestHeaders);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
-    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_USER_TOKEN));
+    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.of(SYS_USER_TOKEN)));
 
     when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
     when(requestForwardingService.forwardToGateway(rc, GATEWAY_URL + fooEntitiesPath)).thenReturn(succeededFuture());
