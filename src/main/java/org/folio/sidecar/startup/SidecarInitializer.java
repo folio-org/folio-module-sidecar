@@ -28,10 +28,10 @@ public class SidecarInitializer {
   public void onStart(@Observes Router router) {
     log.info("Initializing sidecar: {}", sidecarProperties.getName());
 
-    routingService.initRoutes(router)
-      .map(unused -> {
-        tenantService.init();
-        return null;
-      });
+    // chain of initialization:
+    // 1. routing service and everything that depends on it
+    // 2. tenant service
+    routingService.init(router)
+      .compose(unused -> tenantService.init());
   }
 }

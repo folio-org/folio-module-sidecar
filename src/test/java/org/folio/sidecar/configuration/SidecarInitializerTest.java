@@ -33,6 +33,6 @@ class SidecarInitializerTest {
   @Test
   void onStart_positive() {
     routerConfiguration.onStart(router);
-    verify(routingService).initRoutes(router);
+    verify(routingService).init(router);
   }
 }

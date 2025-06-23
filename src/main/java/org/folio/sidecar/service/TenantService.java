@@ -38,8 +38,13 @@ public class TenantService {
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
   private final AtomicReference<Future<List<Tenant>>> tenantsAndEntitlementsTask = new AtomicReference<>(null);
 
-  public void init() {
-    tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
+  public Future<Void> init() {
+    Future<List<Tenant>> lte = loadTenantsAndEntitlements();
+    tenantsAndEntitlementsTask.set(lte);
+    
+    return lte.map((Void) null).onSuccess(unused -> {
+      log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId());
+    });
   }
 
   public void enableTenant(String tenantName) {

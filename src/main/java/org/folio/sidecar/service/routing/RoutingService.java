@@ -50,7 +50,7 @@ public class RoutingService implements DiscoveryListener {
     this.modulePermissionsService = modulePermissionsService;
   }
 
-  public Future<Void> initRoutes(Router router) {
+  public Future<Void> init(Router router) {
     return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
   }
 
@@ -63,7 +63,7 @@ public class RoutingService implements DiscoveryListener {
     var type = knownModules.get(moduleId);
 
     if (type != null) {
-      loadBootstrapAndProcess(updateModuleRoutesByType(type));
+      loadBootstrapAndProcess(updateModuleRoutesByType(type, moduleId));
     }
   }
 
@@ -93,6 +93,9 @@ public class RoutingService implements DiscoveryListener {
     requestHandlers.forEach(route::handler);
 
     registerKnownModules(moduleBootstrap);
+
+    log.info("Sidecar initialized from module bootstrap: moduleId = {}, applicationId = {}",
+      moduleBootstrap.getModule().getModuleId(), moduleBootstrap.getModule().getApplicationId());
   }
 
   private void registerKnownModules(ModuleBootstrap moduleBootstrap) {
@@ -106,7 +109,7 @@ public class RoutingService implements DiscoveryListener {
     log.info("Known modules registered: {}", this::getKnownModulesAsString);
   }
 
-  private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type) {
+  private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type, String updatedModuleId) {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
         moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
@@ -116,6 +119,9 @@ public class RoutingService implements DiscoveryListener {
 
       moduleBootstrapListeners.forEach(listener -> listener
         .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), UPDATE));
+
+      log.info("Sidecar updated from module bootstrap: moduleId = {}, moduleType = {}, applicationId = {}",
+        updatedModuleId, type, moduleBootstrap.getModule().getApplicationId());
     };
   }
 
