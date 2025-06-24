@@ -22,8 +22,10 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.inject.Instance;
+import jakarta.ws.rs.BadRequestException;
 import java.util.Optional;
 import java.util.function.Consumer;
+import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -58,6 +60,7 @@ class EgressRequestHandlerTest {
   @Mock private ServiceTokenProvider serviceTokenProvider;
   @Mock private SystemUserTokenProvider systemUserTokenProvider;
   @Mock private RequestFilterService requestFilterService;
+  @Mock private ModuleProperties moduleProperties;
 
   @InjectMocks
   private EgressRequestHandler egressRequestHandler;
@@ -111,30 +114,30 @@ class EgressRequestHandlerTest {
   }
 
   @Test
-  void handle_positive_sysUserTokenIsEmpty() {
-    prepareHttpRequest(req -> when(req.path()).thenReturn(fooEntitiesPath));
+  void handle_negative_sysUserTokenIsEmpty() {
+    prepareHttpRequest(req -> {});
 
     when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
 
     when(request.headers()).thenReturn(requestHeaders);
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
-    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(null));
-
-    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(succeededFuture());
+    when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.empty()));
+    when(moduleProperties.getId()).thenReturn(MODULE_ID);
 
     var rf = egressRequestHandler.handle(routingEntry(), rc);
 
-    assertThat(rf.succeeded()).isTrue();
+    assertThat(rf.failed()).isTrue();
+    assertThat(rf.cause())
+      .isInstanceOf(BadRequestException.class)
+      .hasMessageContaining("System user token is required");
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
-    verify(requestHeaders, never()).set(eq(OkapiHeaders.TOKEN), anyString());
   }
 
   @Test
   void handle_positive_sysUserTokenGetFailed() {
-    prepareHttpRequest(req -> when(req.path()).thenReturn(fooEntitiesPath));
+    prepareHttpRequest(req -> {});
 
     when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
     when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
@@ -143,12 +146,10 @@ class EgressRequestHandlerTest {
     when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
     when(systemUserTokenProvider.getToken(rc)).thenReturn(failedFuture("System user token is not found"));
 
-    when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-    when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(succeededFuture());
-
     var rf = egressRequestHandler.handle(routingEntry(), rc);
 
-    assertThat(rf.succeeded()).isTrue();
+    assertThat(rf.failed()).isTrue();
+    assertThat(rf.cause()).hasMessage("System user token is not found");
 
     verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
     verify(requestHeaders, never()).set(eq(OkapiHeaders.TOKEN), anyString());
