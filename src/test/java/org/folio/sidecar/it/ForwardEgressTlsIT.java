@@ -6,6 +6,7 @@ import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -72,6 +73,7 @@ class ForwardEgressTlsIT {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .body("{\"name\":\"entity-timeout\",\"description\":\"Test description\"}")
       .post("/bar/entities")
       .then()
@@ -94,6 +96,7 @@ class ForwardEgressTlsIT {
       .header(OkapiHeaders.MODULE_ID, "mod-qux-0.0.2")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -139,6 +142,7 @@ class ForwardEgressTlsIT {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .body("{\"name\":\"entity\",\"description\":\"An entity description\"}")
       .post("/bar/entities")
       .then()
@@ -161,6 +165,7 @@ class ForwardEgressTlsIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/bar/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -185,6 +190,7 @@ class ForwardEgressTlsIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/bar/entities?query=id=={id}&limit={limit}", id, 1)
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -223,6 +229,7 @@ class ForwardEgressTlsIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/bar/entities")
       .then()
       .log().headers()

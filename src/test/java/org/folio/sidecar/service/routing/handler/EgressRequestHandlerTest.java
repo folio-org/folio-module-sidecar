@@ -136,7 +136,7 @@ class EgressRequestHandlerTest {
   }
 
   @Test
-  void handle_positive_sysUserTokenGetFailed() {
+  void handle_negative_sysUserTokenGetFailed() {
     prepareHttpRequest(req -> {});
 
     when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));

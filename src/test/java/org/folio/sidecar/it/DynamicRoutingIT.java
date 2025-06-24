@@ -6,6 +6,7 @@ import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -58,6 +59,7 @@ class DynamicRoutingIT {
       .header(OkapiHeaders.TENANT, TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_ID)
       .get("/dyn-foo/entities")
       .then()
@@ -85,6 +87,7 @@ class DynamicRoutingIT {
       .header(OkapiHeaders.TENANT, TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .header(OkapiHeaders.MODULE_HINT, MODULE_DYN_FOO_NAME)
       .get("/dyn-foo/entities")
       .then()
