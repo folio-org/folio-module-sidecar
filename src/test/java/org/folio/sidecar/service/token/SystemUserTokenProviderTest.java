@@ -79,92 +79,6 @@ class SystemUserTokenProviderTest {
     verifyNoMoreInteractions(keycloakService, credentialService, moduleProperties, cacheFactory, tokenCache);
   }
 
-  @Nested
-  class WhenSystemUserRequired {
-
-    @BeforeEach
-    void setup() {
-      var mb = new ModuleBootstrapDiscovery();
-      mb.setSystemUserRequired(true);
-
-      service.onModuleBootstrap(mb, ModuleBootstrapListener.ChangeType.INIT);
-    }
-
-    @Test
-    void syncCache_positive() {
-      var cached = Map.ofEntries(
-        entry("tenant-foo", completedFuture(new TokenResponse())),
-        entry("tenant-bar", completedFuture(new TokenResponse()))
-      );
-      when(tokenCache.asMap()).thenReturn(new ConcurrentHashMap<>(cached));
-
-      var loadingCache = mock(LoadingCache.class);
-      when(tokenCache.synchronous()).thenReturn(loadingCache);
-
-      ArgumentCaptor<List<String>> invalidateCaptor = ArgumentCaptor.captor();
-      doNothing().when(loadingCache).invalidateAll(invalidateCaptor.capture());
-
-      ArgumentCaptor<List<String>> refreshCaptor = ArgumentCaptor.captor();
-      when(tokenCache.getAll(refreshCaptor.capture())).thenReturn(completedFuture(emptyMap()));
-
-      service.syncCache(EntitlementsEvent.of(Set.of("tenant-foo", "tenant-baz", "tenant-qux")));
-
-      assertThat(invalidateCaptor.getValue()).containsExactly("tenant-bar");
-      assertThat(refreshCaptor.getValue()).containsExactlyInAnyOrder("tenant-baz", "tenant-qux");
-    }
-
-    @Test
-    void getToken_positive() {
-      mockRequest();
-      when(tokenCache.get(TENANT_NAME)).thenReturn(completedFuture(TOKEN_RESPONSE));
-
-      var tf = service.getToken(rc);
-
-      assertThat(tf.succeeded()).isTrue();
-      assertThat(tf.result()).hasValue(TOKEN_RESPONSE.getAccessToken());
-    }
-
-    @Test
-    void getToken_negative_cacheError() {
-      mockRequest();
-      when(tokenCache.get(TENANT_NAME)).thenReturn(CompletableFuture.failedFuture(
-        new RuntimeException("Failed to get token")));
-
-      var tf = service.getToken(rc);
-
-      assertThat(tf.failed()).isTrue();
-      assertThat(tf.cause()).hasMessageContaining("Failed to get token");
-    }
-  }
-
-  @Nested
-  class WhenSystemUserNotRequired {
-
-    @BeforeEach
-    void setup() {
-      var mb = new ModuleBootstrapDiscovery();
-      mb.setSystemUserRequired(false);
-
-      service.onModuleBootstrap(mb, ModuleBootstrapListener.ChangeType.INIT);
-    }
-
-    @Test
-    void syncCache_positive_withTokenCacheNotAffected() {
-      service.syncCache(EntitlementsEvent.of(Set.of("tenant-foo", "tenant-baz", "tenant-qux")));
-
-      verifyNoInteractions(tokenCache);
-    }
-
-    @Test
-    void getToken_positive_withEmptyResultReturned() {
-      var tf = service.getToken(rc);
-
-      assertThat(tf.succeeded()).isTrue();
-      assertThat(tf.result()).isEmpty();
-      verifyNoInteractions(tokenCache);
-    }
-  }
-
   @Test
   void retrieveToken_positive() throws Exception {
     String username = MODULE_NAME;
@@ -296,5 +210,91 @@ class SystemUserTokenProviderTest {
     when(request.getHeader(OkapiHeaders.REQUEST_ID)).thenReturn(REQUEST_ID);
     when(request.uri()).thenReturn("/foo/entities");
     when(request.method()).thenReturn(GET);
+  }
+
+  @Nested
+  class WhenSystemUserRequired {
+
+    @BeforeEach
+    void setup() {
+      var mb = new ModuleBootstrapDiscovery();
+      mb.setSystemUserRequired(true);
+
+      service.onModuleBootstrap(mb, ModuleBootstrapListener.ChangeType.INIT);
+    }
+
+    @Test
+    void syncCache_positive() {
+      var cached = Map.ofEntries(
+        entry("tenant-foo", completedFuture(new TokenResponse())),
+        entry("tenant-bar", completedFuture(new TokenResponse()))
+      );
+      when(tokenCache.asMap()).thenReturn(new ConcurrentHashMap<>(cached));
+
+      var loadingCache = mock(LoadingCache.class);
+      when(tokenCache.synchronous()).thenReturn(loadingCache);
+
+      ArgumentCaptor<List<String>> invalidateCaptor = ArgumentCaptor.captor();
+      doNothing().when(loadingCache).invalidateAll(invalidateCaptor.capture());
+
+      ArgumentCaptor<List<String>> refreshCaptor = ArgumentCaptor.captor();
+      when(tokenCache.getAll(refreshCaptor.capture())).thenReturn(completedFuture(emptyMap()));
+
+      service.syncCache(EntitlementsEvent.of(Set.of("tenant-foo", "tenant-baz", "tenant-qux")));
+
+      assertThat(invalidateCaptor.getValue()).containsExactly("tenant-bar");
+      assertThat(refreshCaptor.getValue()).containsExactlyInAnyOrder("tenant-baz", "tenant-qux");
+    }
+
+    @Test
+    void getToken_positive() {
+      mockRequest();
+      when(tokenCache.get(TENANT_NAME)).thenReturn(completedFuture(TOKEN_RESPONSE));
+
+      var tf = service.getToken(rc);
+
+      assertThat(tf.succeeded()).isTrue();
+      assertThat(tf.result()).hasValue(TOKEN_RESPONSE.getAccessToken());
+    }
+
+    @Test
+    void getToken_negative_cacheError() {
+      mockRequest();
+      when(tokenCache.get(TENANT_NAME)).thenReturn(CompletableFuture.failedFuture(
+        new RuntimeException("Failed to get token")));
+
+      var tf = service.getToken(rc);
+
+      assertThat(tf.failed()).isTrue();
+      assertThat(tf.cause()).hasMessageContaining("Failed to get token");
+    }
+  }
+
+  @Nested
+  class WhenSystemUserNotRequired {
+
+    @BeforeEach
+    void setup() {
+      var mb = new ModuleBootstrapDiscovery();
+      mb.setSystemUserRequired(false);
+
+      service.onModuleBootstrap(mb, ModuleBootstrapListener.ChangeType.INIT);
+    }
+
+    @Test
+    void syncCache_positive_withTokenCacheNotAffected() {
+      service.syncCache(EntitlementsEvent.of(Set.of("tenant-foo", "tenant-baz", "tenant-qux")));
+
+      verifyNoInteractions(tokenCache);
+    }
+
+    @Test
+    void getToken_positive_withEmptyResultReturned() {
+      var tf = service.getToken(rc);
+
+      assertThat(tf.succeeded()).isTrue();
+      assertThat(tf.result()).isEmpty();
+      verifyNoInteractions(tokenCache);
+    }
   }
 }
