@@ -29,13 +29,16 @@ public class UserService {
   private final WebClient webClient;
   private final ModUsersProperties modUsersProperties;
   private final Cache<String, User> userCache;
+  private final Cache<String, List<String>> userPermissionCache;
   private final ServiceTokenProvider serviceTokenProvider;
 
   public UserService(@Named("webClientEgress") WebClient webClient, ModUsersProperties modUsersProperties,
-    Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
+    Cache<String, User> userCache, Cache<String, List<String>> userPermissionCache,
+    ServiceTokenProvider serviceTokenProvider) {
     this.webClient = webClient;
     this.modUsersProperties = modUsersProperties;
     this.userCache = userCache;
+    this.userPermissionCache = userPermissionCache;
     this.serviceTokenProvider = serviceTokenProvider;
   }
 
@@ -60,11 +63,21 @@ public class UserService {
     String tenant) {
     requireNonNull(permissions, "Permissions must not be null");
 
+    var cacheKey = buildKey(userId, tenant);
+    var userPerms = userPermissionCache.getIfPresent(cacheKey);
+    if (userPerms != null) {
+      return succeededFuture(userPerms);
+    }
+
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
+      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken))
+      .onSuccess(perms -> {
+        log.debug("User permissions found: user = {}, targetTenant = {}", userId, tenant);
+        userPermissionCache.put(cacheKey, perms);
+      });
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
