@@ -42,9 +42,8 @@ public class TenantService {
     Future<List<Tenant>> lte = loadTenantsAndEntitlements();
     tenantsAndEntitlementsTask.set(lte);
     
-    return lte.map((Void) null).onSuccess(unused -> {
-      log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId());
-    });
+    return lte.map((Void) null).onSuccess(unused ->
+      log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
   }
 
   public void enableTenant(String tenantName) {

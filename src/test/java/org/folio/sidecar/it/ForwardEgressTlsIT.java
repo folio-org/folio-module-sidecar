@@ -1,11 +1,13 @@
 package org.folio.sidecar.it;
 
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -240,5 +242,27 @@ class ForwardEgressTlsIT {
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
       .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleEgressRequest_negative_emptySystemUserToken_whenSystemUserIsNotDefinedByModule() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .body("{\"name\":\"entity\",\"description\":\"An entity description\"}")
+      .post("/bar/entities")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .statusCode(is(SC_BAD_REQUEST))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("BadRequestException"),
+        "errors[0].code", is("service_error"),
+        "errors[0].message", is("System user token is required if the request doesn't contain X-Okapi-Token. "
+          + "Check that system user is configured for the module: " + MODULE_ID)
+      );
   }
 }
