@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.routing.handler;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
@@ -14,8 +15,8 @@ import jakarta.inject.Named;
 import jakarta.ws.rs.BadRequestException;
 import java.util.Optional;
 import java.util.function.Function;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -28,7 +29,6 @@ import org.folio.sidecar.utils.RoutingUtils;
 @Log4j2
 @Named
 @ApplicationScoped
-@RequiredArgsConstructor
 class EgressRequestHandler implements RoutingEntryHandler {
 
   private final PathProcessor pathProcessor;
@@ -37,6 +37,21 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private final ServiceTokenProvider serviceTokenProvider;
   private final SystemUserTokenProvider systemUserTokenProvider;
   private final ModuleProperties moduleProperties;
+  private final boolean ignoreGettingSystemUserTokenError;
+
+  EgressRequestHandler(PathProcessor pathProcessor, RequestFilterService requestFilterService,
+    RequestForwardingService requestForwardingService, ServiceTokenProvider serviceTokenProvider,
+    SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties,
+    @ConfigProperty(name = "handler.egress.ignore-system-user-token-error", defaultValue = "false")
+    boolean ignoreGettingSystemUserTokenError) {
+    this.pathProcessor = pathProcessor;
+    this.requestFilterService = requestFilterService;
+    this.requestForwardingService = requestForwardingService;
+    this.serviceTokenProvider = serviceTokenProvider;
+    this.systemUserTokenProvider = systemUserTokenProvider;
+    this.moduleProperties = moduleProperties;
+    this.ignoreGettingSystemUserTokenError = ignoreGettingSystemUserTokenError;
+  }
 
   /**
    * Handles outgoing (egress) request.
@@ -79,7 +94,17 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private Future<Void> populateSystemUserToken(RoutingContext rc) {
     return !requireSystemUserToken(rc)
       ? succeededFuture()
-      : systemUserTokenProvider.getToken(rc).map(setSysUserToken(rc));
+      : systemUserTokenProvider.getToken(rc)
+        .map(setSysUserToken(rc))
+        .recover(err -> {
+          if (!ignoreGettingSystemUserTokenError) {
+            return failedFuture(err);
+          } else {
+            log.debug("Failed to get system user token: {}.\n"
+              + "The error is ignored because 'ignoreGettingSystemUserTokenError' is true", err.getMessage(), err);
+            return succeededFuture();
+          }
+        });
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
