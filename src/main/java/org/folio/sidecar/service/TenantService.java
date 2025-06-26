@@ -2,13 +2,11 @@ package org.folio.sidecar.service;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-import io.quarkus.runtime.StartupEvent;
 import io.quarkus.scheduler.Scheduled;
 import io.vertx.core.Future;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -42,10 +40,10 @@ public class TenantService {
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
 
-  public void init(@Observes StartupEvent event) {
+  public Future<Void> init() {
     log.info("Effective cron for tenant entitlements reset-task: {}", resetTaskCronDefinition);
 
-    loadTenantsAndEntitlements().map((Void) null).onSuccess(unused ->
+    return loadTenantsAndEntitlements().map((Void) null).onSuccess(unused ->
       log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
   }
 
