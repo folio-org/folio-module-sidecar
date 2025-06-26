@@ -3,6 +3,7 @@ package org.folio.sidecar.it;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -50,6 +51,7 @@ class ForwardUnknownEgressIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .body("{\"name\":\"entity\",\"description\":\"An entity description\"}")
       .post("/bar/entities")
       .then()
@@ -72,6 +74,7 @@ class ForwardUnknownEgressIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.MODULE_ID, "mod-qux-0.0.2")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -96,6 +99,7 @@ class ForwardUnknownEgressIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.MODULE_ID, "mod-qux-0.0.1")
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -120,6 +124,7 @@ class ForwardUnknownEgressIT {
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "test-signature")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/baz/entities")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
@@ -140,6 +145,7 @@ class ForwardUnknownEgressIT {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
       .get("/bar/no-module-id-header")
       .then()
       .log().ifValidationFails(LogDetail.ALL)
