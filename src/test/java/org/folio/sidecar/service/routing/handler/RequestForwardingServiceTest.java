@@ -438,6 +438,7 @@ class RequestForwardingServiceTest {
     return new HeadersMultiMap()
       .add(CONTENT_TYPE, APPLICATION_JSON)
       .add(USER_AGENT, "test-agent")
+      .add("priORity", "u=4, i")
       .add(OkapiHeaders.TENANT, TestConstants.TENANT_ID)
       .add(OkapiHeaders.TOKEN, TestConstants.AUTH_TOKEN);
   }
