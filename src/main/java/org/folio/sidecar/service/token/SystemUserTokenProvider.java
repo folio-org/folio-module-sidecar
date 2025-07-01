@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.token;
 
+import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptySet;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
@@ -16,27 +17,31 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.EntitlementsEvent;
+import org.folio.sidecar.service.routing.ModuleBootstrapListener;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
 @ApplicationScoped
 @RegisterForReflection
-public class SystemUserTokenProvider {
+public class SystemUserTokenProvider implements ModuleBootstrapListener {
 
   private final KeycloakService keycloakService;
   private final CredentialService credentialService;
   private final ModuleProperties moduleProperties;
   private final AsyncLoadingCache<String, TokenResponse> tokenCache;
+  private boolean systemUserRequired = false;
 
   @Inject
   SystemUserTokenProvider(KeycloakService keycloakService, CredentialService credentialService,
@@ -50,24 +55,46 @@ public class SystemUserTokenProvider {
   @SuppressWarnings("unused")
   @ConsumeEvent(value = EntitlementsEvent.ENTITLEMENTS_EVENT, blocking = true)
   public void syncCache(EntitlementsEvent event) {
-    var tenants = event.getTenants();
-    syncTenantCache(tenants);
+    if (systemUserRequired) {
+      var tenants = event.getTenants();
+      syncTenantCache(tenants);
+    }
+  }
+
+  @Override
+  public void onModuleBootstrap(ModuleBootstrapDiscovery moduleBootstrap, ChangeType changeType) {
+    var previousSystemUserRequired = systemUserRequired;
+
+    systemUserRequired = moduleBootstrap.isSystemUserRequired();
+    log.info("\"System user required\" set to: {}", systemUserRequired);
+
+    if (previousSystemUserRequired && !systemUserRequired) { // changed from true to false
+      // this shouldn't happen in normal operation, but to be safe, invalidate the cache
+      log.info("System user is no longer required, invalidating the token cache");
+      tokenCache.synchronous().invalidateAll();
+    }
   }
 
   /**
-   * Obtains a system user token.
+   * Get a system user access token. If the system user is not required, it returns an empty Optional.
    *
-   * @param rc - {@link RoutingContext} object to handle
-   * @return {@link Future} containing the access token.
+   * @param rc {@link RoutingContext} object to analyze
+   * @return {@link Future} containing the access token wrapped in an Optional or
+   *   an empty Optional if the system user is not required.
    */
-  public Future<String> getToken(RoutingContext rc) {
+  public Future<Optional<String>> getToken(RoutingContext rc) {
+    if (!systemUserRequired) {
+      log.debug("System user token is not required, returning empty token");
+      return succeededFuture(Optional.empty());
+    }
+
     var tenant = RoutingUtils.getTenant(rc);
     var rq = rc.request();
     var requestId = rq.getHeader(REQUEST_ID);
     log.info("Getting system user token [method: {}, path: {}, requestId: {}, tenant: {}]",
       rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
-    return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
+    return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken).map(Optional::of);
   }
 
   TokenResponse retrieveToken(String tenant) throws Exception {

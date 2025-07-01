@@ -72,7 +72,7 @@ class RoutingServiceTest {
   }
 
   @Test
-  void initRoutes_positive() {
+  void init_positive() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
@@ -81,7 +81,7 @@ class RoutingServiceTest {
     var listenersOrder = inOrder(listener1, listener2);
     var routeOrder = inOrder(route);
 
-    routingService.initRoutes(router);
+    routingService.init(router);
 
     verifyListeners(listenersOrder, bootstrap);
     verifyHandlers(routeOrder);
@@ -90,10 +90,10 @@ class RoutingServiceTest {
   }
 
   @Test
-  void initRoutes_negative() {
+  void init_negative() {
     when(appManagerService.getModuleBootstrap()).thenReturn(failedFuture(new NotFoundException("not found")));
 
-    routingService.initRoutes(router);
+    routingService.init(router);
 
     verifyNoInteractions(router);
   }
@@ -105,7 +105,7 @@ class RoutingServiceTest {
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
 
-    routingService.initRoutes(router);
+    routingService.init(router);
     reset(listener1, listener2, router, route);
 
     var listenersOrder = inOrder(listener1, listener2);
@@ -124,7 +124,7 @@ class RoutingServiceTest {
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
 
-    routingService.initRoutes(router);
+    routingService.init(router);
     reset(listener1, listener2, router, route);
 
     var listenersOrder = inOrder(listener1, listener2);

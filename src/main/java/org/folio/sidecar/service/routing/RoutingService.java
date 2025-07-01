@@ -10,6 +10,7 @@ import static org.folio.sidecar.utils.PermissionsUtils.findAllModulePermissions;
 
 import io.quarkus.arc.All;
 import io.quarkus.runtime.Quarkus;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -49,8 +50,8 @@ public class RoutingService implements DiscoveryListener {
     this.modulePermissionsService = modulePermissionsService;
   }
 
-  public void initRoutes(Router router) {
-    loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+  public Future<Void> init(Router router) {
+    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
   }
 
   @Override
@@ -62,13 +63,16 @@ public class RoutingService implements DiscoveryListener {
     var type = knownModules.get(moduleId);
 
     if (type != null) {
-      loadBootstrapAndProcess(updateModuleRoutesByType(type));
+      loadBootstrapAndProcess(updateModuleRoutesByType(type, moduleId));
     }
   }
 
-  private void loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
-    appManagerService.getModuleBootstrap()
-      .onSuccess(consumer::accept)
+  private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
+    return appManagerService.getModuleBootstrap()
+      .map(moduleBootstrap -> {
+        consumer.accept(moduleBootstrap);
+        return (Void) null;
+      })
       .onFailure(error -> {
         log.error("Failed to initialize routes", error);
         Quarkus.asyncExit(0);
@@ -89,6 +93,9 @@ public class RoutingService implements DiscoveryListener {
     requestHandlers.forEach(route::handler);
 
     registerKnownModules(moduleBootstrap);
+
+    log.info("Sidecar initialized from module bootstrap: moduleId = {}, applicationId = {}",
+      moduleBootstrap.getModule().getModuleId(), moduleBootstrap.getModule().getApplicationId());
   }
 
   private void registerKnownModules(ModuleBootstrap moduleBootstrap) {
@@ -102,7 +109,7 @@ public class RoutingService implements DiscoveryListener {
     log.info("Known modules registered: {}", this::getKnownModulesAsString);
   }
 
-  private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type) {
+  private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type, String updatedModuleId) {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
         moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
@@ -112,6 +119,9 @@ public class RoutingService implements DiscoveryListener {
 
       moduleBootstrapListeners.forEach(listener -> listener
         .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), UPDATE));
+
+      log.info("Sidecar updated from module bootstrap: moduleId = {}, moduleType = {}, applicationId = {}",
+        updatedModuleId, type, moduleBootstrap.getModule().getApplicationId());
     };
   }
 
