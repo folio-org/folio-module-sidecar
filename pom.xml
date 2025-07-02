@@ -423,9 +423,11 @@
       <properties>
         <skipITs>false</skipITs>
         <quarkus.native.additional-build-args>
-          -march=compatibility,\
+          -march=native,\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
+          --initialize-at-run-time=java.security.SecureRandom,\
+          --initialize-at-run-time=javax.net.ssl.SSLContext,\
           -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
         <quarkus.native.enabled>true</quarkus.native.enabled>
