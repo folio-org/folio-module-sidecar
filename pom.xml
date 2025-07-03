@@ -428,34 +428,14 @@
         <skipITs>false</skipITs>
         <native.march>-march=native</native.march>
         <quarkus.native.additional-build-args>
-          ${native.march},--initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl\,com.bettercloud.vault.rest.Rest,-H:ReflectionConfigurationFiles=reflection-config.json
+          ${native.march},\
+          --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
+          --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
+          -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
         <quarkus.native.enabled>true</quarkus.native.enabled>
         <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
       </properties>
-
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.quarkus.platform</groupId>
-            <artifactId>quarkus-maven-plugin</artifactId>
-            <version>${quarkus.platform.version}</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <systemProperties>
-                <log4j2.disable.jmx>true</log4j2.disable.jmx>
-                <log4j.plugin.packages.remove>org.apache.logging.log4j.core.appender.mom.jeromq</log4j.plugin.packages.remove>
-              </systemProperties>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
