@@ -429,10 +429,7 @@
         <native.march>-march=native</native.march>
         <quarkus.native.additional-build-args>
           ${native.march},\
-          --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
-          --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
-          --initialize-at-run-time=org.apache.logging.log4j.core.appender.mom.jeromq.JeroMqManager,\
-          --initialize-at-run-time=org.apache.logging.log4j.core.appender.mom.JmsAppender$Builder,\
+          --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl\,com.bettercloud.vault.rest.Rest\,org.apache.logging.log4j.core.appender.mom.jeromq.JeroMqManager\,org.apache.logging.log4j.core.appender.mom.JmsAppender$Builder,\
           -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
         <quarkus.native.enabled>true</quarkus.native.enabled>
