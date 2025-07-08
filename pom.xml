@@ -430,7 +430,7 @@
           --initialize-at-run-time=javax.net.ssl.SSLContext,\
           -H:ReflectionConfigurationFiles=reflection-config.json,\
           -J-XX:MaxRAMPercentage=60.0,\
-          --parallelism=2
+          --parallelism=1
         </quarkus.native.additional-build-args>
         <quarkus.native.enabled>true</quarkus.native.enabled>
         <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
