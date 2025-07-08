@@ -428,9 +428,7 @@
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
           --initialize-at-run-time=java.security.SecureRandom,\
           --initialize-at-run-time=javax.net.ssl.SSLContext,\
-          -H:ReflectionConfigurationFiles=reflection-config.json,\
-          -J-XX:MaxRAMPercentage=60.0,\
-          --parallelism=2
+          -H:ReflectionConfigurationFiles=reflection-config.json
         </quarkus.native.additional-build-args>
         <quarkus.native.enabled>true</quarkus.native.enabled>
         <quarkus.package.jar.enabled>false</quarkus.package.jar.enabled>
