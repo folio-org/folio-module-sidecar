@@ -25,7 +25,7 @@
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.24.1</quarkus.platform.version>
+    <quarkus.platform.version>3.24.3</quarkus.platform.version>
     <applications-poc-tools.version>3.1.0-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.1.9</bcpkix-fips.version>
@@ -36,21 +36,21 @@
     <jjwt.version>0.12.6</jjwt.version>
     <wiremock.version>3.13.1</wiremock.version>
     <assertj-core.version>3.27.3</assertj-core.version>
-    <mockito-core.version>5.8.0</mockito-core.version>
+    <mockito.version>5.18.0</mockito.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
     <surefire-plugin.version>3.5.3</surefire-plugin.version>
     <compiler-plugin.version>3.14.0</compiler-plugin.version>
-    <maven-checkstyle.version>10.26.0</maven-checkstyle.version>
+    <maven-checkstyle.version>10.26.1</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
     <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.1.0</folio-java-checkstyle.version>
-    <aws-crt.version>0.38.5</aws-crt.version>
+    <aws-crt.version>0.38.6</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
@@ -76,6 +76,13 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-bom</artifactId>
+        <version>${mockito.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -90,6 +97,10 @@
           <groupId>org.bouncycastle</groupId>
           <artifactId>bc-fips</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -97,6 +108,12 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-auth-openid</artifactId>
       <version>${applications-poc-tools.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -375,6 +392,7 @@
           <useSystemClassLoader>false</useSystemClassLoader>
           <groups>unit</groups>
           <skip>${skipSurefireTests}</skip>
+          <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
         </configuration>
       </plugin>
 
@@ -397,6 +415,7 @@
                 <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                 <maven.home>${maven.home}</maven.home>
               </systemPropertyVariables>
+              <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
             </configuration>
           </execution>
         </executions>
