@@ -1,3 +1,7 @@
+## Version `v3.0.6` (27.06.2025)
+### Changes:
+* Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))
+
 ## Version `v3.0.5` (27.06.2025)
 ### Changes:
 * Refresh entitlement info upon failed entitlement check (MODSIDECAR-126)
