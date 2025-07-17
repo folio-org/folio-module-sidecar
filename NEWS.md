@@ -11,3 +11,4 @@
 * GET Requests With Bodies Are Not Forwarded Properly (MODSIDECAR-125)
 * Consume "System User required" attribute from module bootstrap and request system user token only if the attribute value is true (MODSIDECAR-87)
 * Native sidecar build issue (MODSIDECAR-137)
+* Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))

@@ -7,6 +7,7 @@ import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
@@ -24,7 +25,6 @@ import jakarta.ws.rs.InternalServerErrorException;
 import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.HttpProperties;
@@ -35,16 +35,6 @@ import org.folio.sidecar.service.TransactionLogHandler;
 @Log4j2
 @ApplicationScoped
 public class RequestForwardingService {
-
-  /**
-   * Predicate for removing headers from the request.
-   *
-   * <p>NOTE: This is used as a workaround to prevent errors with installing modules on a tenant.
-   * HTTP client of mgr-tenant-entitlements is sending default user-agent within install call and due to this installing
-   * of mod-circulation fails when it attempts to communicate with mod-pubsub (as vertex HTTP client tries to add its
-   * own user-agent value...)
-   */
-  private static final Predicate<String> HEADERS_PREDICATE = header -> !USER_AGENT.equalsIgnoreCase(header);
 
   private final HttpClient httpClient;
   private final HttpClient httpClientEgress;
@@ -194,18 +184,28 @@ public class RequestForwardingService {
   }
 
   /**
-   * Filters request headers with the given predicate.
+   * Filters request headers to exclude User-Agent and Priority.
    *
    * @param request request
    * @return filtered headers
    */
-  private static HeadersMultiMap filterHeaders(HttpServerRequest request) {
-    var headers = new HeadersMultiMap();
-    for (var h : request.headers()) {
-      if (HEADERS_PREDICATE.test(h.getKey())) {
-        headers.set(h.getKey(), h.getValue());
-      }
-    }
+  private static MultiMap filterHeaders(HttpServerRequest request) {
+    var headers = new HeadersMultiMap().setAll(request.headers());
+
+    /*
+     * This is used as a workaround to prevent errors with installing modules on a tenant.
+     * HTTP client of mgr-tenant-entitlements is sending default user-agent within install call and due to this
+     * installing of mod-circulation fails when it attempts to communicate with mod-pubsub (as vertex HTTP client
+     * tries to add its own user-agent value...)
+     */
+    headers.remove(USER_AGENT);
+
+    /*
+     * Workaround to protect modules against the DoS via HTTP priority header vulnerability CVE-2025-31650:
+     * <a href="https://folio-org.atlassian.net/browse/FOLIO-4316">FOLIO-4316</a>
+     */
+    headers.remove("Priority");
+
     return headers;
   }
 
