@@ -119,8 +119,8 @@ class TenantEntitlementClientTest {
     ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
 
-    var client = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
-    client.getTenantEntitlements("test-tenant", true, "test-token");
+    var teClient = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
+    teClient.getTenantEntitlements("test-tenant", true, "test-token");
 
     // Verify addQueryParam called three times
     verify(request, org.mockito.Mockito.times(3)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
