@@ -52,6 +52,7 @@ public class TenantEntitlementClient {
     return doGet(entitlementUrl(), token,
       request -> request
         .addQueryParam("tenant", tenant)
+        .addQueryParam("limit", Integer.toString(clientProperties.getBatchSize()))
         .addQueryParam("includeModules", Boolean.toString(withModules)))
       .map(response -> jsonConverter.parseResponse(response, EntitlementList.class))
       .map(entitlements -> ResultList.of(entitlements.getTotalRecords(), entitlements.getEntitlements()));
