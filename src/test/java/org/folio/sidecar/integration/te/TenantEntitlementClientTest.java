@@ -107,8 +107,6 @@ class TenantEntitlementClientTest {
     var mockClientProperties = org.mockito.Mockito.mock(TenantEntitlementClientProperties.class);
     org.mockito.Mockito.when(mockClientProperties.getBatchSize()).thenReturn(500);
 
-    TenantEntitlementClient client = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
-
     // Setup mocks for fluent API
     when(webClient.getAbs(anyString())).thenReturn(request);
     when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
@@ -121,6 +119,7 @@ class TenantEntitlementClientTest {
     ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
 
+    var client = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
     client.getTenantEntitlements("test-tenant", true, "test-token");
 
     // Verify addQueryParam called three times
