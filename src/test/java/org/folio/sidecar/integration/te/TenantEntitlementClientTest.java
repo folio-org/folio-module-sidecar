@@ -101,4 +101,34 @@ class TenantEntitlementClientTest {
       () -> new TenantEntitlementClient(webClient, jsonConverter, properties),
       "Batch size should not be less than 1");
   }
+
+  @Test
+  void getTenantEntitlements_positive_limitQueryParamIsAdded() {
+    var mockClientProperties = org.mockito.Mockito.mock(TenantEntitlementClientProperties.class);
+    org.mockito.Mockito.when(mockClientProperties.getBatchSize()).thenReturn(500);
+
+    TenantEntitlementClient client = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
+
+    // Setup mocks for fluent API
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/tenant-entitlements.json"));
+
+    // ArgumentCaptors for key and value
+    ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
+
+    client.getTenantEntitlements("test-tenant", true, "test-token");
+
+    // Verify addQueryParam called three times
+    verify(request, org.mockito.Mockito.times(3)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
+
+    // Assert that one of the calls was for "limit" with value "500"
+    assertThat(keyCaptor.getAllValues()).contains("limit");
+    int limitIndex = keyCaptor.getAllValues().indexOf("limit");
+    assertThat(valueCaptor.getAllValues().get(limitIndex)).isEqualTo("500");
+  }
 }
