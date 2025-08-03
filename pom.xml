@@ -289,7 +289,7 @@
     <dependency>
       <groupId>io.smallrye</groupId>
       <artifactId>smallrye-fault-tolerance-standalone</artifactId>
-      <version>6.9.1</version>
+      <version>6.9.2</version>
       <scope>test</scope>
     </dependency>
 
