@@ -8,6 +8,7 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.security.ForbiddenException;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -113,6 +114,7 @@ public class UserService {
     return userId + "#" + tenant;
   }
 
+  @RegisterForReflection
   public record PermissionContainer(List<String> permissions) {
   }
 }
