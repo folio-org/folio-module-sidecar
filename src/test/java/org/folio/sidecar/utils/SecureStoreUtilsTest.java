@@ -20,7 +20,7 @@ class SecureStoreUtilsTest {
   @Test
   void globalStoreKey_positive() {
     try (MockedStatic<FolioEnvironment> mockedEnv = mockStatic(FolioEnvironment.class)) {
-      mockedEnv.when(FolioEnvironment::getFolioEnvName).thenReturn(TEST_ENV);
+      mockedEnv.when(FolioEnvironment::getSecureStoreEnvName).thenReturn(TEST_ENV);
 
       var key = SecureStoreUtils.globalStoreKey(TEST_CLIENT_ID);
 
@@ -39,7 +39,7 @@ class SecureStoreUtilsTest {
   @Test
   void tenantStoreKey_positive() {
     try (MockedStatic<FolioEnvironment> mockedEnv = mockStatic(FolioEnvironment.class)) {
-      mockedEnv.when(FolioEnvironment::getFolioEnvName).thenReturn(TEST_ENV);
+      mockedEnv.when(FolioEnvironment::getSecureStoreEnvName).thenReturn(TEST_ENV);
 
       var key = SecureStoreUtils.tenantStoreKey(TEST_TENANT, TEST_CLIENT_ID);
 

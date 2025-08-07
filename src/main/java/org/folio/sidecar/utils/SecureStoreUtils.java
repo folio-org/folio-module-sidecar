@@ -1,7 +1,7 @@
 package org.folio.sidecar.utils;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.folio.sidecar.utils.FolioEnvironment.getFolioEnvName;
+import static org.folio.sidecar.utils.FolioEnvironment.getSecureStoreEnvName;
 
 import lombok.experimental.UtilityClass;
 
@@ -22,6 +22,6 @@ public class SecureStoreUtils {
       throw new IllegalArgumentException("Client id cannot be empty");
     }
 
-    return String.format("%s_%s_%s", getFolioEnvName(), tenant, key);
+    return String.format("%s_%s_%s", getSecureStoreEnvName(), tenant, key);
   }
 }

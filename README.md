@@ -1,6 +1,6 @@
 # folio-module-sidecar
 
-Copyright (C) 2023-2024 The Open Library Foundation
+Copyright (C) 2023-2025 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -342,9 +342,10 @@ Default transaction/access log format:
 
 ### Secure storage environment variables
 
-| Name              | Default value | Required | Description                                                                    |
-|:------------------|:--------------|:--------:|:-------------------------------------------------------------------------------|
-| SECRET_STORE_TYPE | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP` |
+| Name               | Default value | Required | Description                                                                                                                        |
+|:-------------------|:--------------|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------|
+| SECRET_STORE_TYPE  | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP`                                                     |
+| SECRET\_STORE_\ENV | folio         |  false   | First component of the secret store key. Fallback is ENV environment variable for Ramsons and Sunflower. Last fallback is "folio". |
 
 #### AWS-SSM
 

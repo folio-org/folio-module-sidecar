@@ -41,6 +41,7 @@
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
+    <argLine />
     <surefire-plugin.version>3.5.3</surefire-plugin.version>
     <compiler-plugin.version>3.14.0</compiler-plugin.version>
     <maven-checkstyle.version>10.26.1</maven-checkstyle.version>
