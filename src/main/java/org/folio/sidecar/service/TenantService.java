@@ -92,8 +92,6 @@ public class TenantService {
     if (canExecuteTenantsAndEntitlementsTask.compareAndSet(true, false)) {
       loadTenantsAndEntitlements();
       log.info("Task to load tenants and entitlements started");
-    } else {
-      log.debug("Skip tenants/entitlements reload: cron gate not flipped yet");
     }
   }
 

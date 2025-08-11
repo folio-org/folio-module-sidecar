@@ -168,22 +168,6 @@ class TenantServiceTest {
     verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
   }
 
-  @SuppressWarnings("unchecked")
-  private void mockRetryTemplate() {
-    when(retryTemplate.callAsync(any(Supplier.class))).thenAnswer(invocation -> {
-      Supplier<Future<List<String>>> supplier = invocation.getArgument(0);
-      return supplier.get();
-    });
-  }
-
-  private static EntitlementsEvent tenantEntitlementsEvent() {
-    return EntitlementsEvent.of(Set.of(TestConstants.TENANT_NAME));
-  }
-
-  private static EntitlementsEvent emptyEntitlementsEvent() {
-    return EntitlementsEvent.of(Collections.emptySet());
-  }
-
   @Test
   void executeTenantsAndEntitlementsTask_noop_whenCronFlagFalse() {
 
@@ -260,5 +244,21 @@ class TenantServiceTest {
   void isEnabledTenant_negative_nullOrEmpty() {
     Assertions.assertFalse(tenantService.isEnabledTenant(null));
     Assertions.assertFalse(tenantService.isEnabledTenant(""));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void mockRetryTemplate() {
+    when(retryTemplate.callAsync(any(Supplier.class))).thenAnswer(invocation -> {
+      Supplier<Future<List<String>>> supplier = invocation.getArgument(0);
+      return supplier.get();
+    });
+  }
+
+  private static EntitlementsEvent tenantEntitlementsEvent() {
+    return EntitlementsEvent.of(Set.of(TestConstants.TENANT_NAME));
+  }
+
+  private static EntitlementsEvent emptyEntitlementsEvent() {
+    return EntitlementsEvent.of(Collections.emptySet());
   }
 }
