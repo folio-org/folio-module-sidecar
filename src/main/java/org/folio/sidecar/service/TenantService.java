@@ -112,7 +112,7 @@ public class TenantService {
   private void addEnabledTenants(List<Tenant> tenants) {
     enabledTenants.clear();
     tenants.forEach(tenant -> enabledTenants.add(tenant.getName()));
-    log.info("Module is enabled for tenants: {}", tenants.stream().map(Tenant::getName).toList());
+    log.info("Module is enabled for tenants: {}", () -> tenants.stream().map(Tenant::getName).toList());
     notifyEntitlementsChanged();
   }
 
