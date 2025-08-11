@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.te.TenantEntitlementClient;
 import org.folio.sidecar.integration.te.model.Entitlement;
@@ -30,6 +30,9 @@ import org.folio.sidecar.service.token.ServiceTokenProvider;
 @RequiredArgsConstructor
 public class TenantService {
 
+  @ConfigProperty(name = "tenant-service.reset-task.cron-definition")
+  String resetTaskCronDefinition;
+
   private final ServiceTokenProvider tokenProvider;
   private final RetryTemplate retryTemplate;
   private final TenantManagerClient tenantManagerClient;
@@ -38,10 +41,12 @@ public class TenantService {
   private final EventBus eventBus;
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
-  private final AtomicReference<Future<List<Tenant>>> tenantsAndEntitlementsTask = new AtomicReference<>(null);
 
   public void init(@Observes StartupEvent event) {
-    tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
+    log.info("Effective cron for tenant entitlements reset-task: {}", resetTaskCronDefinition);
+
+    loadTenantsAndEntitlements().map((Void) null).onSuccess(unused ->
+      log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
   }
 
   public void enableTenant(String tenantName) {
@@ -86,10 +91,8 @@ public class TenantService {
     * Should be removed after design long term solution.
   */
   public void executeTenantsAndEntitlementsTask() {
-    var currentTask = tenantsAndEntitlementsTask.get();
-    if (canExecuteTenantsAndEntitlementsTask.get() && currentTask != null && currentTask.isComplete()) {
-      canExecuteTenantsAndEntitlementsTask.set(false);
-      tenantsAndEntitlementsTask.set(loadTenantsAndEntitlements());
+    if (canExecuteTenantsAndEntitlementsTask.compareAndSet(true, false)) {
+      loadTenantsAndEntitlements();
       log.info("Task to load tenants and entitlements started");
     }
   }
@@ -111,11 +114,11 @@ public class TenantService {
   private void addEnabledTenants(List<Tenant> tenants) {
     enabledTenants.clear();
     tenants.forEach(tenant -> enabledTenants.add(tenant.getName()));
-    log.info("Module is enabled for tenants: {}", tenants);
+    log.info("Module is enabled for tenants: {}", () -> tenants.stream().map(Tenant::getName).toList());
     notifyEntitlementsChanged();
   }
 
   private void notifyEntitlementsChanged() {
-    eventBus.publish(EntitlementsEvent.ENTITLEMENTS_EVENT, EntitlementsEvent.of(enabledTenants));
+    eventBus.publish(EntitlementsEvent.ENTITLEMENTS_EVENT, EntitlementsEvent.of(Set.copyOf(enabledTenants)));
   }
 }

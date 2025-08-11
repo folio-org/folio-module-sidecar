@@ -8,12 +8,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.only;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import java.util.Collections;
 import java.util.List;
@@ -167,6 +169,84 @@ class TenantServiceTest {
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
     assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
     verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
+  }
+
+  @Test
+  void executeTenantsAndEntitlementsTask_noop_whenCronFlagFalse() {
+
+    // Without resetting the cron flag, the task should not start
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    verifyNoInteractions(tokenProvider, tenantEntitlementClient, tenantManagerClient, eventBus);
+  }
+
+  @Test
+  void executeTenantsAndEntitlementsTask_startsEvenIfPreviousTaskIncomplete() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+
+    // First entitlement call never completes (simulates stuck previous task)
+    var firstCallPromise = Promise.<ResultList<Entitlement>>promise();
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(firstCallPromise.future())
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    // init kicks off the first (stuck) load
+    tenantService.init(STARTUP_EVENT);
+
+    // cron flips the flag, and the next failed check triggers a new load
+    tenantService.resetTaskFlag();
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    // Second load should complete and enable tenant
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    verify(tenantEntitlementClient, times(2))
+      .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+    verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
+  }
+
+  @Test
+  void executeTenantsAndEntitlementsTask_onlyOneRefreshPerCronReset() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    // First allowed execution
+    tenantService.resetTaskFlag();
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    // Second call without cron reset must be a no-op
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    verify(tenantEntitlementClient, times(1))
+      .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+
+    // After cron reset, another execution should be allowed
+    tenantService.resetTaskFlag();
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    verify(tenantEntitlementClient, times(2))
+      .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+  }
+
+  @Test
+  void isEnabledTenant_negative_nullOrEmpty() {
+    Assertions.assertFalse(tenantService.isEnabledTenant(null));
+    Assertions.assertFalse(tenantService.isEnabledTenant(""));
   }
 
   @SuppressWarnings("unchecked")
