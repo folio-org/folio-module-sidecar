@@ -1,3 +1,8 @@
+## Version `v3.0.7` (12.08.2025)
+### Changes:
+* Server unreachable | Application not enabled (MODSIDECAR-141)
+* Add limit query parameter to tenant entitlement request (MODSIDECAR-135)
+
 ## Version `v3.0.6` (27.06.2025)
 ### Changes:
 * Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))
