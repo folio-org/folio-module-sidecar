@@ -35,7 +35,7 @@
     <!-- Test properties -->
     <jjwt.version>0.12.6</jjwt.version>
     <wiremock.version>3.13.1</wiremock.version>
-    <assertj-core.version>3.27.3</assertj-core.version>
+    <assertj-core.version>3.27.4</assertj-core.version>
     <mockito.version>5.18.0</mockito.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
