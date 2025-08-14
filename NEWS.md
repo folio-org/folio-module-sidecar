@@ -13,4 +13,5 @@
 * Native sidecar build issue (MODSIDECAR-137)
 * Remove HTTP priority header to work around DoS CVE-2025-31650 ([MODSIDECAR-130](https://folio-org.atlassian.net/browse/MODSIDECAR-130))
 * Add limit query parameter to tenant entitlement request (MODSIDECAR-135)
+* Server unreachable | Application not enabled ([MODSIDECAR-141](https://folio-org.atlassian.net/browse/MODSIDECAR-141))
 * Use SECURE\_STORE\_ENV, not ENV, for secure store key ([MODSIDECAR-140]https://folio-org.atlassian.net/browse/MODSIDECAR-140))
