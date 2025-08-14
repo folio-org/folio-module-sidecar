@@ -1,6 +1,6 @@
 # folio-module-sidecar
 
-Copyright (C) 2023-2024 The Open Library Foundation
+Copyright (C) 2023-2025 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -336,9 +336,10 @@ Default transaction/access log format:
 
 ### Secure storage environment variables
 
-| Name              | Default value | Required | Description                                                            |
-|:------------------|:--------------|:--------:|:-----------------------------------------------------------------------|
-| SECRET_STORE_TYPE | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT` |
+| Name               | Default value | Required | Description                                                                                                                        |
+|:-------------------|:--------------|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------|
+| SECRET_STORE_TYPE  | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP`                                                     |
+| SECRET\_STORE_\ENV | folio         |  false   | First component of the secret store key. Fallback is ENV environment variable for Ramsons and Sunflower. Last fallback is "folio". |
 
 #### AWS-SSM
 
@@ -370,6 +371,19 @@ Required when `SECRET_STORE_TYPE=VAULT`
 | SECRET_STORE_VAULT_KEYSTORE_PASSWORD    | -             | the password used to access the JKS keystore (optional)                             |
 | SECRET_STORE_VAULT_KEYSTORE_FILE_PATH   | -             | the path to a JKS keystore file containing a client cert and private key            |
 | SECRET_STORE_VAULT_TRUSTSTORE_FILE_PATH | -             | the path to a JKS truststore file containing Vault server certs that can be trusted |
+
+#### FSSP (Folio Secure Store Proxy)
+
+Required when `SECRET_STORE_TYPE=FSSP`
+
+| Name                                   | Default value         | Description                                 |
+|:---------------------------------------|:----------------------|:--------------------------------------------|
+| SECRET_STORE_FSSP_ADDRESS              | -                     | The address (URL) of the FSSP service.      |
+| SECRET_STORE_FSSP_SECRET_PATH          | secure-store/entries  | The path in FSSP where secrets are stored.  |
+| SECRET_STORE_FSSP_ENABLE_SSL           | false                 | Whether to use SSL for the FSSP connection. |
+| SECRET_STORE_FSSP_TRUSTSTORE_PATH      | -                     | Truststore file path for SSL connections.   |
+| SECRET_STORE_FSSP_TRUSTSTORE_FILE_TYPE | -                     | Truststore file type (e.g., JKS, PKCS12).   |
+| SECRET_STORE_FSSP_TRUSTSTORE_PASSWORD  | -                     | Truststore password for SSL connections.    |
 
 ## Security
 

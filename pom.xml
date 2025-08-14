@@ -41,7 +41,8 @@
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
-    <surefire-plugin.version>3.5.2</surefire-plugin.version>
+    <argLine />
+    <surefire-plugin.version>3.5.3</surefire-plugin.version>
     <compiler-plugin.version>3.14.0</compiler-plugin.version>
     <maven-checkstyle.version>10.21.4</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
