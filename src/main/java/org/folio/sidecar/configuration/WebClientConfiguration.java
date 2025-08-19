@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
+import org.folio.sidecar.configuration.properties.WebClientConfig.TlsSettings;
 import org.folio.sidecar.configuration.properties.WebClientConfig.WebClientSettings;
 
 @Log4j2
@@ -97,7 +98,20 @@ public class WebClientConfiguration {
   }
 
   private WebClientOptions populateOptionsFrom(WebClientSettings settings) {
-    var result = new WebClientOptions()
+    var result = createWebOptions(settings);
+    log.info("Creating web client with options: clientName = {}, options = {}", settings::name,
+      () -> optionsToString(result));
+
+    var tls = settings.tls();
+    if (tls.enabled()) {
+      configureTls(result, tls, settings.name());
+    }
+
+    return result;
+  }
+
+  private static WebClientOptions createWebOptions(WebClientSettings settings) {
+    return new WebClientOptions()
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
       .setKeepAlive(true)
@@ -113,36 +127,35 @@ public class WebClientConfiguration {
       .setPoolCleanerPeriod(settings.pool().cleanerPeriod())
       .setPoolEventLoopSize(settings.pool().eventLoopSize())
       .setMaxWaitQueueSize(settings.pool().maxWaitQueueSize());
-    log.info("Creating web client with options: clientName = {}, options = {}", settings::name,
-      () -> optionsToString(result));
+  }
 
-    var tls = settings.tls();
-    if (tls.enabled()) {
-      if (tls.trustStorePath().isEmpty()) {
-        log.debug("Creating web client for Public Trusted Certificates: clientName = {}", settings.name());
-        result.setSsl(true)
-          .setReuseAddress(true)
-          .setReusePort(true)
-          .setTcpKeepAlive(true)
-          .setTrustAll(false);
-      } else {
-        result.setVerifyHost(tls.verifyHostname())
-          .setSsl(true)
-          .setReuseAddress(true)
-          .removeEnabledSecureTransportProtocol("TLSv1.3")
-          .addEnabledSecureTransportProtocol("TLSv1.2")
-          .setReusePort(true)
-          .setTcpKeepAlive(true)
-          .setTrustAll(false)
-          .setTrustOptions(new KeyStoreOptions()
-            .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", settings.name()))
-            .setPath(getRequired(tls.trustStorePath(), "trust-store-path", settings.name()))
-            .setType(getRequired(tls.trustStoreFileType(), "trust-store-file-type", settings.name()))
-            .setProvider(getRequired(tls.trustStoreProvider(), "trust-store-provider", settings.name())));
-      }
+  private static void configureTls(WebClientOptions result, TlsSettings tls, String clientName) {
+    if (tls.trustStorePath().isEmpty()) {
+      log.debug("Creating web client for Public Trusted Certificates: clientName = {}", clientName);
+      result.setSsl(true)
+        .setReuseAddress(true)
+        .setReusePort(true)
+        .setTcpKeepAlive(true)
+        .setTrustAll(false);
+    } else {
+      result.setVerifyHost(tls.verifyHostname())
+        .setSsl(true)
+        .setReuseAddress(true)
+        .removeEnabledSecureTransportProtocol("TLSv1.3")
+        .addEnabledSecureTransportProtocol("TLSv1.2")
+        .setReusePort(true)
+        .setTcpKeepAlive(true)
+        .setTrustAll(false)
+        .setTrustOptions(createKeyStoreOptions(tls, clientName));
     }
+  }
 
-    return result;
+  private static KeyStoreOptions createKeyStoreOptions(TlsSettings tls, String clientName) {
+    return new KeyStoreOptions()
+      .setPassword(getRequired(tls.trustStorePassword(), "trust-store-password", clientName))
+      .setPath(getRequired(tls.trustStorePath(), "trust-store-path", clientName))
+      .setType(getRequired(tls.trustStoreFileType(), "trust-store-file-type", clientName))
+      .setProvider(getRequired(tls.trustStoreProvider(), "trust-store-provider", clientName));
   }
 
   private static String optionsToString(WebClientOptions result) {

@@ -15,6 +15,7 @@ import org.folio.sidecar.integration.okapi.OkapiHeaders;
 @ApplicationScoped
 public class TransactionLogHandler {
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public void log(RoutingContext rc, HttpClientResponse resp, HttpClientRequest req) {
     var request = rc.request();
     var end = System.currentTimeMillis();
