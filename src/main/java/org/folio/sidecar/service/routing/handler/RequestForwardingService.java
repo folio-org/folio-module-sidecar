@@ -96,6 +96,7 @@ public class RequestForwardingService {
     return forwardRequest(rc, absUri, httpClientGateway);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
     var result = Promise.<Void>promise();
 

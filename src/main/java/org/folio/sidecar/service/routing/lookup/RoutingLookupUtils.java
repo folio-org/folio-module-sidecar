@@ -166,6 +166,7 @@ class RoutingLookupUtils {
     return fastMatch(pathPattern, 0, path, 0, path.length());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private static boolean fastMatch(String pathPattern, int patternIndex, String path, int uriIndex, int pathLength) {
     while (patternIndex < pathPattern.length()) {
       var patternChar = pathPattern.charAt(patternIndex);

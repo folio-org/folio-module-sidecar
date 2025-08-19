@@ -50,7 +50,7 @@
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
     <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
-    <folio-java-checkstyle.version>1.1.0</folio-java-checkstyle.version>
+    <folio-java-checkstyle.version>1.2.0-SNAPSHOT</folio-java-checkstyle.version>
     <aws-crt.version>0.38.8</aws-crt.version>
 
     <sonar.exclusions>
@@ -357,9 +357,12 @@
         </executions>
         <configuration>
           <sourceDirectories>
-            <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-            <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+            <directory>${project.build.sourceDirectory}</directory>
           </sourceDirectories>
+          <testSourceDirectories>
+            <directory>${project.build.testSourceDirectory}</directory>
+          </testSourceDirectories>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <failsOnError>true</failsOnError>
           <outputEncoding>UTF-8</outputEncoding>
           <inputEncoding>UTF-8</inputEncoding>
@@ -367,6 +370,8 @@
           <failOnViolation>true</failOnViolation>
           <logViolationsToConsole>true</logViolationsToConsole>
           <configLocation>folio-checkstyle/checkstyle.xml</configLocation>
+          <propertiesLocation>${basedir}/checkstyle/checkstyle-checker.properties</propertiesLocation>
+          <suppressionsLocation>${basedir}/checkstyle/checkstyle-suppressions.xml</suppressionsLocation>
           <cacheFile>${basedir}/target/cachefile</cacheFile>
         </configuration>
       </plugin>
