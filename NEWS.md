@@ -1,3 +1,7 @@
+## Version `v3.0.8` (22.08.2025)
+### Changes:
+* Native sidecar ECS: Cannot switch affiliation (MODSIDECAR-139)
+
 ## Version `v3.0.7` (12.08.2025)
 ### Changes:
 * Server unreachable | Application not enabled (MODSIDECAR-141)
