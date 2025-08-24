@@ -25,7 +25,7 @@
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.25.2</quarkus.platform.version>
+    <quarkus.platform.version>3.25.4</quarkus.platform.version>
     <applications-poc-tools.version>3.1.0-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.1.9</bcpkix-fips.version>
@@ -36,7 +36,7 @@
     <jjwt.version>0.13.0</jjwt.version>
     <wiremock.version>3.13.1</wiremock.version>
     <assertj-core.version>3.27.4</assertj-core.version>
-    <mockito.version>5.18.0</mockito.version>
+    <mockito.version>5.19.0</mockito.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
 
@@ -51,7 +51,7 @@
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
     <maven-failsafe-plugin.version>3.5.3</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.2.0-SNAPSHOT</folio-java-checkstyle.version>
-    <aws-crt.version>0.38.8</aws-crt.version>
+    <aws-crt.version>0.38.11</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
