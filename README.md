@@ -342,10 +342,10 @@ Default transaction/access log format:
 
 ### Secure storage environment variables
 
-| Name               | Default value | Required | Description                                                                                                                        |
-|:-------------------|:--------------|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------|
-| SECRET_STORE_TYPE  | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP`                                                     |
-| SECRET\_STORE\_ENV | folio         |  false   | First component of the secret store key. Fallback is ENV environment variable for Ramsons and Sunflower. Last fallback is "folio". |
+| Name              | Default value | Required | Description                                                                                                                        |
+|:------------------|:--------------|:--------:|:-----------------------------------------------------------------------------------------------------------------------------------|
+| SECRET_STORE_TYPE | -             |   true   | Secure storage type. Supported values: `EPHEMERAL`, `AWS_SSM`, `VAULT`, `FSSP`                                                     |
+| SECURE_STORE_ENV  | folio         |  false   | First component of the secret store key. Fallback is ENV environment variable for Ramsons and Sunflower. Last fallback is "folio". |
 
 #### AWS-SSM
 
