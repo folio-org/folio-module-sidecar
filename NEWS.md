@@ -1,3 +1,8 @@
+## Version `v3.0.9` (17.09.2025)
+### Changes:
+* Use SECRET_STORE_ENV, not ENV, for secure store key ([MODSIDECAR-140]https://folio-org.atlassian.net/browse/MODSIDECAR-140))
+* Fix secure store env variable processing in native sidecar (MODSIDECAR-145)
+
 ## Version `v3.0.8` (22.08.2025)
 ### Changes:
 * Native sidecar ECS: Cannot switch affiliation (MODSIDECAR-139)
