@@ -1,3 +1,7 @@
+## Version `v3.0.10`
+### Changes:
+* Bump quarkus-bom from 3.19.2 to 3.20.3 fixing zip bomb ([MODSIDECAR-147](https://folio-org.atlassian.net/browse/MODSIDECAR-147))
+
 ## Version `v3.0.9` (17.09.2025)
 ### Changes:
 * Use SECRET_STORE_ENV, not ENV, for secure store key ([MODSIDECAR-140]https://folio-org.atlassian.net/browse/MODSIDECAR-140))
