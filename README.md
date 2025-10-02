@@ -382,14 +382,16 @@ Required when `SECRET_STORE_TYPE=VAULT`
 
 Required when `SECRET_STORE_TYPE=FSSP`
 
-| Name                                   | Default value         | Description                                 |
-|:---------------------------------------|:----------------------|:--------------------------------------------|
-| SECRET_STORE_FSSP_ADDRESS              | -                     | The address (URL) of the FSSP service.      |
-| SECRET_STORE_FSSP_SECRET_PATH          | secure-store/entries  | The path in FSSP where secrets are stored.  |
-| SECRET_STORE_FSSP_ENABLE_SSL           | false                 | Whether to use SSL for the FSSP connection. |
-| SECRET_STORE_FSSP_TRUSTSTORE_PATH      | -                     | Truststore file path for SSL connections.   |
-| SECRET_STORE_FSSP_TRUSTSTORE_FILE_TYPE | -                     | Truststore file type (e.g., JKS, PKCS12).   |
-| SECRET_STORE_FSSP_TRUSTSTORE_PASSWORD  | -                     | Truststore password for SSL connections.    |
+| Name                                   | Default value        | Description                                                                               |
+|:---------------------------------------|:---------------------|:------------------------------------------------------------------------------------------|
+| SECRET_STORE_FSSP_ADDRESS              | -                    | The address (URL) of the FSSP service.                                                    |
+| SECRET_STORE_FSSP_SECRET_PATH          | secure-store/entries | The path in FSSP where secrets are stored.                                                |
+| SECRET_STORE_FSSP_KEYSTORE_PATH        | -                    | Path to the keystore file for FSSP secure credential storage to establish mTLS connection |
+| SECRET_STORE_FSSP_KEYSTORE_FILE_TYPE   | -                    | Keystore file type (e.g., JKS, PKCS12) for FSSP.                                          |
+| SECRET_STORE_FSSP_KEYSTORE_PASSWORD    | -                    | Password for accessing the FSSP keystore.                                                 |
+| SECRET_STORE_FSSP_TRUSTSTORE_PATH      | -                    | Truststore file path for SSL connections.                                                 |
+| SECRET_STORE_FSSP_TRUSTSTORE_FILE_TYPE | -                    | Truststore file type (e.g., JKS, PKCS12).                                                 |
+| SECRET_STORE_FSSP_TRUSTSTORE_PASSWORD  | -                    | Truststore password for SSL connections.                                                  |
 
 ## Security
 
