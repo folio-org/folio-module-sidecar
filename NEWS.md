@@ -1,6 +1,7 @@
 ## Version `v3.0.12` (13.10.2025)
 ### Changes:
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
+* Add key store configuration properties for secure store (APPPOCTOOL-62)
 
 ## Version `v3.0.11` (13.10.2025)
 ### Changes:
