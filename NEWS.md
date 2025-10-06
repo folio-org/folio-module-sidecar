@@ -16,3 +16,4 @@
 * Server unreachable | Application not enabled ([MODSIDECAR-141](https://folio-org.atlassian.net/browse/MODSIDECAR-141))
 * Use SECURE\_STORE\_ENV, not ENV, for secure store key ([MODSIDECAR-140]https://folio-org.atlassian.net/browse/MODSIDECAR-140))
 * Fix secure store env variable processing in native sidecar (MODSIDECAR-145)
+* Add key store configuration properties for secure store (APPPOCTOOL-62)
