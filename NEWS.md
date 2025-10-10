@@ -17,3 +17,4 @@
 * Use SECURE\_STORE\_ENV, not ENV, for secure store key ([MODSIDECAR-140]https://folio-org.atlassian.net/browse/MODSIDECAR-140))
 * Fix secure store env variable processing in native sidecar (MODSIDECAR-145)
 * Add key store configuration properties for secure store (APPPOCTOOL-62)
+* Add support for custom Keycloak base URL for JWKS endpoint, `KC_JWKS_BASE_URL` environment variable (MODSIDECAR-148)

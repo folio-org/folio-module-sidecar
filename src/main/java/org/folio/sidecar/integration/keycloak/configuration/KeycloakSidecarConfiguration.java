@@ -52,6 +52,7 @@ public class KeycloakSidecarConfiguration {
   public OpenidJwtParserProvider openidJwtParserProvider(KeycloakProperties keycloakProperties) {
     return new OpenidJwtParserProvider(
       keycloakProperties.getJwksRefreshInterval(),
-      keycloakProperties.getForcedJwksRefreshInterval());
+      keycloakProperties.getForcedJwksRefreshInterval(),
+      keycloakProperties.getJwksBaseUrl());
   }
 }
