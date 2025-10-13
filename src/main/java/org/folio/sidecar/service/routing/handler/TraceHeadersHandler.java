@@ -22,13 +22,17 @@ public class TraceHeadersHandler implements Handler<RoutingContext> {
   @Override
   public void handle(RoutingContext rc) {
     var req = rc.request();
-    if (pathMatched(req.path())) {
+    if (pathMatched(req.path()) && log.isInfoEnabled()) {
+      var method = req.method();
+      var requestUri = dumpUri(rc).get();
+      var headersDump = dumpHeaders(rc).get();
+
       log.debug("""
         \n======================================
         Request: method = {}, uri = {}
         Current state of request context:
         ********** Headers *******************
-        {}""", req::method, dumpUri(rc), dumpHeaders(rc));
+        {}""", method, requestUri, headersDump);
     }
     decorated.handle(rc);
   }
