@@ -16,6 +16,7 @@ public class KeycloakProperties {
   @ConfigProperty(name = "keycloak.uri-validation.enabled") boolean uriValidationEnabled;
   @ConfigProperty(name = "keycloak.jwt-cache.jwks-refresh-interval") int jwksRefreshInterval;
   @ConfigProperty(name = "keycloak.jwt-cache.forced-jwks-refresh-interval") int forcedJwksRefreshInterval;
+  @ConfigProperty(name = "keycloak.jwks-base-url") String jwksBaseUrl;
   @ConfigProperty(name = "keycloak.login.client-suffix") String loginClientSuffix;
   @ConfigProperty(name = "keycloak.admin.client-id") String adminClientId;
   @ConfigProperty(name = "keycloak.service.client-id") String serviceClientId;

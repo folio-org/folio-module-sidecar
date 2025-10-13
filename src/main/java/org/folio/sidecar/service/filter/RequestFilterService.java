@@ -58,8 +58,16 @@ public class RequestFilterService {
 
   private static Handler<Throwable> traceContext(RoutingContext rc) {
     return throwable -> {
-      log.debug("Exception happened while applying filters: error = {}, {}",
-        throwable::getMessage, () -> getCausePlace(throwable));
+      if (!log.isDebugEnabled()) {
+        return;
+      }
+
+      var errorMessage = throwable.getMessage();
+      var causeLocation = getCausePlace(throwable);
+      log.debug("Exception happened while applying filters: error = {}, {}", errorMessage, causeLocation);
+
+      var headersDump = dumpHeaders(rc).get();
+      var contextDump = dumpContextData(rc).get();
 
       log.debug("""
         Current state of request context:
@@ -67,7 +75,7 @@ public class RequestFilterService {
         {}
         ********** Context Data **************
         {}
-        """, dumpHeaders(rc), dumpContextData(rc));
+        """, headersDump, contextDump);
     };
   }
 
