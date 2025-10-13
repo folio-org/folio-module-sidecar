@@ -7,8 +7,10 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.folio.jwt.openid.OpenidJwtParserProvider;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,5 +65,30 @@ class KeycloakSidecarConfigurationTest {
       .pollDelay(Duration.ofMillis(1000))
       .pollInterval(Duration.ofMillis(200))
       .untilAsserted(() -> assertThat(cache.getIfPresent(cacheKey)).isNotNull());
+  }
+
+  @Test
+  void openidJwtParserProvider_positive_withJwksBaseUrl() {
+    when(keycloakProperties.getJwksRefreshInterval()).thenReturn(60);
+    when(keycloakProperties.getForcedJwksRefreshInterval()).thenReturn(300);
+    when(keycloakProperties.getJwksBaseUrl()).thenReturn("https://custom-keycloak.example.com");
+
+    var result = keycloakSidecarConfiguration.openidJwtParserProvider(keycloakProperties);
+
+    assertThat(result).isNotNull().isInstanceOf(OpenidJwtParserProvider.class);
+  }
+
+  @Test
+  void jsonWebTokenParser_positive() {
+    when(keycloakProperties.getUrl()).thenReturn("https://keycloak.example.com");
+    when(keycloakProperties.isUriValidationEnabled()).thenReturn(true);
+
+    var openidJwtParserProvider = mock(OpenidJwtParserProvider.class);
+    var objectMapper = mock(ObjectMapper.class);
+
+    var result = keycloakSidecarConfiguration.jsonWebTokenParser(
+      keycloakProperties, openidJwtParserProvider, objectMapper);
+
+    assertThat(result).isNotNull();
   }
 }
