@@ -1,3 +1,8 @@
+## Version `v3.0.13` (15.10.2025)
+### Changes:
+* Add support for custom Keycloak base URL for JWKS endpoint, `KC_JWKS_BASE_URL` environment variable (MODSIDECAR-148)
+* bump up applications-poc-tools dependencies to 3.0.8
+
 ## Version `v3.0.12` (13.10.2025)
 ### Changes:
 * Support FSSP type of Secure Store (APPPOCTOOL-59)
