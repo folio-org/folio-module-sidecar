@@ -454,7 +454,7 @@
       </activation>
       <properties>
         <skipITs>false</skipITs>
-        <native.march>-march=native</native.march>
+        <native.march>-march=x86-64</native.march>
         <quarkus.native.additional-build-args>
           ${native.march},\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
