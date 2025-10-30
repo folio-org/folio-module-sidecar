@@ -16,29 +16,15 @@
 #
 ###
 
-# Build stage - use the same base as runtime to ensure GLIBC compatibility
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4 as builder
+# Build stage - use UBI with development tools
+FROM registry.access.redhat.com/ubi9/ubi:9.4 as builder
 
-# Install required packages for native build
-RUN microdnf install -y gzip tar unzip which \
-    && microdnf clean all
+# Install build tools
+RUN dnf install -y java-21-openjdk-devel maven gcc zlib-devel \
+    && dnf clean all
 
-# Install GraalVM
-ENV GRAALVM_VERSION=21.0.5
-ENV GRAALVM_ARCH=linux-x64
-RUN curl -L "https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-${GRAALVM_VERSION}/graalvm-community-jdk-${GRAALVM_VERSION}_${GRAALVM_ARCH}_bin.tar.gz" | tar -xz -C /opt \
-    && mv /opt/graalvm-community-openjdk-${GRAALVM_VERSION}* /opt/graalvm
-
-ENV JAVA_HOME=/opt/graalvm
-ENV PATH=$JAVA_HOME/bin:$PATH
-
-# Install Maven
-ENV MAVEN_VERSION=3.9.9
-RUN curl -L "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" | tar -xz -C /opt \
-    && mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven
-
-ENV MAVEN_HOME=/opt/maven
-ENV PATH=$MAVEN_HOME/bin:$PATH
+# Set JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk
 
 # Copy source code
 COPY . /build

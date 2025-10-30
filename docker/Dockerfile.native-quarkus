@@ -1,0 +1,39 @@
+####
+# This Dockerfile uses the official Quarkus build container for maximum compatibility
+# It ensures that the native binary is built with the exact same environment as intended by Quarkus team
+#
+# Build the image with:
+#
+# docker build -f docker/Dockerfile.native-quarkus -t folio-module-sidecar-native .
+#
+# Then run the container using:
+#
+# docker run -i --rm -p 8081:8081 folio-module-sidecar-native
+#
+###
+
+# Build stage - use official Quarkus native builder
+FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 as builder
+
+# Copy source code
+COPY . /build
+WORKDIR /build
+
+# Build native executable
+RUN ./mvnw clean package -Dnative -DskipTests
+
+# Runtime stage - use UBI9 minimal for compatibility
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+WORKDIR /work/
+RUN chown 1001 /work \
+    && chmod "g+rwX" /work \
+    && chown 1001:root /work
+
+# Copy the native executable from builder stage
+COPY --from=builder --chown=1001:root /build/target/*-runner /work/application
+
+EXPOSE 8081
+USER 1001
+
+ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
