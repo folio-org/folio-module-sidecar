@@ -23,35 +23,35 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <quarkus.package.jar.add-runner-suffix>false</quarkus.package.jar.add-runner-suffix>
-    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
+    <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.version>3.20.3</quarkus.platform.version>
-    <applications-poc-tools.version>3.0.8</applications-poc-tools.version>
+    <quarkus.platform.version>3.29.0</quarkus.platform.version>
+    <applications-poc-tools.version>3.1.0-SNAPSHOT</applications-poc-tools.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
-    <bcpkix-fips.version>2.1.9</bcpkix-fips.version>
+    <bcpkix-fips.version>2.1.10</bcpkix-fips.version>
 
-    <lombok.version>1.18.36</lombok.version>
+    <lombok.version>1.18.42</lombok.version>
 
     <!-- Test properties -->
-    <jjwt.version>0.12.6</jjwt.version>
-    <wiremock.version>3.12.1</wiremock.version>
-    <assertj-core.version>3.27.3</assertj-core.version>
-    <mockito-core.version>5.8.0</mockito-core.version>
+    <jjwt.version>0.13.0</jjwt.version>
+    <wiremock.version>3.13.1</wiremock.version>
+    <assertj-core.version>3.27.6</assertj-core.version>
+    <mockito.version>5.20.0</mockito.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <skipSurefireTests>false</skipSurefireTests>
 
     <!-- Plugin properties-->
     <argLine />
-    <surefire-plugin.version>3.5.3</surefire-plugin.version>
-    <compiler-plugin.version>3.14.0</compiler-plugin.version>
-    <maven-checkstyle.version>10.21.4</maven-checkstyle.version>
-    <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
+    <surefire-plugin.version>3.5.4</surefire-plugin.version>
+    <compiler-plugin.version>3.14.1</compiler-plugin.version>
+    <maven-checkstyle.version>12.1.1</maven-checkstyle.version>
+    <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-    <maven-clean-plugin.version>3.4.1</maven-clean-plugin.version>
+    <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
-    <maven-failsafe-plugin.version>3.5.2</maven-failsafe-plugin.version>
-    <folio-java-checkstyle.version>1.1.0</folio-java-checkstyle.version>
-    <aws-crt.version>0.36.1</aws-crt.version>
+    <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
+    <folio-java-checkstyle.version>1.2.0</folio-java-checkstyle.version>
+    <aws-crt.version>0.39.4</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
@@ -77,6 +77,13 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-bom</artifactId>
+        <version>${mockito.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -91,6 +98,10 @@
           <groupId>org.bouncycastle</groupId>
           <artifactId>bc-fips</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -98,6 +109,12 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-auth-openid</artifactId>
       <version>${applications-poc-tools.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -221,6 +238,8 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -273,7 +292,7 @@
     <dependency>
       <groupId>io.smallrye</groupId>
       <artifactId>smallrye-fault-tolerance-standalone</artifactId>
-      <version>6.9.0</version>
+      <version>6.9.3</version>
       <scope>test</scope>
     </dependency>
 
@@ -297,7 +316,7 @@
       </plugin>
 
       <plugin>
-        <groupId>io.quarkus</groupId>
+        <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
         <version>${quarkus.platform.version}</version>
         <extensions>true</extensions>
@@ -340,9 +359,12 @@
         </executions>
         <configuration>
           <sourceDirectories>
-            <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-            <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+            <directory>${project.build.sourceDirectory}</directory>
           </sourceDirectories>
+          <testSourceDirectories>
+            <directory>${project.build.testSourceDirectory}</directory>
+          </testSourceDirectories>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <failsOnError>true</failsOnError>
           <outputEncoding>UTF-8</outputEncoding>
           <inputEncoding>UTF-8</inputEncoding>
@@ -350,6 +372,8 @@
           <failOnViolation>true</failOnViolation>
           <logViolationsToConsole>true</logViolationsToConsole>
           <configLocation>folio-checkstyle/checkstyle.xml</configLocation>
+          <propertiesLocation>${basedir}/checkstyle/checkstyle-checker.properties</propertiesLocation>
+          <suppressionsLocation>${basedir}/checkstyle/checkstyle-suppressions.xml</suppressionsLocation>
           <cacheFile>${basedir}/target/cachefile</cacheFile>
         </configuration>
       </plugin>
@@ -376,6 +400,7 @@
           <useSystemClassLoader>false</useSystemClassLoader>
           <groups>unit</groups>
           <skip>${skipSurefireTests}</skip>
+          <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
         </configuration>
       </plugin>
 
@@ -398,6 +423,7 @@
                 <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                 <maven.home>${maven.home}</maven.home>
               </systemPropertyVariables>
+              <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
             </configuration>
           </execution>
         </executions>
@@ -428,8 +454,9 @@
       </activation>
       <properties>
         <skipITs>false</skipITs>
+        <native.march>-march=native</native.march>
         <quarkus.native.additional-build-args>
-          -march=native,\
+          ${native.march},\
           --initialize-at-run-time=org.apache.http.impl.auth.NTLMEngineImpl,\
           --initialize-at-run-time=com.bettercloud.vault.rest.Rest,\
           -H:ReflectionConfigurationFiles=reflection-config.json
