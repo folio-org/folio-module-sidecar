@@ -1,3 +1,7 @@
+## Version `v3.0.14` (11.11.2025)
+### Changes:
+* Fixing Quarkus micro-image build failures (MODSIDECAR-160)
+
 ## Version `v3.0.13` (15.10.2025)
 ### Changes:
 * Add support for custom Keycloak base URL for JWKS endpoint, `KC_JWKS_BASE_URL` environment variable (MODSIDECAR-148)
