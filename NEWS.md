@@ -1,3 +1,7 @@
+## Version `v3.0.15` (12.11.2025)
+### Changes:
+* Bump quarkus version (MODSIDECAR-154)
+
 ## Version `v3.0.14` (11.11.2025)
 ### Changes:
 * Fixing Quarkus micro-image build failures (MODSIDECAR-160)
