@@ -13,7 +13,6 @@ import io.vertx.ext.web.handler.ResponseTimeHandler;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.inject.UnsatisfiedResolutionException;
 import jakarta.inject.Named;
 import java.util.Collections;
 import lombok.extern.log4j.Log4j2;
@@ -49,6 +48,7 @@ public class RoutingConfiguration {
 
   @Named
   @ApplicationScoped
+  @LookupUnlessProperty(name = "routing.forward-to-gateway.always", stringValue = "true")
   public ChainedHandler basicEgressHandler(@Named("egressLookup") RoutingLookup lookup,
     @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
     return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
@@ -56,13 +56,17 @@ public class RoutingConfiguration {
 
   @Named
   @ApplicationScoped
-  @LookupUnlessProperty(name = "routing.forward-to-gateway.always", stringValue = "true")
   public ChainedHandler chainedHandler(@Named("basicIngressHandler") ChainedHandler ingressHandler,
-    @Named("basicEgressHandler") ChainedHandler egressHandler,
+    @Named("basicEgressHandler") Instance<ChainedHandler> egressHandler,
     @Named("dynamicEgressHandler") Instance<ChainedHandler> dynamicEgressHandler,
     @Named("gatewayEgressHandler") Instance<ChainedHandler> gatewayEgressHandler,
     @Named("notFoundHandler") ChainedHandler notFoundHandler) {
-    var handler = ingressHandler.next(egressHandler);
+    var handler = ingressHandler;
+
+    if (egressHandler.isResolvable()) {
+      handler = handler.next(egressHandler.get());
+      log.debug("Egress handler added to the handlers chain");
+    }
 
     if (dynamicEgressHandler.isResolvable()) {
       handler = handler.next(dynamicEgressHandler.get());
@@ -72,25 +76,6 @@ public class RoutingConfiguration {
     if (gatewayEgressHandler.isResolvable()) {
       handler = handler.next(gatewayEgressHandler.get());
       log.debug("Gateway egress handler added to the handlers chain");
-    }
-
-    return handler.next(notFoundHandler);
-  }
-
-  @Named
-  @ApplicationScoped
-  @LookupIfProperty(name = "routing.forward-to-gateway.always", stringValue = "true")
-  public ChainedHandler chainedHandler(@Named("basicIngressHandler") ChainedHandler ingressHandler,
-    @Named("gatewayEgressHandler") Instance<ChainedHandler> gatewayEgressHandler,
-    @Named("notFoundHandler") ChainedHandler notFoundHandler) {
-
-    ChainedHandler handler;
-    if (gatewayEgressHandler.isResolvable()) {
-      handler = ingressHandler.next(gatewayEgressHandler.get());
-      log.debug("Gateway egress handler added to the handlers chain");
-    } else {
-      throw new UnsatisfiedResolutionException("Egress handler to forward requests to gateway is not configured."
-        + " Check 'routing.forward-to-gateway.enabled' property value.");
     }
 
     return handler.next(notFoundHandler);
