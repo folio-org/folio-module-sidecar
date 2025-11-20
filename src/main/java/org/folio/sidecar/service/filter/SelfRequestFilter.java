@@ -25,7 +25,7 @@ public class SelfRequestFilter implements IngressRequestFilter {
 
     if (selfRequest) {
       var rq = rc.request();
-      log.info("Request is self request, skipping authorization: method = {}, uri = {}", rq::method, dumpUri(rc));
+      log.debug("Request is self request, skipping authorization: method = {}, uri = {}", rq::method, dumpUri(rc));
     }
 
     return Future.succeededFuture(rc);

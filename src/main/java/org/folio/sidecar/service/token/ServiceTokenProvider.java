@@ -73,14 +73,14 @@ public class ServiceTokenProvider {
   private Future<String> getTokenInternal(String tenant, RoutingContext rc) {
     var rq = rc.request();
     var requestId = rq.getHeader(REQUEST_ID);
-    log.info("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
+    log.debug("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
       rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
   }
 
   private Future<String> getTokenInternal(String tenant) {
-    log.info("Getting service token for tenant: {}", tenant);
+    log.debug("Getting service token for tenant: {}", tenant);
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
   }
 
@@ -121,7 +121,6 @@ public class ServiceTokenProvider {
   }
 
   private void syncTenantCache(Set<String> tenants) {
-    log.info("Synchronizing service token cache...");
     var enabledTenants = tenants == null ? emptySet() : tenants;
     var cachedTenants = tokenCache.asMap().keySet();
 

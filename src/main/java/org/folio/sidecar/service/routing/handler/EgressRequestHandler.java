@@ -61,7 +61,7 @@ class EgressRequestHandler implements RoutingEntryHandler {
   @Override
   public Future<Void> handle(ScRoutingEntry routingEntry, RoutingContext rc) {
     var rq = rc.request();
-    log.info("Handling egress request [method: {}, uri: {}, requestId: {}]",
+    log.debug("Handling egress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
 
     return requestFilterService.filterEgressRequest(rc)
@@ -115,7 +115,7 @@ class EgressRequestHandler implements RoutingEntryHandler {
     var rq = rc.request();
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
-    log.info("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
+    log.debug("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
       rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
 
     return (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId()))

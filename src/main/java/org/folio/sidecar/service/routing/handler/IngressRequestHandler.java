@@ -36,7 +36,7 @@ class IngressRequestHandler implements RoutingEntryHandler {
   @Override
   public Future<Void> handle(ScRoutingEntry scRoutingEntry, RoutingContext rc) {
     var rq = rc.request();
-    log.info("Handling ingress request [method: {}, uri: {}, requestId: {}]",
+    log.debug("Handling ingress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
     
     return requestFilterService.filterIngressRequest(rc)
@@ -51,7 +51,7 @@ class IngressRequestHandler implements RoutingEntryHandler {
     rc.put("uct", System.currentTimeMillis());
 
     var path = pathProcessor.getModulePath(rc.request().path());
-    log.info("Forwarding ingress request to underlying module: [method: {}, uri: {}]", request::method, dumpUri(rc));
+    log.debug("Forwarding ingress request to underlying module: [method: {}, uri: {}]", request::method, dumpUri(rc));
 
     var absUri = moduleProperties.getUrl() + path;
 

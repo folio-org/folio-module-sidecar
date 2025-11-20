@@ -95,7 +95,7 @@ public class KeycloakImpersonationService implements CacheInvalidatable {
       return false;
     }
     if (entry.getKey().contains(event.getUserId())) {
-      log.info("Invalidating impersonated user token cache: key = {}", entry.getKey());
+      log.debug("Invalidating impersonated user token cache: key = {}", entry.getKey());
       return true;
     }
     return false;

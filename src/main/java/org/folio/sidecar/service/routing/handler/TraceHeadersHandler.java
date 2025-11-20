@@ -27,7 +27,7 @@ public class TraceHeadersHandler implements Handler<RoutingContext> {
       var requestUri = dumpUri(rc).get();
       var headersDump = dumpHeaders(rc).get();
 
-      log.info("""
+      log.debug("""
         \n======================================
         Request: method = {}, uri = {}
         Current state of request context:
