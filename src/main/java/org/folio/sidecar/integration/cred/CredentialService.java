@@ -29,11 +29,11 @@ public class CredentialService {
   private final Cache<String, UserCredentials> userCredentialsCache;
 
   public Future<ClientCredentials> getAdminClientCredentials() {
-    log.info("Retrieving admin client credentials");
+    log.debug("Retrieving admin client credentials");
 
     return clientCredentials(properties::getAdminClientId,
       SecureStoreUtils::globalStoreKey,
-      creds -> log.info("Admin client credentials obtained: clientId = {}", creds.getClientId()));
+      creds -> log.debug("Admin client credentials obtained: clientId = {}", creds.getClientId()));
   }
 
   public void resetAdminClientCredentials() {
@@ -41,11 +41,11 @@ public class CredentialService {
   }
 
   public Future<ClientCredentials> getServiceClientCredentials(String tenant) {
-    log.info("Retrieving service client credentials: tenant = {}", tenant);
+    log.debug("Retrieving service client credentials: tenant = {}", tenant);
 
     return clientCredentials(properties::getServiceClientId,
       clientId -> tenantStoreKey(tenant, clientId),
-      creds -> log.info("Service client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant)
+      creds -> log.debug("Service client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant)
     );
   }
 
@@ -54,11 +54,11 @@ public class CredentialService {
   }
 
   public Future<ClientCredentials> getLoginClientCredentials(String tenant) {
-    log.info("Retrieving login client credentials: tenant = {}", tenant);
+    log.debug("Retrieving login client credentials: tenant = {}", tenant);
 
     return clientCredentials(() -> tenant + properties.getLoginClientSuffix(),
       clientId -> tenantStoreKey(tenant, clientId),
-      creds -> log.info("Login client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant));
+      creds -> log.debug("Login client credentials obtained: clientId = {}, tenant = {}", creds.getClientId(), tenant));
   }
 
   public void resetLoginClientCredentials(String tenant) {
@@ -66,11 +66,11 @@ public class CredentialService {
   }
 
   public Future<ClientCredentials> getImpersonationClientCredentials(String tenant) {
-    log.info("Retrieving impersonation client credentials: tenant = {}", tenant);
+    log.debug("Retrieving impersonation client credentials: tenant = {}", tenant);
 
     return clientCredentials(properties::getImpersonationClientId,
       clientId -> tenantStoreKey(tenant, clientId),
-      creds -> log.info("Impersonation client credentials obtained: clientId = {}, tenant = {}",
+      creds -> log.debug("Impersonation client credentials obtained: clientId = {}, tenant = {}",
         creds.getClientId(), tenant));
   }
 
@@ -79,14 +79,14 @@ public class CredentialService {
   }
 
   public Future<UserCredentials> getUserCredentials(String tenant, String username) {
-    log.info("Retrieving user credentials: tenant = {}, username = {}", tenant, username);
+    log.debug("Retrieving user credentials: tenant = {}, username = {}", tenant, username);
 
     String key = tenantStoreKey(tenant, username);
 
     return getCredsFromCacheOrSecureStore(
       userCredentialsCache, key,
       secret -> UserCredentials.of(username, secret)
-    ).onSuccess(creds -> log.info("User credentials obtained: username = {}, tenant = {}",
+    ).onSuccess(creds -> log.debug("User credentials obtained: username = {}, tenant = {}",
       creds.getUsername(), tenant));
   }
 

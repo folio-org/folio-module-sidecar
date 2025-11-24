@@ -74,7 +74,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     }
 
     putPermissionsHeaderToRequest(rc, permissions);
-    log.info("X-Okapi-Permissions populated: permissions = {}, userId = {}", permissions, userId);
+    log.debug("X-Okapi-Permissions populated: permissions = {}, userId = {}", permissions, userId);
     return rc;
   }
 

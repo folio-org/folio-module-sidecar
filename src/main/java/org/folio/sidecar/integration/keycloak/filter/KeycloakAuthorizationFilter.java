@@ -61,7 +61,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var permission = resolvePermission(routingContext);
     routingContext.put(KC_PERMISSION_NAME, permission);
     var tenantName = getTenant(routingContext);
-    log.info("Authorizing request to: {} for tenant: {}", permission, tenantName);
+    log.debug("Authorizing request to: {} for tenant: {}", permission, tenantName);
 
     return findCachedAccessToken(routingContext, permission, tenantName)
       .map(jwt -> succeededFuture(routingContext))
@@ -91,7 +91,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private static boolean shouldRemove(LogoutEvent event, Entry<String, JsonWebToken> entry) {
     var partToBeMatched = LOGOUT == event.getType() ? event.getSessionId() : event.getUserId();
     if (entry.getKey().contains(partToBeMatched)) {
-      log.info("Invalidating authZ cached token: key = {}", entry.getKey());
+      log.debug("Invalidating authZ cached token: key = {}", entry.getKey());
       return true;
     }
     return false;

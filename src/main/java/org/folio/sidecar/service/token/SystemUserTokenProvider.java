@@ -91,7 +91,7 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
     var tenant = RoutingUtils.getTenant(rc);
     var rq = rc.request();
     var requestId = rq.getHeader(REQUEST_ID);
-    log.info("Getting system user token [method: {}, path: {}, requestId: {}, tenant: {}]",
+    log.debug("Getting system user token [method: {}, path: {}, requestId: {}, tenant: {}]",
       rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
     return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken).map(Optional::of);
@@ -134,7 +134,7 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
   }
 
   private Future<TokenResponse> authUser(String tenant, UserCredentials user, ClientCredentials client) {
-    log.info("Authenticating system user: user = {}, tenant = {}", user.getUsername(), tenant);
+    log.debug("Authenticating system user: user = {}, tenant = {}", user.getUsername(), tenant);
     return keycloakService.obtainUserToken(tenant, client, user);
   }
 
