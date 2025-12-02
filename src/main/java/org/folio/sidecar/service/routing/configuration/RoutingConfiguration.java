@@ -65,7 +65,9 @@ public class RoutingConfiguration {
 
     if (egressHandler.isResolvable()) {
       handler = handler.next(egressHandler.get());
-      log.debug("Egress handler added to the handlers chain");
+      log.debug("Basic egress handler added to the handlers chain");
+    } else {
+      log.debug("Basic egress handler is not configured");
     }
 
     if (dynamicEgressHandler.isResolvable()) {
