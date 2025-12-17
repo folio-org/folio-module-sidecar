@@ -40,10 +40,9 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private final boolean ignoreGettingSystemUserTokenError;
 
   EgressRequestHandler(PathProcessor pathProcessor, RequestFilterService requestFilterService,
-    RequestForwardingService requestForwardingService, ServiceTokenProvider serviceTokenProvider,
-    SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties,
-    @ConfigProperty(name = "handler.egress.ignore-system-user-token-error", defaultValue = "false")
-    boolean ignoreGettingSystemUserTokenError) {
+      RequestForwardingService requestForwardingService, ServiceTokenProvider serviceTokenProvider,
+      SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties,
+      @ConfigProperty(name = "handler.egress.ignore-system-user-token-error", defaultValue = "false") boolean ignoreGettingSystemUserTokenError) {
     this.pathProcessor = pathProcessor;
     this.requestFilterService = requestFilterService;
     this.requestForwardingService = requestForwardingService;
@@ -62,13 +61,22 @@ class EgressRequestHandler implements RoutingEntryHandler {
   public Future<Void> handle(ScRoutingEntry routingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.debug("Handling egress request [method: {}, uri: {}, requestId: {}]",
-      rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
+        rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
+
+    // Detect potential misconfiguration: public traffic routed to sidecar
+    var hasSidecarSignature = rc.get("SELF_REQUEST_KEY");
+    if (hasSidecarSignature == null || Boolean.FALSE.equals(hasSidecarSignature)) {
+      log.warn("⚠️  POTENTIAL MISCONFIGURATION: Egress handler processing request without sidecar signature!");
+      log.warn("   This might indicate Kong/gateway is routing public traffic to sidecar port instead of main app.");
+      log.warn("   Request: {} {}", rq.method(), rq.path());
+      log.warn("   See: https://folio-org.atlassian.net/browse/RANCHER-2623");
+    }
 
     return requestFilterService.filterEgressRequest(rc)
-      .map(v -> validateRoutingModuleId(routingEntry))
-      .compose(v -> populateSystemToken(rc))
-      .compose(v -> populateSystemUserToken(rc))
-      .compose(v -> forwardEgressRequest(rc, routingEntry));
+        .map(v -> validateRoutingModuleId(routingEntry))
+        .compose(v -> populateSystemToken(rc))
+        .compose(v -> populateSystemUserToken(rc))
+        .compose(v -> forwardEgressRequest(rc, routingEntry));
   }
 
   private Void validateRoutingModuleId(ScRoutingEntry routingEntry) {
@@ -82,29 +90,30 @@ class EgressRequestHandler implements RoutingEntryHandler {
 
   private Future<Void> populateSystemToken(RoutingContext rc) {
     return serviceTokenProvider.getToken(rc)
-      .map(serviceToken -> {
-        RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
+        .map(serviceToken -> {
+          RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
-        log.debug("Service token assigned to {} header: token = {} [requestId: {}]",
-          () -> OkapiHeaders.SYSTEM_TOKEN, () -> tokenHash(serviceToken), () -> rc.request().getHeader(REQUEST_ID));
-        return null;
-      });
+          log.debug("Service token assigned to {} header: token = {} [requestId: {}]",
+              () -> OkapiHeaders.SYSTEM_TOKEN, () -> tokenHash(serviceToken), () -> rc.request().getHeader(REQUEST_ID));
+          return null;
+        });
   }
 
   private Future<Void> populateSystemUserToken(RoutingContext rc) {
     return !requireSystemUserToken(rc)
-      ? succeededFuture()
-      : systemUserTokenProvider.getToken(rc)
-        .map(setSysUserToken(rc))
-        .recover(err -> {
-          if (!ignoreGettingSystemUserTokenError) {
-            return failedFuture(err);
-          } else {
-            log.debug("Failed to get system user token: {}.\n"
-              + "The error is ignored because 'ignoreGettingSystemUserTokenError' is true", err.getMessage(), err);
-            return succeededFuture();
-          }
-        });
+        ? succeededFuture()
+        : systemUserTokenProvider.getToken(rc)
+            .map(setSysUserToken(rc))
+            .recover(err -> {
+              if (!ignoreGettingSystemUserTokenError) {
+                return failedFuture(err);
+              } else {
+                log.debug("Failed to get system user token: {}.\n"
+                    + "The error is ignored because 'ignoreGettingSystemUserTokenError' is true", err.getMessage(),
+                    err);
+                return succeededFuture();
+              }
+            });
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {
@@ -116,24 +125,24 @@ class EgressRequestHandler implements RoutingEntryHandler {
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
     log.debug("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
-      rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
+        rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
 
     return (GATEWAY_INTERFACE_ID.equals(routingEntry.getInterfaceId()))
-      ? requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath)
-      : requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
+        ? requestForwardingService.forwardToGateway(rc, routingEntry.getLocation() + updatedPath)
+        : requestForwardingService.forwardEgress(rc, routingEntry.getLocation() + updatedPath);
   }
 
   private Function<Optional<String>, Void> setSysUserToken(RoutingContext rc) {
     return t -> {
       var token = t.orElseThrow(() -> new BadRequestException("System user token is required"
-        + " if the request doesn't contain " + OkapiHeaders.TOKEN
-        + ". Check that system user is configured for the module: " + moduleProperties.getId()));
+          + " if the request doesn't contain " + OkapiHeaders.TOKEN
+          + ". Check that system user is configured for the module: " + moduleProperties.getId()));
 
       String requestId = rc.request().getHeader(REQUEST_ID);
 
       RoutingUtils.setHeader(rc, OkapiHeaders.TOKEN, token);
       log.debug("System user token assigned to {} header: token = {} [requestId: {}]",
-        () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
+          () -> OkapiHeaders.TOKEN, () -> tokenHash(token), () -> requestId);
 
       return null;
     };

@@ -37,10 +37,13 @@ class IngressRequestHandler implements RoutingEntryHandler {
   public Future<Void> handle(ScRoutingEntry scRoutingEntry, RoutingContext rc) {
     var rq = rc.request();
     log.debug("Handling ingress request [method: {}, uri: {}, requestId: {}]",
-      rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
-    
+        rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
+
+    log.info("✓ Ingress route matched: {} {} -> forwarding to main application at {}",
+        rq.method(), rq.path(), moduleProperties.getUrl());
+
     return requestFilterService.filterIngressRequest(rc)
-      .compose(authResponse -> forwardRequest(rc));
+        .compose(authResponse -> forwardRequest(rc));
   }
 
   private Future<Void> forwardRequest(RoutingContext rc) {
