@@ -66,10 +66,10 @@ class EgressRequestHandler implements RoutingEntryHandler {
     // Detect potential misconfiguration: public traffic routed to sidecar
     var hasSidecarSignature = rc.get("SELF_REQUEST_KEY");
     if (hasSidecarSignature == null || Boolean.FALSE.equals(hasSidecarSignature)) {
-      log.warn("⚠️  POTENTIAL MISCONFIGURATION: Egress handler processing request without sidecar signature!");
-      log.warn("   This might indicate Kong/gateway is routing public traffic to sidecar port instead of main app.");
-      log.warn("   Request: {} {}", rq.method(), rq.path());
-      log.warn("   See: https://folio-org.atlassian.net/browse/RANCHER-2623");
+      log.warn("POTENTIAL MISCONFIGURATION: Egress handler processing request without sidecar signature!");
+      log.warn("This might indicate Kong/gateway is routing public traffic to sidecar port instead of main app.");
+      log.warn("Request: {} {}", rq.method(), rq.path());
+      log.warn("See: https://folio-org.atlassian.net/browse/RANCHER-2623");
     }
 
     return requestFilterService.filterEgressRequest(rc)

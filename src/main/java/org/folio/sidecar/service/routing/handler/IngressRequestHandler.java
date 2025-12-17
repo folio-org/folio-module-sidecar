@@ -39,7 +39,7 @@ class IngressRequestHandler implements RoutingEntryHandler {
     log.debug("Handling ingress request [method: {}, uri: {}, requestId: {}]",
         rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
 
-    log.info("✓ Ingress route matched: {} {} -> forwarding to main application at {}",
+    log.info("Ingress route matched: {} {} -> forwarding to main application at {}",
         rq.method(), rq.path(), moduleProperties.getUrl());
 
     return requestFilterService.filterIngressRequest(rc)
