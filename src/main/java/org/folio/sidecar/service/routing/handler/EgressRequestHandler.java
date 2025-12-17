@@ -42,7 +42,9 @@ class EgressRequestHandler implements RoutingEntryHandler {
   EgressRequestHandler(PathProcessor pathProcessor, RequestFilterService requestFilterService,
       RequestForwardingService requestForwardingService, ServiceTokenProvider serviceTokenProvider,
       SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties,
-      @ConfigProperty(name = "handler.egress.ignore-system-user-token-error", defaultValue = "false") boolean ignoreGettingSystemUserTokenError) {
+      @ConfigProperty(name = "handler.egress.ignore-system-user-token-error",
+          defaultValue = "false")
+      boolean ignoreGettingSystemUserTokenError) {
     this.pathProcessor = pathProcessor;
     this.requestFilterService = requestFilterService;
     this.requestForwardingService = requestForwardingService;
