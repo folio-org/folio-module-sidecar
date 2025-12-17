@@ -18,7 +18,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
-import io.smallrye.mutiny.TimeoutException;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -353,9 +352,9 @@ class RequestForwardingServiceTest {
   }
 
   @Test
-  void forward_negative() {
+  void forward_negative_responseError() {
     var routingContext = routingContext(rc -> {});
-    var error = new TimeoutException();
+    var error = new RuntimeException("Unknown error");
 
     QueryStringEncoder encoder = new QueryStringEncoder(PATH);
     routingContext.request().params().forEach(encoder::addParam);
@@ -377,6 +376,33 @@ class RequestForwardingServiceTest {
 
     assertThat(result.failed()).isTrue();
     assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
+    assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request because of response error:"
+      + " Unknown error");
+  }
+
+  @Test
+  void forward_negative_requestError() {
+    var routingContext = mock(RoutingContext.class);
+    var request = mock(HttpServerRequest.class);
+    var error = new RuntimeException("Unknown error");
+    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(failedFuture(error));
+    when(routingContext.request()).thenReturn(request);
+    when(request.method()).thenReturn(POST);
+    when(request.params()).thenReturn(requestParams());
+
+    routingContext.request().params().forEach(encoder::addParam);
+    var result = service.forwardIngress(routingContext, absoluteUrl);
+
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
+    assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request: Unknown error");
   }
 
   private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {
