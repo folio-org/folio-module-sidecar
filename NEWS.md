@@ -19,4 +19,4 @@
 * Add key store configuration properties for secure store (APPPOCTOOL-62)
 * Add support for custom Keycloak base URL for JWKS endpoint, `KC_JWKS_BASE_URL` environment variable (MODSIDECAR-148)
 * Review and clean up logs in folio-module-sidecar (MODSIDECAR-164)
-* Review and clean up logs in folio-module-sidecar (EUREKASUP-113)
+* Add error logs for request forwarding (EUREKASUP-113)
