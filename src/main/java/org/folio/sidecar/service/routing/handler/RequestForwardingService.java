@@ -153,11 +153,16 @@ public class RequestForwardingService {
           log.trace("Handle the HTTP client response by streaming the output back to the server");
           handleSuccessfulResponse(rc, response, result);
           transactionLogHandler.log(rc, response, httpClientRequest);
-        }).onFailure(error ->
-          result.fail(new InternalServerErrorException("Failed to proxy request: response timeout", error)));
-    }).onFailure(error ->
-      result.fail(new InternalServerErrorException("Failed to proxy request: request timeout", error)));
-
+        }).onFailure(error -> {
+          var errorMessage = format("Failed to proxy request because of response error: %s", error.getMessage());
+          log.error(errorMessage);
+          result.fail(new InternalServerErrorException(errorMessage, error));
+        });
+    }).onFailure(error -> {
+      var errorMessage = format("Failed to proxy request: %s", error.getMessage());
+      log.error(errorMessage);
+      result.fail(new InternalServerErrorException(errorMessage, error));
+    });
     return result.future();
   }
 
