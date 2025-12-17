@@ -3,6 +3,8 @@ package org.folio.sidecar.service.routing.handler;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -77,6 +79,9 @@ class IngressRequestHandlerTest {
     assertThat(headers).hasSize(1);
     assertThat(headers.get(OkapiHeaders.URL)).isEqualTo(SIDECAR_URL);
     assertThat(headers.get(OkapiHeaders.PERMISSIONS_REQUIRED)).isNull();
+
+    // Verify uct (upstream connect time) is set before forwarding
+    verify(routingContext).put(eq("uct"), any(Long.class));
   }
 
   @Test
