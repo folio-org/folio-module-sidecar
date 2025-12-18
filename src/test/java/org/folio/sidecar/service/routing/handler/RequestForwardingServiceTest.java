@@ -352,6 +352,77 @@ class RequestForwardingServiceTest {
   }
 
   @Test
+  @MockitoSettings(strictness = Strictness.LENIENT)
+  void forward_positive_transactionLogTimingFields() {
+    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+    var encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
+
+    var response = routingContext.response();
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
+
+    service.forwardIngress(routingContext, absoluteUrl);
+
+    // Verify uht (upstream header time) is set when response headers are received
+    verify(routingContext).put(eq("uht"), any(Long.class));
+
+    // Trigger the response end handler to simulate complete response
+    responseEndHandlerCaptor.getValue().handle(null);
+
+    // Verify urt (upstream response time) is set when response body is fully received
+    verify(routingContext).put(eq("urt"), any(Long.class));
+  }
+
+  @Test
+  @MockitoSettings(strictness = Strictness.LENIENT)
+  void forwardEgress_positive_transactionLogTimingFields() {
+    var egressSettingsMock = mock(WebClientConfig.WebClientSettings.class);
+    when(webClientConfig.egress()).thenReturn(egressSettingsMock);
+
+    var egressTlsMock = mock(WebClientConfig.TlsSettings.class);
+    when(egressSettingsMock.tls()).thenReturn(egressTlsMock);
+    when(egressTlsMock.enabled()).thenReturn(true);
+
+    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+    var encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
+    prepareHttpRequestMocks(routingContext, httpClientRequest);
+    prepareHttpResponseMocks(routingContext, httpClientResponse);
+
+    var response = routingContext.response();
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
+
+    service.forwardEgress(routingContext, absoluteUrl);
+
+    // Verify uht (upstream header time) is set when response headers are received
+    verify(routingContext).put(eq("uht"), any(Long.class));
+
+    // Trigger the response end handler to simulate complete response
+    responseEndHandlerCaptor.getValue().handle(null);
+
+    // Verify urt (upstream response time) is set when response body is fully received
+    verify(routingContext).put(eq("urt"), any(Long.class));
+  }
+
+  @Test
   void forward_negative_responseError() {
     var routingContext = routingContext(rc -> {});
     var error = new RuntimeException("Unknown error");

@@ -219,19 +219,20 @@ public class RequestForwardingService {
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
-    rc.addHeadersEndHandler(event -> rc.put("uht", System.currentTimeMillis()));
+    rc.put("uht", System.currentTimeMillis());
 
-    removeSidecarSignatureThenEndResponse(resp, response, result);
+    removeSidecarSignatureThenEndResponse(rc, resp, response, result);
   }
 
   /**
    * Removes sidecar signature from the response and ends it.
    *
+   * @param rc                 - {@link RoutingContext} object
    * @param httpClientResponse - {@link HttpResponse} object
    * @param httpServerResponse - {@link HttpServerResponse} object
    * @param result             - result promise
    */
-  private void removeSidecarSignatureThenEndResponse(HttpClientResponse httpClientResponse,
+  private void removeSidecarSignatureThenEndResponse(RoutingContext rc, HttpClientResponse httpClientResponse,
     HttpServerResponse httpServerResponse, Promise<Void> result) {
     sidecarSignatureService.removeSignature(httpServerResponse);
 
@@ -255,6 +256,7 @@ public class RequestForwardingService {
     // End the request when the file stream finishes
     httpClientResponse.endHandler(v -> {
       log.trace("Response to the server  complete, ending request.");
+      rc.put("urt", System.currentTimeMillis());
       httpServerResponse.end();
       result.complete();
     });
