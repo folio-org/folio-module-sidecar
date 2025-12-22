@@ -27,4 +27,6 @@ public class KeycloakProperties {
 
   @ConfigProperty(name = "keycloak.introspection.token-cache-max-size") long tokenIntrospectionCacheMaxSize;
   @ConfigProperty(name = "keycloak.introspection.inactive-token-ttl-in-sec") long inactiveTokenIntrospectionTtl;
+  @ConfigProperty(name = "keycloak.introspection.cache-ttl-offset", defaultValue = "500")
+  long introspectionCacheTtlOffset;
 }

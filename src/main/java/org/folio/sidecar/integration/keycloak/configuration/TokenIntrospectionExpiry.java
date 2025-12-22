@@ -16,13 +16,13 @@ import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
 @RequiredArgsConstructor
 public class TokenIntrospectionExpiry implements Expiry<String, TokenIntrospectionResponse> {
 
-  private static final long EXPIRE_OFFSET = 500L;
-
   private final long inactiveTokenTtl;
+  private final long expireOffsetNanos;
 
   @Inject
   public TokenIntrospectionExpiry(KeycloakProperties keycloakProperties) {
     this.inactiveTokenTtl = keycloakProperties.getInactiveTokenIntrospectionTtl();
+    this.expireOffsetNanos = MILLISECONDS.toNanos(keycloakProperties.getIntrospectionCacheTtlOffset());
   }
 
   @Override
@@ -30,7 +30,9 @@ public class TokenIntrospectionExpiry implements Expiry<String, TokenIntrospecti
     if (value.getExpirationTime() == null) {
       return SECONDS.toNanos(inactiveTokenTtl);
     }
-    return SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis()) - EXPIRE_OFFSET;
+    var expiresIn = SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis())
+      - expireOffsetNanos;
+    return Math.max(expiresIn, 0);
   }
 
   @Override
@@ -38,7 +40,9 @@ public class TokenIntrospectionExpiry implements Expiry<String, TokenIntrospecti
     if (value.getExpirationTime() == null) {
       return SECONDS.toNanos(inactiveTokenTtl);
     }
-    return SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis()) - EXPIRE_OFFSET;
+    var expiresIn = SECONDS.toNanos(value.getExpirationTime()) - MILLISECONDS.toNanos(currentTimeMillis())
+      - expireOffsetNanos;
+    return Math.max(expiresIn, 0);
   }
 
   @Override

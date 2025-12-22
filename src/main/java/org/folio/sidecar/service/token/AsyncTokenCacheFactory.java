@@ -54,10 +54,11 @@ public class AsyncTokenCacheFactory {
     var duration = earlyExpiresIn > MIN_EARLY_EXPIRATION_SEC
       ? ofSeconds(earlyExpiresIn)
       : ofMillis(minusTenPercent(expiresIn * 1000));
-    log.debug("Token TTL calculated: duration = {} mls, token = {}",
-      duration::toMillis, () -> tokenResponseAsString(token));
+    var ttlNanos = Math.max(duration.toNanos(), 0);
+    log.debug("Token TTL calculated: duration = {} ms, token = {}",
+      () -> ttlNanos / 1_000_000L, () -> tokenResponseAsString(token));
 
-    return duration.toNanos();
+    return ttlNanos;
   }
 
   private long minusTenPercent(Long expiresInMillis) {
