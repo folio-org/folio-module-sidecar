@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.token;
 
 import static java.util.Collections.emptySet;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
@@ -19,6 +20,7 @@ import jakarta.inject.Inject;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
@@ -34,13 +36,15 @@ public class ServiceTokenProvider {
   private final KeycloakService keycloakService;
   private final CredentialService credentialService;
   private final AsyncLoadingCache<String, TokenResponse> tokenCache;
+  private final int retrievalTimeoutSeconds;
 
   @Inject
   ServiceTokenProvider(KeycloakService keycloakService, CredentialService credentialService,
-    AsyncTokenCacheFactory cacheFactory) {
+    AsyncTokenCacheFactory cacheFactory, TokenCacheProperties cacheProperties) {
     this.keycloakService = keycloakService;
     this.credentialService = credentialService;
     this.tokenCache = cacheFactory.createCache(this::retrieveToken);
+    this.retrievalTimeoutSeconds = cacheProperties.getRetrievalTimeoutSeconds();
   }
 
   @SuppressWarnings("unused")
@@ -88,7 +92,7 @@ public class ServiceTokenProvider {
     var tokenFuture = obtainToken(tenant)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant)));
 
-    return executeAndGet(tokenFuture);
+    return executeAndGet(tokenFuture, retrievalTimeoutSeconds, SECONDS);
   }
 
   private Future<TokenResponse> obtainToken(String tenant) {

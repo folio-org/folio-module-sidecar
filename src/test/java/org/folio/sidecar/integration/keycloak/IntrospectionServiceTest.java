@@ -44,6 +44,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class IntrospectionServiceTest {
 
   private static final String JWT = "jwt";
+  private static final Long EXPIRATION_TIME = 1700000000L;
 
   @InjectMocks private IntrospectionService introspectionService;
 
@@ -81,6 +82,38 @@ class IntrospectionServiceTest {
   }
 
   @Test
+  void checkActiveToken_positive_differentExpirationTimesHaveDifferentCacheKeys() {
+    var firstExpiration = 1700000000L;
+    var secondExpiration = 1700001000L;
+    var ctx1 = routingContextWithExpiration("tenant", "userId", "sessionId", firstExpiration);
+    var ctx2 = routingContextWithExpiration("tenant", "userId", "sessionId", secondExpiration);
+
+    var key1 = join("#", "tenant", "userId", "sessionId", String.valueOf(firstExpiration));
+    var key2 = join("#", "tenant", "userId", "sessionId", String.valueOf(secondExpiration));
+
+    // Cache hit for first token
+    when(tokenCache.getIfPresent(key1)).thenReturn(activeTokenResponse());
+
+    var result1 = introspectionService.checkActiveToken(ctx1);
+    assertThat(result1.succeeded()).isTrue();
+    verify(tokenCache).getIfPresent(key1);
+
+    // Cache miss for second token (different expiration time = different key)
+    when(tokenCache.getIfPresent(key2)).thenReturn(null);
+    var client = ClientCredentials.of("tenant-login", "secret");
+    when(credentialService.getLoginClientCredentials("tenant")).thenReturn(succeededFuture(client));
+    when(keycloakClient.introspectToken("tenant", client, JWT)).thenReturn(succeededFuture(introspectionResponse));
+    when(introspectionResponse.statusCode()).thenReturn(200);
+    when(introspectionResponse.bodyAsJson(TokenIntrospectionResponse.class)).thenReturn(activeTokenResponse());
+
+    var result2 = introspectionService.checkActiveToken(ctx2);
+    assertThat(result2.succeeded()).isTrue();
+    verify(tokenCache).getIfPresent(key2);
+    // Verifies that Keycloak was actually called for the second token
+    verify(keycloakClient).introspectToken("tenant", client, JWT);
+  }
+
+  @Test
   void checkActiveToken_positive_cachedToken() {
     var ctx = routingContext("tenant", "userId", "sessionId");
     var key = cacheKey("tenant", "userId", "sessionId");
@@ -89,7 +122,7 @@ class IntrospectionServiceTest {
     var routingContextFuture = introspectionService.checkActiveToken(ctx);
 
     assertThat(routingContextFuture.succeeded()).isTrue();
-    verify(tokenCache).getIfPresent("tenant#userId#sessionId");
+    verify(tokenCache).getIfPresent(key);
     verifyNoInteractions(keycloakClient);
   }
 
@@ -102,7 +135,7 @@ class IntrospectionServiceTest {
     var routingContextFuture = introspectionService.checkActiveToken(ctx);
 
     assertThat(routingContextFuture.succeeded()).isFalse();
-    verify(tokenCache).getIfPresent("tenant#userId#sessionId");
+    verify(tokenCache).getIfPresent(key);
     verifyNoInteractions(keycloakClient);
   }
 
@@ -193,7 +226,7 @@ class IntrospectionServiceTest {
   }
 
   private static String cacheKey(String tenant, String userId, String tokenSessionId) {
-    return join("#", tenant, userId, tokenSessionId);
+    return join("#", tenant, userId, tokenSessionId, String.valueOf(EXPIRATION_TIME));
   }
 
   private static TokenIntrospectionResponse activeTokenResponse() {
@@ -210,6 +243,20 @@ class IntrospectionServiceTest {
     lenient().when(rc.get(ORIGIN_TENANT)).thenReturn(originTenant);
     lenient().when(rc.request().getHeader(TOKEN)).thenReturn(JWT);
     lenient().when(token.getClaim(SESSION_ID_CLAIM)).thenReturn(sessionIdClaim);
+    lenient().when(token.getExpirationTime()).thenReturn(EXPIRATION_TIME);
+    return rc;
+  }
+
+  private static RoutingContext routingContextWithExpiration(String originTenant, String userIdClaim,
+    String sessionIdClaim, Long expirationTime) {
+    var rc = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
+    var token = mock(JsonWebToken.class);
+    when(rc.get(PARSED_TOKEN)).thenReturn(token);
+    lenient().when(token.getClaim(USER_ID_CLAIM)).thenReturn(userIdClaim);
+    lenient().when(rc.get(ORIGIN_TENANT)).thenReturn(originTenant);
+    lenient().when(rc.request().getHeader(TOKEN)).thenReturn(JWT);
+    lenient().when(token.getClaim(SESSION_ID_CLAIM)).thenReturn(sessionIdClaim);
+    lenient().when(token.getExpirationTime()).thenReturn(expirationTime);
     return rc;
   }
 }

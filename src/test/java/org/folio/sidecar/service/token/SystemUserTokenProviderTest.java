@@ -33,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.cred.model.UserCredentials;
@@ -62,6 +63,7 @@ class SystemUserTokenProviderTest {
   @Mock private CredentialService credentialService;
   @Mock private ModuleProperties moduleProperties;
   @Mock private AsyncTokenCacheFactory cacheFactory;
+  @Mock private TokenCacheProperties cacheProperties;
   @Mock private RoutingContext rc;
   @Mock private HttpServerRequest request;
 
@@ -71,7 +73,9 @@ class SystemUserTokenProviderTest {
   @BeforeEach
   void setup() {
     when(cacheFactory.createCache(ArgumentMatchers.any())).thenReturn(tokenCache);
-    service = new SystemUserTokenProvider(keycloakService, credentialService, moduleProperties, cacheFactory);
+    when(cacheProperties.getRetrievalTimeoutSeconds()).thenReturn(30);
+    service = new SystemUserTokenProvider(keycloakService, credentialService, moduleProperties, cacheFactory,
+      cacheProperties);
   }
 
   @AfterEach

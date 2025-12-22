@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
@@ -67,13 +68,15 @@ class ServiceTokenProviderTest {
   @Mock private CredentialService credentialService;
   @Mock private AsyncTokenCacheFactory cacheFactory;
   @Mock private AsyncLoadingCache<String, TokenResponse> tokenCache;
+  @Mock private TokenCacheProperties cacheProperties;
 
   private ServiceTokenProvider service;
 
   @BeforeEach
   void setup() {
     when(cacheFactory.createCache(ArgumentMatchers.any())).thenReturn(tokenCache);
-    service = new ServiceTokenProvider(keycloakService, credentialService, cacheFactory);
+    when(cacheProperties.getRetrievalTimeoutSeconds()).thenReturn(30);
+    service = new ServiceTokenProvider(keycloakService, credentialService, cacheFactory, cacheProperties);
   }
 
   @AfterEach
