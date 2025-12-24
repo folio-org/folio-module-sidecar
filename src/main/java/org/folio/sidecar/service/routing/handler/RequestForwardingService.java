@@ -133,16 +133,13 @@ public class RequestForwardingService {
           }
           httpClientRequest.write(buffer);
         });
-      }
-
-      try {
         // End the request when the file stream finishes
         httpServerRequest.endHandler(v -> {
           log.trace("End the request when the file stream finishes");
           httpClientRequest.end();
         });
-      } catch (Exception e) {
-        log.warn("The request has already been read, but the HTTP client still needs to be closed. ", e);
+      } else {
+        // For GET/HEAD requests without body, end the request immediately
         httpClientRequest.end();
       }
 
