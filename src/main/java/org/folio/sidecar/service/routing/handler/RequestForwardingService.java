@@ -135,7 +135,7 @@ public class RequestForwardingService {
         });
         // End the request when the file stream finishes
         httpServerRequest.endHandler(v -> {
-          log.trace("End the request when the file stream finishes");
+          log.debug("End the request when the file stream finishes");
           httpClientRequest.end();
         });
       } else {
