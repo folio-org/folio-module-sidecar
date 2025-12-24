@@ -163,7 +163,6 @@ class RequestForwardingServiceTest {
     verify(routingContext.response()).end();
   }
 
-
   @CsvSource({
     "GET",
     "HEAD"
