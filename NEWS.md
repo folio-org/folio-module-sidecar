@@ -21,3 +21,4 @@
 * Review and clean up logs in folio-module-sidecar (MODSIDECAR-164)
 * Some transaction log fields are (always?) empty (MODSIDECAR-165)
 * Add error logs for request forwarding (EUREKASUP-113)
+* The request has already been read, but the HTTP client still needs to be closed (MODSIDECAR-169)

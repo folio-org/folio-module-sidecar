@@ -621,5 +621,4 @@ class RequestForwardingServiceTest {
       .add("offset", "10")
       .add("size", "50");
   }
-
 }
