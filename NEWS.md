@@ -21,3 +21,4 @@
 * Review and clean up logs in folio-module-sidecar (MODSIDECAR-164)
 * Some transaction log fields are (always?) empty (MODSIDECAR-165)
 * Add error logs for request forwarding (EUREKASUP-113)
+* Fix intermittent 401 Unauthorized errors under load by correcting token cache key generation and TTL calculations to properly handle Refresh Token Rotation (RTR) (MODSIDECAR-171)

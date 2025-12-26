@@ -8,6 +8,7 @@ import static org.folio.sidecar.integration.keycloak.model.TokenIntrospectionRes
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
 import static org.folio.sidecar.utils.JwtUtils.getSessionIdClaim;
+import static org.folio.sidecar.utils.JwtUtils.getTokenExpirationTime;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.RoutingUtils.getOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
@@ -63,7 +64,8 @@ public class IntrospectionService implements CacheInvalidatable {
 
     var tenant = getOriginTenant(ctx);
     var sessionId = getSessionIdClaim(parsedToken.get());
-    var key = cacheKey(tenant, userId.get(), sessionId);
+    var expirationTime = getTokenExpirationTime(parsedToken.get());
+    var key = cacheKey(tenant, userId.get(), sessionId, expirationTime);
 
     var cachedIntrospection = tokenCache.getIfPresent(key);
     if (cachedIntrospection != null) {
@@ -100,7 +102,9 @@ public class IntrospectionService implements CacheInvalidatable {
       return failedFuture(new UnauthorizedException("Failed to introspect user token"));
     }
     var introspectionResponse = response.bodyAsJson(TokenIntrospectionResponse.class);
-    tokenCache.put(key, introspectionResponse.isActive() ? introspectionResponse : INACTIVE_TOKEN);
+    if (introspectionResponse.isActive()) {
+      tokenCache.put(key, introspectionResponse);
+    }
     return succeededFuture(introspectionResponse);
   }
 
@@ -118,7 +122,7 @@ public class IntrospectionService implements CacheInvalidatable {
       : key.contains(event.getUserId()) && key.contains(event.getSessionId());
   }
 
-  private static String cacheKey(String tenant, String userId, String tokenSessionId) {
-    return join("#", tenant, userId, tokenSessionId);
+  private static String cacheKey(String tenant, String userId, String tokenSessionId, Long expirationTime) {
+    return join("#", tenant, userId, tokenSessionId, String.valueOf(expirationTime));
   }
 }
