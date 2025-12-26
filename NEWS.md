@@ -1,3 +1,7 @@
+## Version `v3.0.17` (26.12.2025)
+### Changes:
+* Fix intermittent 401 Unauthorized errors under load (MODSIDECAR-171)
+* 
 ## Version `v3.0.16` (02.12.2025)
 ### Changes:
 * Consume "System User required" attribute from module bootstrap and request system user token only if the attribute value is true (MODSIDECAR-87)
