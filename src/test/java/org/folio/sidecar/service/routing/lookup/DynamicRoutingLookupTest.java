@@ -112,6 +112,32 @@ class DynamicRoutingLookupTest {
     assertThat(actual.result()).isEqualTo(Optional.of(expected));
   }
 
+  @Test
+  void lookupRoute_positive_exactModuleNameMatchWithSimilarNames() {
+    var moduleHint = TestConstants.MODULE_NAME;
+    var rc = mockModuleHint(moduleHint);
+    when(rc.request().method()).thenReturn(GET);
+    when(rc.request().headers().get(TENANT)).thenReturn(TENANT_NAME);
+
+    var exactMatchModuleId = MODULE_ID;
+    var similarModuleId = "mod-foo-item-1.0.0";
+
+    var md = moduleDiscovery();
+    when(discoveryCache.get(exactMatchModuleId)).thenReturn(completedFuture(md));
+
+    when(tenantEntitlementService.getTenantEntitlements(TENANT_NAME, true))
+      .thenReturn(succeededFuture(asSinglePage(List.of(
+        Entitlement.of(TestConstants.APPLICATION_ID, TENANT_ID,
+          List.of(similarModuleId, exactMatchModuleId, ANOTHER_MODULE_ID))
+      ))));
+
+    var actual = dynamicRoutingLookup.lookupRoute(PATH, rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    var expected = dynamicEntry(md, rc);
+    assertThat(actual.result()).isEqualTo(Optional.of(expected));
+  }
+
   @ParameterizedTest
   @NullAndEmptySource
   void lookupRoute_negative_moduleHintHeaderBlank(String moduleHint) {
@@ -142,6 +168,31 @@ class DynamicRoutingLookupTest {
     assertFailed(actual, e -> {
       assertThat(e).isInstanceOf(IllegalArgumentException.class);
       assertThat(e.getMessage()).startsWith("No entitled module found for name");
+    });
+  }
+
+  @Test
+  void lookupRoute_negative_multipleModulesWithSameNameEntitled() {
+    var moduleHint = TestConstants.MODULE_NAME;
+    var rc = mockModuleHint(moduleHint);
+    when(rc.request().method()).thenReturn(GET);
+    when(rc.request().headers().get(TENANT)).thenReturn(TENANT_NAME);
+
+    var moduleIdV1 = "mod-foo-1.0.0";
+    var moduleIdV2 = "mod-foo-2.0.0";
+
+    when(tenantEntitlementService.getTenantEntitlements(TENANT_NAME, true))
+      .thenReturn(succeededFuture(asSinglePage(List.of(
+        Entitlement.of(TestConstants.APPLICATION_ID, TENANT_ID, List.of(moduleIdV1, moduleIdV2, ANOTHER_MODULE_ID))
+      ))));
+
+    var actual = dynamicRoutingLookup.lookupRoute(PATH, rc);
+
+    assertFailed(actual, e -> {
+      assertThat(e).isInstanceOf(IllegalArgumentException.class);
+      assertThat(e.getMessage()).startsWith("Multiple entitled modules found for name");
+      assertThat(e.getMessage()).contains(moduleIdV1);
+      assertThat(e.getMessage()).contains(moduleIdV2);
     });
   }
 

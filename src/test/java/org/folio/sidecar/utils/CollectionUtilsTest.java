@@ -6,6 +6,7 @@ import static java.util.Collections.emptyNavigableMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.folio.sidecar.support.Ordered;
 import org.folio.support.types.UnitTest;
@@ -98,6 +100,41 @@ class CollectionUtilsTest {
     assertThat(list).isEqualTo(List.of(ordered3, ordered2, ordered1));
   }
 
+  @ParameterizedTest
+  @MethodSource("takeOnePositiveDataProvider")
+  void takeOne_positive_returnsSingleElement(Collection<?> collection, Object expectedElement) {
+    Supplier<RuntimeException> emptyExceptionSupplier = () -> new IllegalStateException("Collection is empty");
+    Supplier<RuntimeException> tooManyExceptionSupplier = () -> new IllegalStateException("Too many elements");
+
+    var result = CollectionUtils.takeOne(collection, emptyExceptionSupplier, tooManyExceptionSupplier);
+
+    assertThat(result).isEqualTo(expectedElement);
+  }
+
+  @ParameterizedTest
+  @MethodSource("takeOneEmptyCollectionDataProvider")
+  void takeOne_negative_throwsExceptionForEmptyCollection(Collection<?> collection) {
+    Supplier<RuntimeException> emptyExceptionSupplier =
+      () -> new IllegalArgumentException("Collection must not be empty");
+    Supplier<RuntimeException> tooManyExceptionSupplier = () -> new IllegalStateException("Too many elements");
+
+    assertThatThrownBy(() -> CollectionUtils.takeOne(collection, emptyExceptionSupplier, tooManyExceptionSupplier))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessage("Collection must not be empty");
+  }
+
+  @ParameterizedTest
+  @MethodSource("takeOneMultipleElementsDataProvider")
+  void takeOne_negative_throwsExceptionForMultipleElements(Collection<?> collection) {
+    Supplier<RuntimeException> emptyExceptionSupplier = () -> new IllegalStateException("Collection is empty");
+    Supplier<RuntimeException> tooManyExceptionSupplier =
+      () -> new UnsupportedOperationException("Expected exactly one element");
+
+    assertThatThrownBy(() -> CollectionUtils.takeOne(collection, emptyExceptionSupplier, tooManyExceptionSupplier))
+      .isInstanceOf(UnsupportedOperationException.class)
+      .hasMessage("Expected exactly one element");
+  }
+
   private static Stream<Arguments> emptyCollectionDataProvider() {
     return Stream.of(
       arguments((List<?>) null),
@@ -132,6 +169,36 @@ class CollectionUtilsTest {
       arguments(singletonMap("key", "value")),
       arguments(singletonMap(1, 2)),
       arguments(Map.of(1, 1, "key", "value"))
+    );
+  }
+
+  private static Stream<Arguments> takeOnePositiveDataProvider() {
+    return Stream.of(
+      arguments(List.of("single"), "single"),
+      arguments(List.of(42), 42),
+      arguments(Set.of("element"), "element"),
+      arguments(List.of(true), true),
+      arguments(Set.of(100L), 100L)
+    );
+  }
+
+  private static Stream<Arguments> takeOneEmptyCollectionDataProvider() {
+    return Stream.of(
+      arguments((List<?>) null),
+      arguments(emptyList()),
+      arguments(emptySet()),
+      arguments(new ArrayList<>()),
+      arguments(new LinkedHashSet<>())
+    );
+  }
+
+  private static Stream<Arguments> takeOneMultipleElementsDataProvider() {
+    return Stream.of(
+      arguments(List.of("first", "second")),
+      arguments(List.of(1, 2, 3)),
+      arguments(Set.of("a", "b")),
+      arguments(List.of(true, false)),
+      arguments(Set.of(1, 2, 3, 4, 5))
     );
   }
 }
