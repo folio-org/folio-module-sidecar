@@ -44,14 +44,14 @@
     <argLine />
     <surefire-plugin.version>3.5.4</surefire-plugin.version>
     <compiler-plugin.version>3.14.1</compiler-plugin.version>
-    <maven-checkstyle.version>12.1.1</maven-checkstyle.version>
+    <maven-checkstyle.version>12.3.0</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
-    <maven-release-plugin.version>3.2.0</maven-release-plugin.version>
+    <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
     <maven-failsafe-plugin.version>3.5.4</maven-failsafe-plugin.version>
     <folio-java-checkstyle.version>1.2.0</folio-java-checkstyle.version>
-    <aws-crt.version>0.39.4</aws-crt.version>
+    <aws-crt.version>0.41.0</aws-crt.version>
 
     <sonar.exclusions>
       src/main/java/**/sidecar/model/**,
