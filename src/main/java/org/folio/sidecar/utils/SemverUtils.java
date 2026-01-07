@@ -1,5 +1,6 @@
 package org.folio.sidecar.utils;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.experimental.UtilityClass;
 
@@ -14,5 +15,14 @@ public class SemverUtils {
 
   public static boolean hasVersion(String sourceId) {
     return VERSION_PATTERN.matcher(sourceId).matches();
+  }
+
+  public static String getName(String sourceId) {
+    Matcher matcher = VERSION_PATTERN.matcher(sourceId);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException("Source does not contain a valid semantic version: source = " + sourceId);
+    }
+
+    return matcher.group(1);
   }
 }
