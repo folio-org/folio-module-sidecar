@@ -19,24 +19,29 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
+import org.folio.sidecar.service.CacheInvalidatable;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped
-public class UserService {
+public class UserService implements CacheInvalidatable {
 
   private final WebClient webClient;
   private final ModUsersProperties modUsersProperties;
   private final Cache<String, User> userCache;
+  private final Cache<String, List<String>> permissionCache;
   private final ServiceTokenProvider serviceTokenProvider;
 
   public UserService(@Named("webClientEgress") WebClient webClient, ModUsersProperties modUsersProperties,
-    Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
+    Cache<String, User> userCache, @Named("permissionCache") Cache<String, List<String>> permissionCache,
+    ServiceTokenProvider serviceTokenProvider) {
     this.webClient = webClient;
     this.modUsersProperties = modUsersProperties;
     this.userCache = userCache;
+    this.permissionCache = permissionCache;
     this.serviceTokenProvider = serviceTokenProvider;
   }
 
@@ -61,11 +66,22 @@ public class UserService {
     String tenant) {
     requireNonNull(permissions, "Permissions must not be null");
 
+    var permCacheKey = buildPermissionCacheKey(tenant, userId, permissions);
+    var cachedPermissions = permissionCache.getIfPresent(permCacheKey);
+    if (cachedPermissions != null) {
+      log.debug("Permission cache hit: userId = {}, tenant = {}", userId, tenant);
+      return succeededFuture(cachedPermissions);
+    }
+
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
+      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken))
+      .onSuccess(resolved -> {
+        log.debug("Permission cache put: userId = {}, tenant = {}", userId, tenant);
+        permissionCache.put(permCacheKey, resolved);
+      });
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
@@ -112,6 +128,19 @@ public class UserService {
 
   private static String buildKey(String userId, String tenant) {
     return userId + "#" + tenant;
+  }
+
+  private static String buildPermissionCacheKey(String tenant, String userId, List<String> permissions) {
+    var permsHash = String.valueOf(permissions.stream().sorted().toList().hashCode());
+    return tenant + "#" + userId + "#" + permsHash;
+  }
+
+  @Override
+  public void invalidate(LogoutEvent event) {
+    var userId = event.getUserId();
+    userCache.asMap().keySet().removeIf(key -> key.contains(userId));
+    permissionCache.asMap().keySet().removeIf(key -> key.contains("#" + userId + "#"));
+    log.debug("Invalidated caches for user: userId = {}", userId);
   }
 
   @RegisterForReflection
