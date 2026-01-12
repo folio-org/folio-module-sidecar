@@ -231,6 +231,16 @@ Default transaction/access log format:
 | ROOT_LOG_LEVEL       | INFO                 |  false   | Root log level.                                     |
 | SC_ACCESS_LOG_FORMAT | _default log format_ |  false   | Access log format.                                  |
 
+#### Enabling Keycloak Debug Logging
+
+To debug Keycloak interactions and token cache behavior:
+
+```bash
+export QUARKUS_LOG_CATEGORY__ORG_FOLIO_SIDECAR_INTEGRATION_KEYCLOAK__LEVEL=DEBUG
+export QUARKUS_LOG_CATEGORY__ORG_FOLIO_SIDECAR_SERVICE_TOKEN__LEVEL=DEBUG
+```
+
+This logs all Keycloak HTTP calls, token cache hits/misses, and cache invalidation events.
 
 ### keycloak integration environment variables
 

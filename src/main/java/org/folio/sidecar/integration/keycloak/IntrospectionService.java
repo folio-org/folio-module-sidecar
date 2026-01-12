@@ -69,18 +69,22 @@ public class IntrospectionService implements CacheInvalidatable {
 
     var cachedIntrospection = tokenCache.getIfPresent(key);
     if (cachedIntrospection != null) {
+      log.debug("IntrospectionService: Cache HIT [tenant={}, userId={}, isActive={}]",
+        () -> tenant, userId::get, cachedIntrospection::isActive);
       return succeededFuture(cachedIntrospection);
     }
 
+    log.debug("IntrospectionService: Cache MISS [tenant={}, userId={}]", () -> tenant, userId::get);
     var token = ctx.request().getHeader(TOKEN);
     return introspectToken(tenant, token, key)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndIntrospectToken(tenant, token, key)));
   }
 
   private Future<TokenIntrospectionResponse> introspectToken(String tenant, String token, String cacheKey) {
+    log.debug("IntrospectionService: Requesting Keycloak token introspection [tenant={}]", () -> tenant);
     return credentialService.getLoginClientCredentials(tenant)
       .compose(client -> keycloakClient.introspectToken(tenant, client, token))
-      .compose(response -> handelAndCacheResponse(response, cacheKey));
+      .compose(response -> handelAndCacheResponse(response, cacheKey, tenant));
   }
 
   private Function<UnauthorizedException, Future<TokenIntrospectionResponse>> resetCredentialsAndIntrospectToken(
@@ -95,13 +99,16 @@ public class IntrospectionService implements CacheInvalidatable {
     };
   }
 
-  private Future<TokenIntrospectionResponse> handelAndCacheResponse(HttpResponse<Buffer> response, String key) {
+  private Future<TokenIntrospectionResponse> handelAndCacheResponse(HttpResponse<Buffer> response, String key,
+                                                                     String tenant) {
     var statusCode = response.statusCode();
     if (statusCode != HttpResponseStatus.OK.code()) {
       log.warn("Failed to introspect user token: response = {}, status = {}", response::bodyAsString, () -> statusCode);
       return failedFuture(new UnauthorizedException("Failed to introspect user token"));
     }
     var introspectionResponse = response.bodyAsJson(TokenIntrospectionResponse.class);
+    log.debug("IntrospectionService: Introspection response [tenant={}, isActive={}]",
+      () -> tenant, introspectionResponse::isActive);
     if (introspectionResponse.isActive()) {
       tokenCache.put(key, introspectionResponse);
     }

@@ -31,24 +31,32 @@ public class KeycloakClient {
   }
 
   public Future<HttpResponse<Buffer>> obtainToken(String realm, ClientCredentials client) {
+    log.debug("Keycloak HTTP: POST token [realm={}, grant_type=client_credentials, client_id={}]",
+      () -> realm, client::getClientId);
     var requestBody = prepareClientRequestBody(client);
     return webClient.postAbs(resolveTokenUrl(realm))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> obtainUserToken(String realm, ClientCredentials client, UserCredentials user) {
+    log.debug("Keycloak HTTP: POST token [realm={}, grant_type=password, client_id={}, username={}]",
+      () -> realm, client::getClientId, user::getUsername);
     var requestBody = preparePasswordRequestBody(client, user);
     return webClient.postAbs(resolveTokenUrl(realm))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> refreshUserToken(String realm, ClientCredentials client, String refreshToken) {
+    log.debug("Keycloak HTTP: POST /realms/{}/protocol/openid-connect/token [grant_type=refresh_token, client_id={}]",
+      () -> realm, client::getClientId);
     var requestBody = prepareRefreshRequestBody(client, refreshToken);
     return webClient.postAbs(resolveTokenUrl(realm))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> evaluatePermissions(String tenant, String permission, String accessToken) {
+    log.debug("Keycloak HTTP: POST /realms/{}/protocol/openid-connect/token [grant_type=uma-ticket, permission={}]",
+      () -> tenant, () -> permission);
     var clientId = tenant + properties.getLoginClientSuffix();
     var requestBody = prepareRptRequestBody(clientId, permission);
     return webClient.postAbs(resolveTokenUrl(tenant))
@@ -57,12 +65,16 @@ public class KeycloakClient {
   }
 
   public Future<HttpResponse<Buffer>> impersonateUserToken(String realm, ClientCredentials client, String username) {
+    log.debug("Keycloak HTTP: POST token [realm={}, grant_type=token-exchange, client_id={}, username={}]",
+      () -> realm, client::getClientId, () -> username);
     var requestBody = prepareImpersonateRequestBody(client, username);
     return webClient.postAbs(resolveTokenUrl(realm))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> introspectToken(String realm, ClientCredentials client, String token) {
+    log.debug("Keycloak HTTP: POST /realms/{}/protocol/openid-connect/token/introspect [client_id={}]",
+      () -> realm, client::getClientId);
     var requestBody = prepareIntrospectRequestBody(client, token);
     var url = String.format("%s/realms/%s/protocol/openid-connect/token/introspect", properties.getUrl(), realm);
     return webClient.postAbs(url).sendForm(requestBody);

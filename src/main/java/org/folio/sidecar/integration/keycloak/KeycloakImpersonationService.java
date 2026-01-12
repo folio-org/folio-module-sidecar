@@ -41,15 +41,20 @@ public class KeycloakImpersonationService implements CacheInvalidatable {
     var key = buildCacheKey(targetTenant, user.getId());
     var userToken = tokenCache.getIfPresent(key);
     if (userToken != null) {
-      log.debug("User token found in cache: username = {}, targetTenant = {}", user.getUsername(), targetTenant);
+      log.debug("KeycloakImpersonationService: Cache HIT [tenant={}, username={}, userId={}]",
+        () -> targetTenant, user::getUsername, user::getId);
       return succeededFuture(userToken);
     }
 
+    log.debug("KeycloakImpersonationService: Cache MISS [tenant={}, username={}, userId={}]",
+      () -> targetTenant, user::getUsername, user::getId);
     return impersonateUser(targetTenant, user, key)
       .recover(tryRecoverFrom(ClientErrorException.class, resetCredentialsAndImpersonateUser(targetTenant, user, key)));
   }
 
   private Future<TokenResponse> impersonateUser(String targetTenant, User user, String cacheKey) {
+    log.debug("KeycloakImpersonationService: Requesting Keycloak token exchange [tenant={}, username={}]",
+      () -> targetTenant, user::getUsername);
     return credentialService.getImpersonationClientCredentials(targetTenant)
       .compose(credentials -> keycloakClient.impersonateUserToken(targetTenant, credentials, user.getUsername()))
       .compose(tokenResponse -> handelAndCacheResponse(targetTenant, user, cacheKey, tokenResponse));

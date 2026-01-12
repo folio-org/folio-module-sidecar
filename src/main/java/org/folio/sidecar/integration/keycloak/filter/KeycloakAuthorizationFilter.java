@@ -102,11 +102,16 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var parsedSystemToken = getParsedSystemToken(rc);
 
     if (parsedSystemToken.isPresent() && isCachedToken(permission, tenantName, parsedSystemToken.get())) {
+      log.debug("KeycloakAuthorizationFilter: Cache HIT [permission={}, tenant={}, tokenType=system]",
+        () -> permission, () -> tenantName);
       return parsedSystemToken;
     }
     if (parsedToken.isPresent() && isCachedToken(permission, tenantName, parsedToken.get())) {
+      log.debug("KeycloakAuthorizationFilter: Cache HIT [permission={}, tenant={}, tokenType=user]",
+        () -> permission, () -> tenantName);
       return parsedToken;
     }
+    log.debug("KeycloakAuthorizationFilter: Cache MISS [permission={}, tenant={}]", () -> permission, () -> tenantName);
     return Optional.empty();
   }
 
@@ -132,7 +137,9 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
 
-    log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
+    log.debug("KeycloakAuthorizationFilter: Requesting Keycloak permission evaluation [tenant={}, permission={}]",
+      () -> tenant, () -> permission);
+    log.trace("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))

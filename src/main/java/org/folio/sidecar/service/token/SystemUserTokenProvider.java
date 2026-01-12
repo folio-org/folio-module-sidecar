@@ -102,6 +102,7 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
   }
 
   TokenResponse retrieveToken(String tenant) throws Exception {
+    log.debug("SystemUserTokenProvider: Cache miss - retrieving token for tenant: {}", () -> tenant);
     var username = moduleProperties.getName();
 
     var tokenFuture = obtainToken(tenant, username)
@@ -138,7 +139,8 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
   }
 
   private Future<TokenResponse> authUser(String tenant, UserCredentials user, ClientCredentials client) {
-    log.info("Authenticating system user: user = {}, tenant = {}", user.getUsername(), tenant);
+    log.debug("SystemUserTokenProvider: Requesting Keycloak token [grant_type=password, tenant={}, username={}]",
+      () -> tenant, user::getUsername);
     return keycloakService.obtainUserToken(tenant, client, user);
   }
 

@@ -21,7 +21,11 @@ public class LogoutConsumer {
 
   @Incoming("logout")
   public void consume(LogoutEvent event) {
-    log.info("Consuming logout event: {}", event);
+    log.info("LogoutConsumer: Received logout event [type={}, userId={}, sessionId={}]",
+      event.getType(), event.getUserId(), event.getSessionId());
+    log.debug("LogoutConsumer: Invalidating {} caches: {}",
+      caches::size,
+      () -> caches.stream().map(c -> c.getClass().getSimpleName()).toList());
     caches.forEach(cache -> cache.invalidate(event));
   }
 }

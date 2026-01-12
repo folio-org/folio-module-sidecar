@@ -7,7 +7,6 @@ import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
 import static org.folio.sidecar.utils.FutureUtils.tryRecoverFrom;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
-import static org.folio.sidecar.utils.TokenUtils.tokenResponseAsString;
 
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -89,6 +88,7 @@ public class ServiceTokenProvider {
   }
 
   TokenResponse retrieveToken(String tenant) throws Exception {
+    log.debug("ServiceTokenProvider: Cache miss - retrieving token for tenant: {}", () -> tenant);
     var tokenFuture = obtainToken(tenant)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant)));
 
@@ -96,15 +96,19 @@ public class ServiceTokenProvider {
   }
 
   private Future<TokenResponse> obtainToken(String tenant) {
-    var cred = SUPER_TENANT.equalsIgnoreCase(tenant)
+    var isMasterRealm = SUPER_TENANT.equalsIgnoreCase(tenant);
+    log.debug("ServiceTokenProvider: Requesting token [grant_type=client_credentials, tenant={}, master={}]",
+      () -> tenant, () -> isMasterRealm);
+
+    var cred = isMasterRealm
       ? credentialService.getAdminClientCredentials()
       : credentialService.getServiceClientCredentials(tenant);
 
     return cred
       .compose(credentials -> keycloakService.obtainToken(tenant, credentials))
       .map(tokenResponse -> {
-        log.debug("Service token obtained: token = {}, tenant = {}",
-          () -> tokenResponseAsString(tokenResponse), () -> tenant);
+        log.debug("ServiceTokenProvider: Token obtained [tenant={}, expiresIn={}s]",
+          () -> tenant, tokenResponse::getExpiresIn);
         return tokenResponse;
       });
   }
