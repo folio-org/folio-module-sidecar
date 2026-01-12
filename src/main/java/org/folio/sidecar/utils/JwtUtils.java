@@ -35,6 +35,10 @@ public class JwtUtils {
     return ofNullable(token.getClaim(USER_ID_CLAIM));
   }
 
+  public static Long getTokenExpirationTime(JsonWebToken token) {
+    return token.getExpirationTime();
+  }
+
   public static String trimTokenBearer(String token) {
     return token == null || !token.startsWith("Bearer ") ? token : token.substring(7).trim();
   }

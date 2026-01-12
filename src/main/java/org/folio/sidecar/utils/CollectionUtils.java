@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -81,5 +82,29 @@ public class CollectionUtils {
    */
   public static <T extends Ordered> List<T> sortByOrder(Instance<T> values) {
     return values.stream().sorted(comparingInt(Ordered::getOrder)).toList();
+  }
+
+  /**
+   * Takes one element from the given collection. If the collection is empty or contains more than one element,
+   * an exception is thrown using the provided suppliers.
+   *
+   * @param source                     - the source collection
+   * @param emptyCollectionExcSupplier - supplier for exception to be thrown if the collection is empty
+   * @param tooManyItemsExcSupplier    - supplier for exception to be thrown if the collection has more than one element
+   * @param <T>                        - generic type for collection element
+   * @return the single element from the collection
+   * @throws RuntimeException if the collection is empty or has more than one element
+   */
+  public static <T> T takeOne(Collection<T> source, Supplier<? extends RuntimeException> emptyCollectionExcSupplier,
+    Supplier<? extends RuntimeException> tooManyItemsExcSupplier) {
+    if (isEmpty(source)) {
+      throw emptyCollectionExcSupplier.get();
+    }
+
+    if (source.size() > 1) {
+      throw tooManyItemsExcSupplier.get();
+    }
+
+    return source.iterator().next();
   }
 }

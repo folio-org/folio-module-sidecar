@@ -7,6 +7,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.MODULE_HINT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.model.ScRoutingEntry.dynamicRoutingEntry;
+import static org.folio.sidecar.utils.CollectionUtils.takeOne;
 import static org.folio.sidecar.utils.CollectionUtils.toStream;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.getHeader;
@@ -74,11 +75,18 @@ public class DynamicRoutingLookup implements RoutingLookup {
 
   private static Function<ResultList<Entitlement>, String> findEntitledModuleIdByName(String moduleName,
     String tenant) {
-    return result -> toStream(result.getRecords())
-      .flatMap(r -> toStream(r.getModules()))
-      .filter(m -> m.startsWith(moduleName))
-      .findFirst()
-      .orElseThrow(() -> new IllegalArgumentException("No entitled module found for name: "
-        + "moduleName = " + moduleName + ", tenant = " + tenant));
+    return result -> {
+      var moduleIds = toStream(result.getRecords())
+        .flatMap(r -> toStream(r.getModules()))
+        .filter(m -> SemverUtils.getName(m).equals(moduleName))
+        .toList();
+
+      return takeOne(moduleIds,
+        () -> new IllegalArgumentException("No entitled module found for name: "
+          + "moduleName = " + moduleName + ", tenant = " + tenant),
+        () -> new IllegalArgumentException("Multiple entitled modules found for name: "
+          + "moduleName = " + moduleName + ", foundModuleIds = " + moduleIds + ", tenant = " + tenant)
+      );
+    };
   }
 }

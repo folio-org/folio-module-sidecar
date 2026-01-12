@@ -20,4 +20,9 @@ public class TokenCacheProperties {
    * when a request is being processed.
    */
   @ConfigProperty(name = "token-cache.refresh-before-expiry-sec") Integer refreshBeforeExpirySeconds;
+  /**
+   * Specifies the timeout in seconds for token retrieval operations.
+   * This timeout is applied when obtaining tokens from Keycloak during cache loading.
+   */
+  @ConfigProperty(name = "token-cache.retrieval-timeout-sec", defaultValue = "30") Integer retrievalTimeoutSeconds;
 }

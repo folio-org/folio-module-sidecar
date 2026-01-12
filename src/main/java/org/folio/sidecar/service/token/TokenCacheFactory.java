@@ -75,10 +75,11 @@ public class TokenCacheFactory {
     // invalidating a cache entry prior to the token expiration.
     var earlyExpiresIn = expiresIn - refreshBeforeExpiry;
     var duration = earlyExpiresIn > MIN_EARLY_EXPIRATION_SEC ? ofSeconds(earlyExpiresIn) : ofSeconds(expiresIn);
+    var ttlNanos = Math.max(duration.toNanos(), 0);
     log.debug("Token TTL calculated: duration = {} secs, token = {}",
-      duration::toSeconds, () -> tokenResponseAsString(token));
+      () -> ttlNanos / 1_000_000_000L, () -> tokenResponseAsString(token));
 
-    return duration.toNanos();
+    return ttlNanos;
   }
 
   private static RemovalListener<String, TokenResponse> refreshOnExpiration(

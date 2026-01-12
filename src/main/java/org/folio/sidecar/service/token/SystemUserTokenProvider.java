@@ -2,6 +2,7 @@ package org.folio.sidecar.service.token;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptySet;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.utils.CollectionUtils.isNotEmpty;
 import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.configuration.properties.TokenCacheProperties;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.cred.model.ClientCredentials;
@@ -41,15 +43,17 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
   private final CredentialService credentialService;
   private final ModuleProperties moduleProperties;
   private final AsyncLoadingCache<String, TokenResponse> tokenCache;
+  private final int retrievalTimeoutSeconds;
   private boolean systemUserRequired = false;
 
   @Inject
   SystemUserTokenProvider(KeycloakService keycloakService, CredentialService credentialService,
-    ModuleProperties moduleProperties, AsyncTokenCacheFactory cacheFactory) {
+    ModuleProperties moduleProperties, AsyncTokenCacheFactory cacheFactory, TokenCacheProperties cacheProperties) {
     this.keycloakService = keycloakService;
     this.credentialService = credentialService;
     this.moduleProperties = moduleProperties;
     this.tokenCache = cacheFactory.createCache(this::retrieveToken);
+    this.retrievalTimeoutSeconds = cacheProperties.getRetrievalTimeoutSeconds();
   }
 
   @SuppressWarnings("unused")
@@ -103,7 +107,7 @@ public class SystemUserTokenProvider implements ModuleBootstrapListener {
     var tokenFuture = obtainToken(tenant, username)
       .recover(tryRecoverFrom(UnauthorizedException.class, resetCredentialsAndObtainToken(tenant, username)));
 
-    return executeAndGet(tokenFuture);
+    return executeAndGet(tokenFuture, retrievalTimeoutSeconds, SECONDS);
   }
 
   private Future<TokenResponse> obtainToken(String tenant, String username) {
