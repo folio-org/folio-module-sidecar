@@ -1,5 +1,14 @@
 [
   {
+    "name" : "com.github.benmanes.caffeine.cache.PSAMS",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
     "name" : "com.github.benmanes.caffeine.cache.SSLMSA",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,

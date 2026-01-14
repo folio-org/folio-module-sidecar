@@ -19,15 +19,16 @@ import static org.folio.sidecar.utils.RoutingUtils.putOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import jakarta.ws.rs.BadRequestException;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.jwt.openid.JsonWebTokenParser;
@@ -35,12 +36,18 @@ import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class KeycloakJwtFilter implements IngressRequestFilter {
 
   private static final String FAILED_TO_PARSE_JWT_ERROR_MSG = "Failed to parse JWT";
 
   private final JsonWebTokenParser jsonWebTokenParser;
+  private final Cache<String, JsonWebToken> parsedTokenCache;
+
+  public KeycloakJwtFilter(JsonWebTokenParser jsonWebTokenParser,
+                           @Named("parsedTokenCache") Cache<String, JsonWebToken> parsedTokenCache) {
+    this.jsonWebTokenParser = jsonWebTokenParser;
+    this.parsedTokenCache = parsedTokenCache;
+  }
 
   /**
    * When a module (for example mod-circulation) registers events in mod-pubsub the request is sent without
@@ -102,16 +109,29 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   private Future<RoutingContext> tryParseAccessToken(String accessToken, RoutingContext rc) {
     try {
-      var jsonWebToken = jsonWebTokenParser.parse(accessToken);
+      var jsonWebToken = parseTokenWithCache(accessToken);
       return succeededFuture(populateContextAndHeaders(rc, jsonWebToken));
     } catch (ParseException exception) {
       return failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, exception));
     }
   }
 
+  private JsonWebToken parseTokenWithCache(String accessToken) throws ParseException {
+    var cached = parsedTokenCache.getIfPresent(accessToken);
+    if (cached != null) {
+      log.debug("Using cached parsed token");
+      return cached;
+    }
+
+    var jsonWebToken = jsonWebTokenParser.parse(accessToken);
+    parsedTokenCache.put(accessToken, jsonWebToken);
+    log.debug("Parsed and cached token");
+    return jsonWebToken;
+  }
+
   private Future<RoutingContext> findAccessTokenWhenSystemJwtPresent(String accessToken, RoutingContext rc) {
     try {
-      var jsonWebToken = jsonWebTokenParser.parse(accessToken);
+      var jsonWebToken = parseTokenWithCache(accessToken);
       return succeededFuture(populateContextAndHeaders(rc, jsonWebToken));
     } catch (ParseException exception) {
       return handleParseExceptionForPresentSystemJwt(rc, exception);

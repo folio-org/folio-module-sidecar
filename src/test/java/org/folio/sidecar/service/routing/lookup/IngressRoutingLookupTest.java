@@ -10,6 +10,7 @@ import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
+import static org.folio.sidecar.service.routing.lookup.IngressRoutingLookup.normalizePath;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -81,6 +82,41 @@ class IngressRoutingLookupTest {
 
     assertThat(actual.succeeded()).isTrue();
     assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void normalizePath_positive_singleUuid() {
+    var path = "/inventory/instances/550e8400-e29b-41d4-a716-446655440000";
+    assertThat(normalizePath(path)).isEqualTo("/inventory/instances/{id}");
+  }
+
+  @Test
+  void normalizePath_positive_multipleUuids() {
+    var path = "/inventory/instances/550e8400-e29b-41d4-a716-446655440000/items/123e4567-e89b-12d3-a456-426614174000";
+    assertThat(normalizePath(path)).isEqualTo("/inventory/instances/{id}/items/{id}");
+  }
+
+  @Test
+  void normalizePath_positive_uppercaseUuid() {
+    var path = "/inventory/instances/550E8400-E29B-41D4-A716-446655440000";
+    assertThat(normalizePath(path)).isEqualTo("/inventory/instances/{id}");
+  }
+
+  @Test
+  void normalizePath_positive_noUuid() {
+    var path = "/inventory/instances";
+    assertThat(normalizePath(path)).isEqualTo("/inventory/instances");
+  }
+
+  @Test
+  void normalizePath_positive_queryParams() {
+    var path = "/inventory/instances?query=title=test";
+    assertThat(normalizePath(path)).isEqualTo("/inventory/instances?query=title=test");
+  }
+
+  @Test
+  void normalizePath_positive_nullPath() {
+    assertThat(normalizePath(null)).isEqualTo("");
   }
 
   private static Stream<Arguments> ingressRequestDataProvider() {

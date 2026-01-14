@@ -27,10 +27,10 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Named;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.StringJoiner;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
@@ -40,7 +40,6 @@ import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
 @ApplicationScoped
-@RequiredArgsConstructor
 public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheInvalidatable {
 
   private static final String CACHE_KEY_DELIMITER = "#";
@@ -49,6 +48,12 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
   private final KeycloakClient keycloakClient;
   private final Cache<String, JsonWebToken> authTokenCache;
+
+  public KeycloakAuthorizationFilter(KeycloakClient keycloakClient,
+                                     @Named("kcAuthorizationCache") Cache<String, JsonWebToken> authTokenCache) {
+    this.keycloakClient = keycloakClient;
+    this.authTokenCache = authTokenCache;
+  }
 
   /**
    * Evaluates if a user has access to a module endpoint by obtaining RPT token from Keycloak.
@@ -61,7 +66,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var permission = resolvePermission(routingContext);
     routingContext.put(KC_PERMISSION_NAME, permission);
     var tenantName = getTenant(routingContext);
-    log.info("Authorizing request to: {} for tenant: {}", permission, tenantName);
+    log.debug("Authorizing request to: {} for tenant: {}", permission, tenantName);
 
     return findCachedAccessToken(routingContext, permission, tenantName)
       .map(jwt -> succeededFuture(routingContext))

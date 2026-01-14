@@ -334,18 +334,18 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private void prepareUserTokenMocks(boolean cached) {
-    when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
     when(userToken.containsClaim(USER_ID_CLAIM)).thenReturn(true);
     when(userToken.getClaim(USER_ID_CLAIM)).thenReturn(USER_ID);
     when(userToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(true);
     when(userToken.getClaim(SESSION_ID_CLAIM)).thenReturn(SESSION_STATE);
+    when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
     when(authTokenCache.getIfPresent(userTokenCacheKey())).thenReturn(cached ? userToken : null);
   }
 
   private void prepareSystemTokenMocks(boolean cached) {
-    when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
     when(systemToken.containsClaim(USER_ID_CLAIM)).thenReturn(false);
     when(systemToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(false);
+    when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
     when(authTokenCache.getIfPresent(systemTokenCacheKey())).thenReturn(cached ? systemToken : null);
   }
 
@@ -386,8 +386,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private static String userTokenCacheKey(String userId, String sid) {
-    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, userId, sid,
-      VALID_TOKEN_EXPIRATION_TIME);
+    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, userId, sid, VALID_TOKEN_EXPIRATION_TIME);
   }
 
   private static String systemTokenCacheKey() {

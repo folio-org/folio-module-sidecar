@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.MultiMap;
@@ -52,6 +53,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   private static final String TEST_USER_ID = UUID.randomUUID().toString();
 
   @Mock private JsonWebTokenParser jsonWebTokenParser;
+  @Mock private Cache<String, JsonWebToken> parsedTokenCache;
   @Mock private HttpServerRequest request;
 
   @InjectMocks private KeycloakJwtFilter keycloakJwtFilter;
@@ -80,10 +82,36 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     assertThat(result.result()).isEqualTo(routingContext);
     verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
     verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
+    verify(parsedTokenCache).put(AUTH_TOKEN, jsonWebToken);
 
     assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
     assertThat(requestHeaders.get(USER_ID)).isEqualTo(TEST_USER_ID);
     assertThat(requestHeaders.get(AUTHORIZATION)).isNull();
+  }
+
+  @Test
+  void filter_positive_cachedToken() {
+    var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
+    var routingContext = routingContext(scRoutingEntry(), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+    });
+
+    var jsonWebToken = mock(JsonWebToken.class);
+    when(parsedTokenCache.getIfPresent(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
+    when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).isEqualTo(routingContext);
+    verify(routingContext).put(PARSED_TOKEN, jsonWebToken);
+    verify(routingContext).put(ORIGIN_TENANT, TENANT_NAME);
+    verifyNoInteractions(jsonWebTokenParser);
+
+    assertThat(requestHeaders.get(TOKEN)).isEqualTo(AUTH_TOKEN);
+    assertThat(requestHeaders.get(USER_ID)).isEqualTo(TEST_USER_ID);
   }
 
   @Test

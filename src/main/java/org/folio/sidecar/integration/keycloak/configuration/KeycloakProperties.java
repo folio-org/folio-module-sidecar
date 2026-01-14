@@ -24,6 +24,7 @@ public class KeycloakProperties {
 
   @ConfigProperty(name = "keycloak.authorization-cache-max-size") long authorizationCacheMaxSize;
   @ConfigProperty(name = "keycloak.authorization-cache-ttl-offset") long authorizationCacheTtlOffset;
+  @ConfigProperty(name = "keycloak.parsed-token-cache-max-size") long parsedTokenCacheMaxSize;
 
   @ConfigProperty(name = "keycloak.introspection.token-cache-max-size") long tokenIntrospectionCacheMaxSize;
   @ConfigProperty(name = "keycloak.introspection.inactive-token-ttl-in-sec") long inactiveTokenIntrospectionTtl;

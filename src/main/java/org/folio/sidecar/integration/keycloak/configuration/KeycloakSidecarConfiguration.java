@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Named;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.jwt.openid.JsonWebTokenParser;
@@ -16,6 +17,7 @@ import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
 @Dependent
 public class KeycloakSidecarConfiguration {
 
+  @Named("kcAuthorizationCache")
   @ApplicationScoped
   public Cache<String, JsonWebToken> kcAuthorizationCache(KeycloakProperties props, JsonWebTokenExpiry expiry) {
     return Caffeine.newBuilder()
@@ -23,6 +25,18 @@ public class KeycloakSidecarConfiguration {
       .initialCapacity(10)
       .maximumSize(props.getAuthorizationCacheMaxSize())
       .removalListener((k, jwt, cause) -> log.debug("Cached access token removed: key={}, cause={}", k, cause))
+      .build();
+  }
+
+  @Named("parsedTokenCache")
+  @ApplicationScoped
+  public Cache<String, JsonWebToken> parsedTokenCache(KeycloakProperties props, JsonWebTokenExpiry expiry) {
+    return Caffeine.newBuilder()
+      .expireAfter(expiry)
+      .initialCapacity(50)
+      .maximumSize(props.getParsedTokenCacheMaxSize())
+      .removalListener((k, jwt, cause) -> log.debug("Cached parsed token removed: key={}..., cause={}",
+        () -> k != null && k.length() > 20 ? k.substring(0, 20) : k, () -> cause))
       .build();
   }
 
