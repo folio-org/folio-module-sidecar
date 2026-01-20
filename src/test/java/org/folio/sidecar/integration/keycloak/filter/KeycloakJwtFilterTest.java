@@ -88,7 +88,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_userIdFromHeader() throws Exception {
+  void filter_positive_userIdFromHeader() {
     var customUserId = UUID.randomUUID().toString();
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, USER_ID, customUserId));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
@@ -114,7 +114,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_authorizationHeader() throws Exception {
+  void filter_positive_authorizationHeader() {
     var requestHeaders = headers(Map.of(AUTHORIZATION, "Bearer " + AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
@@ -139,7 +139,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_accessTokenAndSystemAccessToken() throws Exception {
+  void filter_positive_accessTokenAndSystemAccessToken() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, SYSTEM_TOKEN, systemToken));
@@ -168,7 +168,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_systemTokenAndInvalidAmountOfSegmentsInJwt() throws Exception {
+  void filter_positive_systemTokenAndInvalidAmountOfSegmentsInJwt() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var dummyToken = "Dummy";
@@ -216,7 +216,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_negative_systemTokenAndUnknownErrorForJwt() throws Exception {
+  void filter_negative_systemTokenAndUnknownErrorForJwt() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, SYSTEM_TOKEN, systemToken));
@@ -311,7 +311,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_negative_selfRequestWithInvalidToken() throws ParseException {
+  void filter_negative_selfRequestWithInvalidToken() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);

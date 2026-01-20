@@ -47,7 +47,7 @@ class AsyncJsonWebTokenParserTest {
   }
 
   @Test
-  void parseAsync_negative_parseExceptionFailsWithUnauthorizedException() throws Exception {
+  void parseAsync_negative_parseExceptionFailsWithUnauthorizedException() throws ParseException {
     var token = "invalid.jwt.token";
     when(syncParser.parse(token)).thenThrow(new ParseException("Invalid JWT"));
     mockExecuteBlockingCallsCallable();
@@ -63,7 +63,7 @@ class AsyncJsonWebTokenParserTest {
   }
 
   @Test
-  void parseAsync_negative_runtimeExceptionFailsWithUnauthorizedException() throws Exception {
+  void parseAsync_negative_runtimeExceptionFailsWithUnauthorizedException() throws ParseException {
     var token = "invalid.jwt.token";
     when(syncParser.parse(token)).thenThrow(new IllegalStateException("Boom"));
     mockExecuteBlockingCallsCallable();
