@@ -63,7 +63,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive() throws Exception {
+  void filter_positive() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
@@ -273,7 +273,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_negative_parsingFailure() throws Exception {
+  void filter_negative_parsingFailure() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
