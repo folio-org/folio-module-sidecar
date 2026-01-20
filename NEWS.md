@@ -24,3 +24,4 @@
 * Fix intermittent 401 Unauthorized errors under load by correcting token cache key generation and TTL calculations to properly handle Refresh Token Rotation (RTR) (MODSIDECAR-171)
 * 404 during timer call (MODSIDECAR-173)
 * The request has already been read, but the HTTP client still needs to be closed (MODSIDECAR-169)
+* Fix event loop blocking during JWT token parsing by offloading to worker threads (MODSIDECAR-168)
