@@ -98,17 +98,25 @@ public class RequestForwardingService {
 
   @SuppressWarnings("checkstyle:MethodLength")
   private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
-    var result = Promise.<Void>promise();
-
+    final var result = Promise.<Void>promise();
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);
 
+    // Pause the request stream immediately to prevent data loss
+    // This ensures no request body chunks arrive before handlers are ready
+    // The stream will be resumed after handlers are properly set up
+    httpServerRequest.pause();
+
+    // Now it's safe to access params() - stream is paused, no data will be lost
     QueryStringEncoder encoder = new QueryStringEncoder(httpUri.getPath());
     httpServerRequest.params().forEach(encoder::addParam);
 
     // Create an HTTP request
     Future<HttpClientRequest> request = createHttpClientRequestFuture(httpClient, httpServerRequest, httpUri, encoder)
       .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS);
+
+    Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
+
     request.onSuccess(httpClientRequest -> {
 
       httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
@@ -119,30 +127,35 @@ public class RequestForwardingService {
 
       // Attach drainHandler to resume reading when the queue has space
       httpClientRequest.drainHandler(v -> {
-        log.trace("Write queue has space again, resuming  read from server requests.");
+        log.trace("Write queue has space again, resuming read from server requests.");
         httpServerRequest.resume();
       });
 
-      // If the write queue is full, pause the ReadStream
-      Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
+      // Set up request forwarding based on HTTP method
       if (!nonBodyMethods.contains(httpServerRequest.method())) {
+        // POST/PUT/PATCH/DELETE - requests with body
         httpClientRequest.setChunked(true);
+
+        // Set up data handler to forward request body chunks
         httpServerRequest.handler(buffer -> {
           if (httpClientRequest.writeQueueFull()) {
             httpServerRequest.pause();
           }
           httpClientRequest.write(buffer);
         });
-      }
 
-      try {
-        // End the request when the file stream finishes
+        // Set up end handler to close client request when server request completes
         httpServerRequest.endHandler(v -> {
-          log.trace("End the request when the file stream finishes");
+          log.debug("Server request stream ended, closing client request");
           httpClientRequest.end();
         });
-      } catch (Exception e) {
-        log.warn("The request has already been read, but the HTTP client still needs to be closed. ", e);
+
+        // Resume the paused stream as handlers are ready
+        httpServerRequest.resume();
+      } else {
+        // GET/HEAD - requests without body
+        // No need to set handlers or resume, just end the client request immediately
+        log.trace("No request body expected for {} method, ending client request", httpServerRequest.method());
         httpClientRequest.end();
       }
 
@@ -162,6 +175,8 @@ public class RequestForwardingService {
       var errorMessage = format("Failed to proxy request: %s", error.getMessage());
       log.error(errorMessage);
       result.fail(new InternalServerErrorException(errorMessage, error));
+      // Resume the stream on failure to prevent resource leak
+      httpServerRequest.resume();
     });
     return result.future();
   }
