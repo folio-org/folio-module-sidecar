@@ -107,7 +107,6 @@ public class RequestForwardingService {
     // The stream will be resumed after handlers are properly set up
     httpServerRequest.pause();
 
-    // Now it's safe to access params() - stream is paused, no data will be lost
     QueryStringEncoder encoder = new QueryStringEncoder(httpUri.getPath());
     httpServerRequest.params().forEach(encoder::addParam);
 
@@ -133,7 +132,6 @@ public class RequestForwardingService {
 
       // Set up request forwarding based on HTTP method
       if (!nonBodyMethods.contains(httpServerRequest.method())) {
-        // POST/PUT/PATCH/DELETE - requests with body
         httpClientRequest.setChunked(true);
 
         // Set up data handler to forward request body chunks
