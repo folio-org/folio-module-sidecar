@@ -30,7 +30,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.jwt.openid.JsonWebTokenParser;
+import org.folio.sidecar.integration.keycloak.AsyncJsonWebTokenParser;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
 
 @Log4j2
@@ -40,7 +40,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   private static final String FAILED_TO_PARSE_JWT_ERROR_MSG = "Failed to parse JWT";
 
-  private final JsonWebTokenParser jsonWebTokenParser;
+  private final AsyncJsonWebTokenParser asyncJsonWebTokenParser;
 
   /**
    * When a module (for example mod-circulation) registers events in mod-pubsub the request is sent without
@@ -101,21 +101,14 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
   }
 
   private Future<RoutingContext> tryParseAccessToken(String accessToken, RoutingContext rc) {
-    try {
-      var jsonWebToken = jsonWebTokenParser.parse(accessToken);
-      return succeededFuture(populateContextAndHeaders(rc, jsonWebToken));
-    } catch (ParseException exception) {
-      return failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, exception));
-    }
+    return asyncJsonWebTokenParser.parseAsync(accessToken)
+      .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken));
   }
 
   private Future<RoutingContext> findAccessTokenWhenSystemJwtPresent(String accessToken, RoutingContext rc) {
-    try {
-      var jsonWebToken = jsonWebTokenParser.parse(accessToken);
-      return succeededFuture(populateContextAndHeaders(rc, jsonWebToken));
-    } catch (ParseException exception) {
-      return handleParseExceptionForPresentSystemJwt(rc, exception);
-    }
+    return asyncJsonWebTokenParser.parseAsync(accessToken)
+      .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken))
+      .recover(error -> handleParseExceptionForPresentSystemJwt(rc, error));
   }
 
   /**
@@ -146,12 +139,15 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
     return getToken(rc) != null;
   }
 
-  private static Future<RoutingContext> handleParseExceptionForPresentSystemJwt(RoutingContext rc, ParseException err) {
-    if (Objects.equals(INVALID_SEGMENTS_JWT_ERROR_MSG, err.getMessage())) {
+  private static Future<RoutingContext> handleParseExceptionForPresentSystemJwt(RoutingContext rc, Throwable error) {
+    // Special case: dummy tokens from mod-pubsub
+    if (error.getCause() instanceof ParseException err
+        && Objects.equals(INVALID_SEGMENTS_JWT_ERROR_MSG, err.getMessage())) {
       return succeededFuture(rc);
     }
 
-    return failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, err));
+    // All other errors (JWT parsing and system errors) - pass through unchanged
+    return failedFuture(error);
   }
 
   private static RoutingContext populateContextAndHeaders(RoutingContext rc, JsonWebToken parsedToken) {
