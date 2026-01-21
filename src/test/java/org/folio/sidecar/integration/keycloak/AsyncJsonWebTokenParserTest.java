@@ -11,6 +11,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import java.time.Duration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.RejectedExecutionException;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.support.types.UnitTest;
@@ -79,7 +80,7 @@ class AsyncJsonWebTokenParserTest {
   }
 
   @Test
-  void parseAsync_negative_executeBlockingFailsWithUnauthorizedException() {
+  void parseAsync_negative_executeBlockingFailsWithSystemError() {
     var token = "invalid.jwt.token";
     when(vertx.<JsonWebToken>executeBlocking(any(Callable.class), eq(false)))
       .thenReturn(Future.failedFuture(new IllegalStateException("Worker pool unavailable")));
@@ -90,8 +91,24 @@ class AsyncJsonWebTokenParserTest {
       .failsWithin(Duration.ofSeconds(1))
       .withThrowableThat()
       .havingCause()
-      .isInstanceOf(UnauthorizedException.class)
-      .withMessageContaining("Failed to parse JWT");
+      .isInstanceOf(IllegalStateException.class)
+      .withMessageContaining("Worker pool unavailable");
+  }
+
+  @Test
+  void parseAsync_negative_workerPoolExhausted() {
+    var token = "valid.jwt.token";
+    when(vertx.<JsonWebToken>executeBlocking(any(Callable.class), eq(false)))
+      .thenReturn(Future.failedFuture(new RejectedExecutionException("Worker pool exhausted")));
+
+    var future = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture();
+
+    assertThat(future)
+      .failsWithin(Duration.ofSeconds(1))
+      .withThrowableThat()
+      .havingCause()
+      .isInstanceOf(RejectedExecutionException.class)
+      .withMessageContaining("Worker pool exhausted");
   }
 
   private void mockExecuteBlockingCallsCallable() {

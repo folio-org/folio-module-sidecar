@@ -102,10 +102,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
 
   private Future<RoutingContext> tryParseAccessToken(String accessToken, RoutingContext rc) {
     return asyncJsonWebTokenParser.parseAsync(accessToken)
-      .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken))
-      .recover(error -> error instanceof UnauthorizedException
-        ? failedFuture(error)
-        : failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, error)));
+      .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken));
   }
 
   private Future<RoutingContext> findAccessTokenWhenSystemJwtPresent(String accessToken, RoutingContext rc) {
@@ -143,14 +140,14 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
   }
 
   private static Future<RoutingContext> handleParseExceptionForPresentSystemJwt(RoutingContext rc, Throwable error) {
+    // Special case: dummy tokens from mod-pubsub
     if (error.getCause() instanceof ParseException err
         && Objects.equals(INVALID_SEGMENTS_JWT_ERROR_MSG, err.getMessage())) {
       return succeededFuture(rc);
     }
 
-    return error instanceof UnauthorizedException
-      ? failedFuture(error)
-      : failedFuture(new UnauthorizedException(FAILED_TO_PARSE_JWT_ERROR_MSG, error));
+    // All other errors (JWT parsing and system errors) - pass through unchanged
+    return failedFuture(error);
   }
 
   private static RoutingContext populateContextAndHeaders(RoutingContext rc, JsonWebToken parsedToken) {

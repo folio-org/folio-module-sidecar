@@ -87,9 +87,6 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
       .map(jsonWebToken -> {
         putParsedToken(rc, jsonWebToken);
         return rc;
-      })
-      .recover(error -> error instanceof UnauthorizedException
-        ? failedFuture(error)
-        : failedFuture(new UnauthorizedException("Failed to parse impersonated JWT", error)));
+      });
   }
 }

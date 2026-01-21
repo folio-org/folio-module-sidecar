@@ -1,7 +1,5 @@
 package org.folio.sidecar.integration.keycloak;
 
-import static io.vertx.core.Future.failedFuture;
-
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
@@ -28,12 +26,10 @@ public class AsyncJsonWebTokenParser {
    * Parses JWT token asynchronously on a worker thread.
    *
    * @param token the JWT token string to parse
-   * @return Future that completes with the parsed JsonWebToken on success, or fails with UnauthorizedException if
-   *   parsing fails
+   * @return Future that completes with the parsed JsonWebToken on success
    */
   public Future<JsonWebToken> parseAsync(String token) {
-    return vertx.executeBlocking(() -> parseToken(token), false)
-      .recover(AsyncJsonWebTokenParser::handleParsingError);
+    return vertx.executeBlocking(() -> parseToken(token), false);
   }
 
   /**
@@ -54,20 +50,5 @@ public class AsyncJsonWebTokenParser {
       log.warn("Failed to parse JWT token due to unexpected error", e);
       throw new UnauthorizedException("Failed to parse JWT", e);
     }
-  }
-
-  /**
-   * Handles errors that occur during async JWT parsing.
-   *
-   * @param error the error that occurred
-   * @return a failed Future with appropriate exception
-   */
-  private static Future<JsonWebToken> handleParsingError(Throwable error) {
-    if (error instanceof UnauthorizedException) {
-      return failedFuture(error);
-    }
-
-    log.warn("Failed to parse JWT token due to async execution failure", error);
-    return failedFuture(new UnauthorizedException("Failed to parse JWT", error));
   }
 }

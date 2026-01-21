@@ -2,7 +2,7 @@
 feature_id: jwt-token-verification
 title: JWT Token Verification and Parsing
 status: active
-updated: 2026-01-20
+updated: 2026-01-21
 ---
 
 # JWT Token Verification and Parsing
@@ -14,6 +14,8 @@ The sidecar validates JWT tokens from Keycloak by verifying RSA signatures again
 ## Why it exists
 
 JWT signature verification involves CPU-intensive RSA cryptography. Running this on the Vert.x event loop would block request processing. The async implementation offloads verification to worker threads, maintaining high throughput.
+
+Error handling distinguishes between authentication failures (invalid JWT → 401) and system failures (worker pool exhaustion → 503) to enable proper monitoring and operational response.
 
 ## Entry points
 
@@ -35,7 +37,7 @@ JWT signature verification involves CPU-intensive RSA cryptography. Running this
 
 ## Implementation
 
-**AsyncJsonWebTokenParser** wraps the synchronous `JsonWebTokenParser` from the `folio-jwt-openid` library. Uses `vertx.executeBlocking(callable, false)` where `false` enables unordered parallel execution across worker threads. All exceptions are wrapped in `UnauthorizedException`.
+**AsyncJsonWebTokenParser** wraps the synchronous `JsonWebTokenParser` from the `folio-jwt-openid` library. Uses `vertx.executeBlocking(callable, false)` where `false` enables unordered parallel execution across worker threads. JWT parsing/validation exceptions are wrapped in `UnauthorizedException`, while system errors (pool exhaustion, timeouts) propagate unchanged.
 
 **Parser configuration** uses `JwtParserConfiguration` with issuer root URI from Keycloak URL and optional URI validation. JWKS provider is configured with refresh intervals and optional base URL override.
 
@@ -85,15 +87,23 @@ Example: `/users#GET#diku#admin#1f345678-9abc#1705942800`
 
 ## Error handling
 
-All parsing errors are converted to `UnauthorizedException`:
+JWT parsing errors are converted to `UnauthorizedException` (HTTP 401), while system errors propagate unchanged to enable proper HTTP status codes and monitoring:
 
-| Error Type | Cause |
-|------------|-------|
-| `ParseException` | Invalid JWT structure, Base64 encoding, JSON, or signature verification failure |
-| Token expired | `exp` claim is in the past |
-| Invalid issuer | `iss` claim doesn't match Keycloak URL (when validation enabled) |
-| `RuntimeException` | Unexpected errors during parsing |
-| Async execution failure | Worker thread pool exhaustion or timeouts |
+| Error Type | Exception | HTTP Status | Cause |
+|------------|-----------|-------------|-------|
+| JWT parsing failure | `UnauthorizedException` | 401 | Invalid JWT structure, Base64 encoding, JSON, or signature verification failure |
+| Token expired | `UnauthorizedException` | 401 | `exp` claim is in the past |
+| Invalid issuer | `UnauthorizedException` | 401 | `iss` claim doesn't match Keycloak URL (when validation enabled) |
+| Unexpected parsing error | `UnauthorizedException` | 401 | Caught `RuntimeException` during token parsing |
+| Worker pool exhaustion | `RejectedExecutionException` | 503 | All worker threads busy, cannot accept more parsing tasks |
+| Worker timeout | `TimeoutException` | 503 | Worker thread exceeded max execution time |
+| Out of memory | `OutOfMemoryError` | 500 | JVM heap exhausted during parsing |
+| Thread interruption | `InterruptedException` | 500 | Worker thread interrupted during parsing |
+
+**Error propagation behavior:**
+- JWT parsing/validation errors within `parseToken()` → wrapped as `UnauthorizedException`
+- System-level errors from `vertx.executeBlocking()` → propagate unchanged
+- Filters pass through all error types without re-wrapping
 
 ### Special case: KeycloakJwtFilter bypass logic
 
@@ -115,10 +125,15 @@ When a JWT has invalid segments but a system token is present, the request is al
 - "Invalidating authZ cached token: key = {key}"
 
 **Warning level:**
-- "Failed to parse JWT token: {message}" (ParseException)
-- "Failed to parse JWT token due to unexpected error" (RuntimeException)
-- "Failed to parse JWT token due to async execution failure" (async errors)
+- "Failed to parse JWT token: {message}" (ParseException during JWT validation)
+- "Failed to parse JWT token due to unexpected error" (RuntimeException during JWT validation)
 - "System token not found in the request headers, cannot process system JWT"
+
+**Error level (system errors):**
+- "System error during JWT parsing: {exceptionClass}" (worker pool exhaustion, timeouts, OOM)
+- "System error during impersonation JWT parsing" (system errors during token impersonation)
+- "System error during system JWT parsing" (system errors when processing X-System-Token)
+- "System error during JWT parsing with system token present" (system errors in mod-pubsub special case)
 
 ## Dependencies
 
@@ -165,15 +180,24 @@ The parser fetches public keys from the JWKS endpoint. The URL is determined by:
 
 ## Troubleshooting
 
-| Symptom | Root Cause | Fix |
-|---------|------------|-----|
-| "Failed to parse JWT" | Token missing or invalid structure (not 3 segments) | Verify client sends valid JWT with header.payload.signature format |
-| "JWT signature verification failed" | Token signed with wrong key or tampered | Check `KC_URL` points to correct Keycloak, verify `kid` in token header matches JWKS |
-| "Token expired" | `exp` claim is past current time | Check clock sync (NTP), verify token TTL settings in Keycloak |
-| "System token not found" | Missing `X-System-Token` header | Configure service client credentials, ensure calling service populates header |
-| "Failed to process system JWT" | System token blank or malformed | Verify system token generation and transmission |
-| High parse latency | Worker pool exhausted or CPU-bound parsing | Increase worker pool size via Quarkus config, scale horizontally |
-| JWKS fetch failures | Keycloak unreachable or wrong URL | Verify `KC_URL` and `KC_JWKS_BASE_URL`, check network connectivity |
+| Symptom | HTTP Status | Root Cause | Fix |
+|---------|-------------|------------|-----|
+| "Failed to parse JWT" | 401 | Token missing or invalid structure (not 3 segments) | Verify client sends valid JWT with header.payload.signature format |
+| "JWT signature verification failed" | 401 | Token signed with wrong key or tampered | Check `KC_URL` points to correct Keycloak, verify `kid` in token header matches JWKS |
+| "Token expired" | 401 | `exp` claim is past current time | Check clock sync (NTP), verify token TTL settings in Keycloak |
+| "System token not found" | 401 | Missing `X-System-Token` header | Configure service client credentials, ensure calling service populates header |
+| "Failed to process system JWT" | 401 | System token blank or malformed | Verify system token generation and transmission |
+| `RejectedExecutionException` | 503 | Worker pool exhausted, all threads busy | Increase `quarkus.vertx.worker-pool-size`, scale horizontally, reduce request rate |
+| `TimeoutException` | 503 | Worker thread exceeded max execution time | Check for slow JWKS fetches, increase `quarkus.vertx.max-worker-execute-time`, verify Keycloak connectivity |
+| `OutOfMemoryError` | 500 | JVM heap exhausted | Increase heap size (`-Xmx`), investigate memory leaks, scale horizontally |
+| `InterruptedException` | 500 | Thread interruption during parsing | Check for abnormal shutdown or thread management issues |
+| High parse latency | N/A | CPU-bound parsing or saturated worker pool | Monitor worker pool metrics, increase pool size, consider horizontal scaling |
+| JWKS fetch failures | 401 | Keycloak unreachable or wrong URL | Verify `KC_URL` and `KC_JWKS_BASE_URL`, check network connectivity, review JWKS cache settings |
+
+**Monitoring recommendations:**
+- **401 errors**: Indicates authentication problems (bad tokens, expired tokens) → review client token generation
+- **503 errors**: Indicates system overload (worker pool exhaustion) → scale resources or reduce load
+- **500 errors**: Indicates infrastructure problems (OOM, interruptions) → investigate system health
 
 ## Performance characteristics
 
