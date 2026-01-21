@@ -1,7 +1,6 @@
 package org.folio.sidecar.integration.keycloak.filter;
 
 import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_IMPERSONATION;
@@ -14,14 +13,13 @@ import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 
 import io.quarkus.security.UnauthorizedException;
-import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.jwt.openid.JsonWebTokenParser;
+import org.folio.sidecar.integration.keycloak.AsyncJsonWebTokenParser;
 import org.folio.sidecar.integration.keycloak.IntrospectionService;
 import org.folio.sidecar.integration.keycloak.KeycloakImpersonationService;
 import org.folio.sidecar.integration.users.UserService;
@@ -33,7 +31,7 @@ import org.folio.sidecar.service.filter.IngressRequestFilter;
 public class KeycloakImpersonationFilter implements IngressRequestFilter {
 
   private final UserService userService;
-  private final JsonWebTokenParser jwtParser;
+  private final AsyncJsonWebTokenParser asyncJwtParser;
   private final KeycloakImpersonationService impersonationService;
   private final IntrospectionService introspectionService;
 
@@ -85,12 +83,10 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
 
   private Future<RoutingContext> populateRoutingContextByAccessToken(RoutingContext rc, String impersonatedUserToken) {
     rc.request().headers().set(TOKEN, impersonatedUserToken);
-    try {
-      var jsonWebToken = jwtParser.parse(impersonatedUserToken);
-      putParsedToken(rc, jsonWebToken);
-      return succeededFuture(rc);
-    } catch (ParseException exception) {
-      return failedFuture(new UnauthorizedException("Failed to parse impersonated JWT", exception));
-    }
+    return asyncJwtParser.parseAsync(impersonatedUserToken)
+      .map(jsonWebToken -> {
+        putParsedToken(rc, jsonWebToken);
+        return rc;
+      });
   }
 }

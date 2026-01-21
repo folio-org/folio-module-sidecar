@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
@@ -35,7 +36,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.folio.jwt.openid.JsonWebTokenParser;
+import org.folio.sidecar.integration.keycloak.AsyncJsonWebTokenParser;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -51,18 +52,18 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
 
   private static final String TEST_USER_ID = UUID.randomUUID().toString();
 
-  @Mock private JsonWebTokenParser jsonWebTokenParser;
+  @Mock private AsyncJsonWebTokenParser asyncJsonWebTokenParser;
   @Mock private HttpServerRequest request;
 
   @InjectMocks private KeycloakJwtFilter keycloakJwtFilter;
 
   @AfterEach
   void tearDown() {
-    verifyNoMoreInteractions(jsonWebTokenParser);
+    verifyNoMoreInteractions(asyncJsonWebTokenParser);
   }
 
   @Test
-  void filter_positive() throws Exception {
+  void filter_positive() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
@@ -70,7 +71,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -87,7 +88,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_userIdFromHeader() throws Exception {
+  void filter_positive_userIdFromHeader() {
     var customUserId = UUID.randomUUID().toString();
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, USER_ID, customUserId));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
@@ -96,7 +97,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -113,7 +114,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_authorizationHeader() throws Exception {
+  void filter_positive_authorizationHeader() {
     var requestHeaders = headers(Map.of(AUTHORIZATION, "Bearer " + AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
@@ -121,7 +122,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -138,7 +139,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_accessTokenAndSystemAccessToken() throws Exception {
+  void filter_positive_accessTokenAndSystemAccessToken() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, SYSTEM_TOKEN, systemToken));
@@ -149,7 +150,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenReturn(jsonWebToken);
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -167,7 +168,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_positive_systemTokenAndInvalidAmountOfSegmentsInJwt() throws Exception {
+  void filter_positive_systemTokenAndInvalidAmountOfSegmentsInJwt() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var dummyToken = "Dummy";
@@ -178,7 +179,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(request.headers()).thenReturn(requestHeaders);
     });
 
-    when(jsonWebTokenParser.parse(dummyToken)).thenThrow(new ParseException(INVALID_SEGMENTS_JWT_ERROR_MSG));
+    when(asyncJsonWebTokenParser.parseAsync(dummyToken)).thenReturn(Future.failedFuture(
+      new UnauthorizedException("Failed to parse JWT", new ParseException(INVALID_SEGMENTS_JWT_ERROR_MSG))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
@@ -210,11 +212,11 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     verify(routingContext, never()).put(anyString(), any());
 
     assertThat(requestHeaders.get(SYSTEM_TOKEN)).isEqualTo(systemToken);
-    verifyNoInteractions(jsonWebTokenParser);
+    verifyNoInteractions(asyncJsonWebTokenParser);
   }
 
   @Test
-  void filter_negative_systemTokenAndUnknownErrorForJwt() throws Exception {
+  void filter_negative_systemTokenAndUnknownErrorForJwt() {
     var systemToken = "c3lzdGVtLWFjY2Vzcy10b2tlbg==";
     var systemJwt = mock(JsonWebToken.class);
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN, SYSTEM_TOKEN, systemToken));
@@ -225,7 +227,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+      new UnauthorizedException("Failed to parse JWT", new ParseException("Invalid JWT"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
@@ -266,18 +269,19 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       .isInstanceOf(BadRequestException.class)
       .hasMessage("X-Okapi-Token is not equal to Authorization token");
 
-    verifyNoInteractions(jsonWebTokenParser);
+    verifyNoInteractions(asyncJsonWebTokenParser);
   }
 
   @Test
-  void filter_negative_parsingFailure() throws Exception {
+  void filter_negative_parsingFailure() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
       when(request.headers()).thenReturn(requestHeaders);
     });
 
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Failed to parse JWT, invalid offset"));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+      new UnauthorizedException("Failed to parse JWT", new ParseException("Failed to parse JWT, invalid offset"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
@@ -307,7 +311,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
   }
 
   @Test
-  void filter_negative_selfRequestWithInvalidToken() throws ParseException {
+  void filter_negative_selfRequestWithInvalidToken() {
     var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
     var routingContext = routingContext(scRoutingEntry(), rc -> {
       when(rc.request()).thenReturn(request);
@@ -316,7 +320,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
     });
 
-    when(jsonWebTokenParser.parse(AUTH_TOKEN)).thenThrow(new ParseException("Invalid JWT"));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+      new UnauthorizedException("Failed to parse JWT", new ParseException("Invalid JWT"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
 
