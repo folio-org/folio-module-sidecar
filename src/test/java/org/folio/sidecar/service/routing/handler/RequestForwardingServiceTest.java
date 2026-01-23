@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -129,12 +130,14 @@ class RequestForwardingServiceTest {
     // Trigger the captured handler manually
     requestDrainHandlerCaptor.getValue().handle(null);
     // Verify that resume() was called on httpServerRequest
-    verify(routingContext.request()).resume();
+    // (called twice: once after handler setup, once in drain handler)
+    verify(routingContext.request(), times(2)).resume();
 
     // Simulate receiving a buffer
     requestHandlerCaptor.getValue().handle(buffer);
     // Verify httpServerRequest.pause() is called
-    verify(routingContext.request()).pause();
+    // (called twice: once at start, once when write queue is full)
+    verify(routingContext.request(), times(2)).pause();
     // Verify that the buffer is still written to httpClientRequest
     verify(httpClientRequest).write(buffer);
 
@@ -245,12 +248,14 @@ class RequestForwardingServiceTest {
     // Trigger the captured handler manually
     requestDrainHandlerCaptor.getValue().handle(null);
     // Verify that resume() was called on httpServerRequest
-    verify(routingContext.request()).resume();
+    // (called twice: once after handler setup, once in drain handler)
+    verify(routingContext.request(), times(2)).resume();
 
     // Simulate receiving a buffer
     requestHandlerCaptor.getValue().handle(buffer);
     // Verify httpServerRequest.pause() is called
-    verify(routingContext.request()).pause();
+    // (called twice: once at start, once when write queue is full)
+    verify(routingContext.request(), times(2)).pause();
     // Verify that the buffer is still written to httpClientRequest
     verify(httpClientRequest).write(buffer);
 
@@ -319,12 +324,14 @@ class RequestForwardingServiceTest {
     // Trigger the captured handler manually
     requestDrainHandlerCaptor.getValue().handle(null);
     // Verify that resume() was called on httpServerRequest
-    verify(routingContext.request()).resume();
+    // (called twice: once after handler setup, once in drain handler)
+    verify(routingContext.request(), times(2)).resume();
 
     // Simulate receiving a buffer
     requestHandlerCaptor.getValue().handle(buffer);
     // Verify httpServerRequest.pause() is called
-    verify(routingContext.request()).pause();
+    // (called twice: once at start, once when write queue is full)
+    verify(routingContext.request(), times(2)).pause();
     // Verify that the buffer is still written to httpClientRequest
     verify(httpClientRequest).write(buffer);
 
@@ -476,6 +483,55 @@ class RequestForwardingServiceTest {
     assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request: Unknown error");
   }
 
+  @CsvSource({
+    "GET",
+    "HEAD"
+  })
+  @ParameterizedTest
+  void forward_positive_nonBodyHttpMethods(String httpMethod) {
+    var method = io.vertx.core.http.HttpMethod.valueOf(httpMethod);
+    var routingContext = routingContext(rc -> {
+      var response = mock(HttpServerResponse.class);
+      when(rc.response()).thenReturn(response);
+      when(response.setStatusCode(SC_OK)).thenReturn(response);
+      when(rc.request().method()).thenReturn(method);
+    });
+    var encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && method == options.getMethod())))
+      .thenReturn(Future.succeededFuture(httpClientRequest));
+
+    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
+    when(httpClientRequest.headers()).thenReturn(headers);
+    when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+    when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+    when(httpClientRequest.response()).thenReturn(succeededFuture(httpClientResponse));
+    when(httpClientRequest.drainHandler(requestDrainHandlerCaptor.capture())).thenReturn(httpClientRequest);
+
+    prepareHttpResponseMocksForNonBodyHttpMethods(routingContext, httpClientResponse);
+
+    var response = routingContext.response();
+    when(response.headers()).thenReturn(headersResponse);
+    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
+
+    service.forwardIngress(routingContext, absoluteUrl);
+
+    // Verify that end() was called immediately for GET/HEAD request (no endHandler)
+    verify(httpClientRequest).end();
+    // Verify that pause was called initially for stream control
+    verify(routingContext.request()).pause();
+
+    var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
+    assertThat(capturedRequestHeaders).hasSize(3);
+    assertThat(capturedRequestHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
+    assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
+  }
+
   private void prepareHttpResponseMocks(RoutingContext routingContext, HttpClientResponse httpClientResponse) {
     when(httpClientResponse.headers()).thenReturn(responseHeaders());
     when(httpClientResponse.statusCode()).thenReturn(SC_OK);
@@ -551,5 +607,20 @@ class RequestForwardingServiceTest {
       .add("query", "name==test")
       .add("offset", "10")
       .add("size", "50");
+  }
+
+  private void prepareHttpResponseMocksForNonBodyHttpMethods(RoutingContext routingContext,
+    HttpClientResponse httpClientResponse) {
+
+    when(httpClientResponse.headers()).thenReturn(responseHeaders());
+    when(httpClientResponse.statusCode()).thenReturn(SC_OK);
+
+    HttpServerResponse httpServerResponse = routingContext.response();
+    // Mock drainHandler method
+    when(httpServerResponse.drainHandler(responseDrainHandlerCaptor.capture())).thenReturn(httpServerResponse);
+    // Mock handler method
+    when(httpClientResponse.handler(responseHandlerCaptor.capture())).thenReturn(httpClientResponse);
+    // Mock endHandler method
+    when(httpClientResponse.endHandler(responseEndHandlerCaptor.capture())).thenReturn(httpClientResponse);
   }
 }
