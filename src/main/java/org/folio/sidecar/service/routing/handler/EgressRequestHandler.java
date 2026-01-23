@@ -115,6 +115,8 @@ class EgressRequestHandler implements RoutingEntryHandler {
     var rq = rc.request();
     var updatedPath = pathProcessor.cleanIngressRequestPath(rc.request().path());
 
+    rc.put("uct", System.currentTimeMillis());
+
     log.debug("Forwarding egress request to module: [method: {}, uri: {}, moduleId: {}, url: {}]",
       rq::method, dumpUri(rc), routingEntry::getModuleId, routingEntry::getLocation);
 
