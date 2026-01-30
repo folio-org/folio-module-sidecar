@@ -162,8 +162,7 @@ public class RequestForwardingService {
         .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS)
         .onSuccess(response -> {
           log.trace("Handle the HTTP client response by streaming the output back to the server");
-          handleSuccessfulResponse(rc, response, result);
-          transactionLogHandler.log(rc, response, httpClientRequest);
+          handleSuccessfulResponse(rc, response, result, httpClientRequest);
         }).onFailure(error -> {
           var errorMessage = format("Failed to proxy request because of response error: %s", error.getMessage());
           log.error(errorMessage);
@@ -228,13 +227,14 @@ public class RequestForwardingService {
     return headers;
   }
 
-  private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp, Promise<Void> result) {
+  private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp, Promise<Void> result,
+    HttpClientRequest httpClientRequest) {
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
     rc.put("uht", System.currentTimeMillis());
 
-    removeSidecarSignatureThenEndResponse(rc, resp, response, result);
+    removeSidecarSignatureThenEndResponse(rc, resp, response, result, httpClientRequest);
   }
 
   /**
@@ -244,9 +244,10 @@ public class RequestForwardingService {
    * @param httpClientResponse - {@link HttpResponse} object
    * @param httpServerResponse - {@link HttpServerResponse} object
    * @param result             - result promise
+   * @param httpClientRequest  - {@link HttpClientRequest} object for transaction logging
    */
   private void removeSidecarSignatureThenEndResponse(RoutingContext rc, HttpClientResponse httpClientResponse,
-    HttpServerResponse httpServerResponse, Promise<Void> result) {
+    HttpServerResponse httpServerResponse, Promise<Void> result, HttpClientRequest httpClientRequest) {
     sidecarSignatureService.removeSignature(httpServerResponse);
 
     // Set the maximum write queue size to prevent memory overflow
@@ -271,6 +272,7 @@ public class RequestForwardingService {
       log.trace("Response to the server  complete, ending request.");
       rc.put("urt", System.currentTimeMillis());
       httpServerResponse.end();
+      transactionLogHandler.log(rc, httpClientResponse, httpClientRequest);
       result.complete();
     });
 
