@@ -133,7 +133,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     var permission = getKeycloakPermissionName(rc);
 
     log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
-
+    log.info("Token = {}, tenant = {}, permission = {}", jwt::getRawToken, () -> tenant, () -> permission);
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);

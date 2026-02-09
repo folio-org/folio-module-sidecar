@@ -85,6 +85,7 @@ class EgressRequestHandler implements RoutingEntryHandler {
       .map(serviceToken -> {
         RoutingUtils.setHeader(rc, OkapiHeaders.SYSTEM_TOKEN, serviceToken);
 
+        log.info("Populating System Token using [{}]", serviceToken);
         log.debug("Service token assigned to {} header: token = {} [requestId: {}]",
           () -> OkapiHeaders.SYSTEM_TOKEN, () -> tokenHash(serviceToken), () -> rc.request().getHeader(REQUEST_ID));
         return null;
