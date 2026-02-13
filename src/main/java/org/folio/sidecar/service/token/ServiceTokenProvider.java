@@ -126,13 +126,11 @@ public class ServiceTokenProvider {
 
   private void syncTenantCache(Set<String> tenants) {
     log.info("Synchronizing service token cache...");
-    var enabledTenants = tenants == null ? emptySet() : tenants;
     var cachedTenants = tokenCache.asMap().keySet();
 
     if (isNotEmpty(cachedTenants)) {
-      var toInvalidate = cachedTenants.stream().filter(cached -> !enabledTenants.contains(cached)).toList();
-      log.info("Invalidating service token cache for tenants: tenants = {}", toInvalidate);
-      tokenCache.synchronous().invalidateAll(toInvalidate);
+      log.info("Invalidating service token cache for tenants: tenants = {}", cachedTenants);
+      tokenCache.synchronous().invalidateAll(cachedTenants);
     }
 
     if (isNotEmpty(tenants)) {
