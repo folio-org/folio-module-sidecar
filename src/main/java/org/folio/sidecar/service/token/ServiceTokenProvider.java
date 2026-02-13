@@ -136,7 +136,7 @@ public class ServiceTokenProvider {
     if (isNotEmpty(tenants)) {
       var toLoad = tenants.stream().filter(t -> !cachedTenants.contains(t)).toList();
       log.info("Retrieving service token cache for tenants: tenants = {}", toLoad);
-      tokenCache.getAll(toLoad);
+      tokenCache.synchronous().getAll(toLoad);
     }
   }
 }
