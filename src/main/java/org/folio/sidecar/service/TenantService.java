@@ -1,9 +1,11 @@
 package org.folio.sidecar.service;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import io.quarkus.scheduler.Scheduled;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -40,10 +42,15 @@ public class TenantService {
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
 
+  private final Promise<Void> initPromise = Promise.promise();
+  private volatile Future<Void> loadingFuture = initPromise.future();
+
   public Future<Void> init() {
     log.info("Effective cron for tenant entitlements reset-task: {}", resetTaskCronDefinition);
 
-    return loadTenantsAndEntitlements().map((Void) null).onSuccess(unused ->
+    loadTenantsAndEntitlements(initPromise);
+
+    return initPromise.future().onSuccess(unused ->
       log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
   }
 
@@ -61,27 +68,18 @@ public class TenantService {
     }
   }
 
-  public Future<List<Tenant>> loadTenantsAndEntitlements() {
-    return retryTemplate.callAsync(() ->
-      tokenProvider.getAdminToken().compose(token ->
-        tenantEntitlementClient.getModuleEntitlements(moduleProperties.getId(), token)
-          .map(TenantService::getTenantIds)
-          .compose(tenantIds -> tenantManagerClient.getTenantInfo(tenantIds, token)
-            .onSuccess(this::addEnabledTenants)
-            .onFailure(throwable -> log.warn("Failed to load tenants", throwable)))
-          .onFailure(throwable -> log.warn("Failed to load tenant entitlements", throwable)))
-    );
-  }
-
   public boolean isAssignedModule(String moduleId) {
     return Objects.equals(moduleProperties.getId(), moduleId);
   }
 
-  public boolean isEnabledTenant(String name) {
-    if (isEmpty(name)) {
-      return false;
-    }
-    return enabledTenants.contains(name);
+  public Future<Set<String>> getEnabledTenants() {
+    return loadingFuture.map(v -> Set.copyOf(enabledTenants));
+  }
+
+  public Future<Boolean> isEnabledTenant(String name) {
+    return isEmpty(name)
+      ? succeededFuture(false)
+      : loadingFuture.map(v -> enabledTenants.contains(name));
   }
 
   /**
@@ -90,7 +88,11 @@ public class TenantService {
   */
   public void executeTenantsAndEntitlementsTask() {
     if (canExecuteTenantsAndEntitlementsTask.compareAndSet(true, false)) {
-      loadTenantsAndEntitlements();
+      var promise = Promise.<Void>promise();
+      loadingFuture = promise.future();
+
+      loadTenantsAndEntitlements(promise);
+
       log.info("Task to load tenants and entitlements started");
     }
   }
@@ -103,10 +105,18 @@ public class TenantService {
     }
   }
 
-  private static List<String> getTenantIds(ResultList<Entitlement> resultList) {
-    return resultList.getRecords()
-      .stream().map(Entitlement::getTenantId)
-      .toList();
+  private void loadTenantsAndEntitlements(Promise<Void> promise) {
+    var retryFuture = retryTemplate.callAsync(() ->
+      tokenProvider.getAdminToken().compose(token ->
+        tenantEntitlementClient.getModuleEntitlements(moduleProperties.getId(), token)
+          .map(TenantService::getTenantIds)
+          .compose(tenantIds -> tenantManagerClient.getTenantInfo(tenantIds, token)
+            .onSuccess(this::addEnabledTenants)
+            .onFailure(throwable -> log.warn("Failed to load tenants", throwable)))
+          .onFailure(throwable -> log.warn("Failed to load tenant entitlements", throwable)))
+    );
+
+    retryFuture.onComplete(unused -> promise.complete(), promise::fail);
   }
 
   private void addEnabledTenants(List<Tenant> tenants) {
@@ -118,5 +128,11 @@ public class TenantService {
 
   private void notifyEntitlementsChanged() {
     eventBus.publish(EntitlementsEvent.ENTITLEMENTS_EVENT, EntitlementsEvent.of(Set.copyOf(enabledTenants)));
+  }
+
+  private static List<String> getTenantIds(ResultList<Entitlement> resultList) {
+    return resultList.getRecords()
+      .stream().map(Entitlement::getTenantId)
+      .toList();
   }
 }

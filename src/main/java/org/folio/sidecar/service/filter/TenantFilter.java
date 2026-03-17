@@ -9,6 +9,8 @@ import static org.folio.sidecar.utils.RoutingUtils.isTenantInstallRequest;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.TenantNotEnabledException;
@@ -26,8 +28,16 @@ public class TenantFilter implements IngressRequestFilter {
   public Future<RoutingContext> filter(RoutingContext rc) {
     var tenant = rc.request().headers().get(OkapiHeaders.TENANT);
     return tenantService.isEnabledTenant(tenant)
-      ? succeededFuture(rc)
-      : getFailedFuture(tenant);
+      .compose(getOrThrow(
+        () -> rc,
+        () -> new TenantNotEnabledException(tenant))
+      )
+      .onFailure(exc -> {
+        // load tenants and entitlements if tenant is not enabled
+        if  (exc instanceof TenantNotEnabledException) {
+          tenantService.executeTenantsAndEntitlementsTask();
+        }
+      });
   }
 
   @Override
@@ -40,8 +50,8 @@ public class TenantFilter implements IngressRequestFilter {
     return TENANT.getOrder();
   }
 
-  private Future<RoutingContext> getFailedFuture(String tenant) {
-    tenantService.executeTenantsAndEntitlementsTask();
-    return failedFuture(new TenantNotEnabledException(tenant));
+  private static <T> Function<Boolean, Future<T>> getOrThrow(Supplier<T> positiveSupplier,
+    Supplier<Throwable> excSupplier) {
+    return val -> val ? succeededFuture(positiveSupplier.get()) : failedFuture(excSupplier.get());
   }
 }
