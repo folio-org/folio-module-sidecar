@@ -42,7 +42,7 @@ public class TenantService {
   private final Set<String> enabledTenants = new ConcurrentHashSet<>();
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
 
-  private final Promise<Void> initPromise = Promise.promise();
+  private Promise<Void> initPromise = Promise.promise();
   private volatile Future<Void> loadingFuture = initPromise.future();
 
   public Future<Void> init() {
@@ -50,8 +50,12 @@ public class TenantService {
 
     loadTenantsAndEntitlements(initPromise);
 
-    return initPromise.future().onSuccess(unused ->
+    var result = initPromise.future().onSuccess(unused ->
       log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
+
+    initPromise = null;  // once utilized the initialization promise is no longer needed
+
+    return result;
   }
 
   public void enableTenant(String tenantName) {

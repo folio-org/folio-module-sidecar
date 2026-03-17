@@ -65,9 +65,13 @@ public class RoutingConfiguration {
     @Named("dynamicEgressHandler") Instance<ChainedHandler> dynamicEgressHandler,
     @Named("gatewayEgressHandler") Instance<ChainedHandler> gatewayEgressHandler,
     @Named("notFoundHandler") ChainedHandler notFoundHandler) {
-    var handler = moduleEntitlementHandler.isResolvable()
-      ? moduleEntitlementHandler.get()
-      : ingressHandler;
+    var handler = ingressHandler;
+
+    if (moduleEntitlementHandler.isResolvable()) {
+      // put module entitlement handler in front of ingress handler
+      handler = moduleEntitlementHandler.get().next(handler);
+      log.debug("Module entitlement handler added to the handlers chain");
+    }
 
     handler = handler.next(egressHandler);
 
