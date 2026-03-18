@@ -43,7 +43,7 @@ public class TenantService {
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
 
   private Promise<Void> initPromise = Promise.promise();
-  private volatile Future<Void> loadingFuture = initPromise.future();
+  private Future<Void> loadingFuture = initPromise.future();
 
   public Future<Void> init() {
     log.info("Effective cron for tenant entitlements reset-task: {}", resetTaskCronDefinition);
@@ -53,7 +53,7 @@ public class TenantService {
     var result = initPromise.future().onSuccess(unused ->
       log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
 
-    initPromise = null;  // once utilized the initialization promise is no longer needed
+    initPromise = null; // once utilized the initialization promise is no longer needed
 
     return result;
   }
