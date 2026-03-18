@@ -41,3 +41,5 @@ nb-configuration.xml
 
 # AI tools
 .claude/
+.codemie/
+.agents/
