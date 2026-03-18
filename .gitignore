@@ -45,3 +45,7 @@ temp/
 # AI tools
 .claude/
 .codemie/
+<<<<<<< MODSIDECAR-180
+=======
+.agents/
+>>>>>>> master
