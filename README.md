@@ -1,6 +1,6 @@
 # folio-module-sidecar
 
-Copyright (C) 2023-2025 The Open Library Foundation
+Copyright (C) 2023-2026 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -11,7 +11,26 @@ Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
 * [Compiling](#compiling)
     * [Creating a native executable](#creating-a-native-executable)
 * [Running It](#running-it)
+    * [Building And Running JVM Based docker container](#building-and-running-jvm-based-docker-container)
+    * [Building and Running Native docker container](#building-and-running-native-docker-container)
+    * [Building FIPS compatible image](#building-fips-compatible-image)
+    * [Difference between building native executables using a docker-approach and a Graalvm-approach](#difference-between-building-native-executables-using-a-docker-approach-and-a-graalvm-approach)
 * [Environment Variables](#environment-variables)
+    * [Logging configuration](#logging-configuration)
+    * [keycloak integration environment variables](#keycloak-integration-environment-variables)
+    * [api-gateway integration environment variables](#api-gateway-integration-environment-variables)
+    * [mgr-tenant-entitlements integration environment variables](#mgr-tenant-entitlements-integration-environment-variables)
+    * [mgr-tenants integration environment variables](#mgr-tenants-integration-environment-variables)
+    * [mgr-applications integration environment variables](#mgr-applications-integration-environment-variables)
+    * [Kafka configuration properties for `{{env}}.{{tenant}}.mod-login-keycloak.logout` event](#kafka-configuration-properties-for-envtenantmod-login-keycloaklogout-event)
+    * [mod-users-keycloak integration environment variables](#mod-users-keycloak-integration-environment-variables)
+    * [Secure storage environment variables](#secure-storage-environment-variables)
+* [Security](#security)
+    * [Authorizing user in the sidecar](#authorizing-user-in-the-sidecar)
+    * [Ingress](#ingress)
+    * [Egress](#egress)
+    * [Access logging](#access-logging)
+* [Module Entitlement Endpoint](#module-entitlement-endpoint)
 
 ## Introduction
 
@@ -21,6 +40,7 @@ Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
 * module independent, uses Okapi Module Descriptors for self-configuration
 * Ingress request routing for underlying module (specified using environment variables)
 * Egress request routing for module-to-module communication
+* Exposes an operational endpoint for querying enabled tenant entitlements (see [Module Entitlement Endpoint](#module-entitlement-endpoint))
 
 ## Compiling
 
@@ -222,6 +242,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | SC_CLIENT_TLS_TRUSTSTORE_PROVIDER            |                         |  false   | Truststore provider for egress web client                                                                                                                                                                                                                      |
 | WEB_CLIENT_TLS_VERIFY_HOSTNAME               | false                   |  false   | Defines whether verify hostname for web client or not.                                                                                                                                                                                                         |
 | ROUTING_DYNAMIC_ENABLED                      | false                   |  false   | Enables/disables dynamic route feature. If `ROUTING_DYNAMIC_ENABLED` is enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` should be disabled.                                                                                                                        |
+| ROUTING_MODULE_ENTITLEMENT_ENABLED           | true                    |  false   | Enables/disables the `GET /entitlements/modules/{moduleId}` endpoint for querying enabled tenant names. See [Module Entitlement Endpoint](#module-entitlement-endpoint).                                                                                       |
 | TENANT_SERVICE_RESET_TASK_CRON_DEFINITION    | 0 */5 * * * ?           |  false   | Property defines a cron expression that schedules a periodic task for resetting tenant services to load tenants and entitlements                                                                                                                               |
 
 ### Logging configuration
@@ -461,3 +482,23 @@ Required when `SECRET_STORE_TYPE=FSSP`
 | x-okapi-tenant            | OKAPI tenant header value.                                                                                                                     |
 | x-okapi-user-id           | OKAPI user id header value.                                                                                                                    |
 | x-okapi-request-id        | OKAPI request id header value.                                                                                                                 |
+
+## Module Entitlement Endpoint
+
+The sidecar exposes a lightweight operational endpoint that allows the co-located module to query which tenants are currently entitled for it:
+
+```
+GET /entitlements/modules/{moduleId}
+```
+
+This is intended for use by modules that consume Kafka events and need to filter out messages for tenants that have not entitled them. Rather than each module maintaining its own entitlement state, it delegates to the sidecar, which already tracks enabled tenants in memory (loaded at startup and kept up-to-date via the `entitlement` Kafka topic).
+
+| Scenario                                         | Response                                                                     |
+|:-------------------------------------------------|:-----------------------------------------------------------------------------|
+| `{moduleId}` matches the sidecar's own module ID | `200 OK` — JSON array of enabled tenant names, e.g. `["tenant1", "tenant2"]` |
+| `{moduleId}` does not match                      | `403 Forbidden`                                                              |
+| Request method is not `GET`                      | Passes through to the normal routing chain                                   |
+
+The endpoint sits **before** the ingress filter chain and therefore requires no JWT token or `x-okapi-tenant` header. It can be called freely from within the same pod.
+
+This feature can be disabled via the `ROUTING_MODULE_ENTITLEMENT_ENABLED` environment variable (default: `true`). When disabled, the handler is not added to the routing chain at all.

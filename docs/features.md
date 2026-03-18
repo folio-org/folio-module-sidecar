@@ -7,6 +7,7 @@ This directory contains detailed technical documentation for major features of t
 | Feature                                                       | Description                                                                                                           | Status    |
 |---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-----------|
 | [JWT Token Verification](features/jwt-token-verification.md)  | Asynchronous JWT token verification and parsing with RSA signature verification, JWKS caching, and claim extraction   | Active    |
+| [Module Entitlement Query](features/module-entitlement-query.md) | Endpoint for querying which tenants are currently entitled for this module (`GET /entitlements/modules/{moduleId}`) | Active    |
 
 ---
 
@@ -32,6 +33,27 @@ This directory contains detailed technical documentation for major features of t
 - `KC_URL` - Keycloak base URL
 - `KC_JWKS_REFRESH_INTERVAL` - JWKS cache refresh (default: 60s)
 - `quarkus.vertx.worker-pool-size` - Worker thread pool size (default: 20)
+
+---
+
+### Module Entitlement Query
+
+**What it does:** Exposes `GET /entitlements/modules/{moduleId}` so the co-located module can retrieve which tenants are currently entitled for it.
+
+**Key capabilities:**
+- Returns a JSON array of enabled tenant names
+- Bypasses all authentication filters (positioned before ingress handler)
+- Waits for tenant loading to complete before responding (async-safe)
+- Validates that the path module ID matches the sidecar's own `MODULE_ID`
+- Disabled cleanly when `ROUTING_MODULE_ENTITLEMENT_ENABLED=false`
+
+**Entry points:**
+- `ModuleEntitlementHandler` - Handles the request and writes the JSON response
+- `TenantService.getEnabledTenants()` - Provides the current tenant set
+
+**Configuration:**
+- `ROUTING_MODULE_ENTITLEMENT_ENABLED` - Enable/disable the endpoint (default: `true`)
+- `MODULE_ID` - The module ID this sidecar serves; used to validate the path parameter
 
 ---
 

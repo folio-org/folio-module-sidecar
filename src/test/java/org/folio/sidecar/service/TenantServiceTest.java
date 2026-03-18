@@ -3,7 +3,7 @@ package org.folio.sidecar.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -260,7 +260,7 @@ class TenantServiceTest {
     var future = tenantService.getEnabledTenants();
 
     assertThat(future.succeeded()).isTrue();
-    assertThat(future.result().contains(TestConstants.TENANT_NAME)).isTrue();
+    assertThat(future.result()).containsExactly(TestConstants.TENANT_NAME);
   }
 
   @Test
@@ -278,7 +278,7 @@ class TenantServiceTest {
     loadingPromise.complete();
 
     assertThat(future.isComplete()).isTrue();
-    assertThat(future.result().isEmpty()).isTrue();
+    assertThat(future.result()).isEmpty();
   }
 
   @Test
