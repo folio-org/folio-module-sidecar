@@ -106,7 +106,7 @@ class JsonConverterTest {
       .isInstanceOf(BadRequestException.class)
       .hasMessage("Failed to parse http response: Unrecognized token 'value': "
         + "was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n"
-        + " at [Source: (String)\"{\"field\":value}\"; line: 1, column: 15]");
+        + " at [Source: (String)\"{\"field\":value}\"; line: 1, column: 10]");
     verify(objectMapper).readValue(INVALID_JSON_BODY, TestClass.class);
   }
 
@@ -145,7 +145,7 @@ class JsonConverterTest {
       .isInstanceOf(BadRequestException.class)
       .hasMessage("Failed to parse http response: Unrecognized token 'value': "
         + "was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')\n"
-        + " at [Source: (String)\"{\"field\":value}\"; line: 1, column: 15]");
+        + " at [Source: (String)\"{\"field\":value}\"; line: 1, column: 10]");
     verify(objectMapper).readValue(eq(INVALID_JSON_BODY), ArgumentMatchers.<TypeReference<TestClass>>any());
   }
 
