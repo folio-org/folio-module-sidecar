@@ -26,3 +26,4 @@
 * Fix event loop blocking during JWT token parsing by offloading to worker threads (MODSIDECAR-168)
 * Sidecar:The request has already been read, but the HTTP client still needs to be closed (MODSIDECAR-169)
 * Migrate CI from Jenkins to GitHub Actions Maven central workflow (MODSIDECAR-179)
+* Implement API for returning entitlement information (MODSIDECAR-180)

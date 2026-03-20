@@ -11,6 +11,7 @@ import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
 import static org.folio.sidecar.support.TestUtils.asJson;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -521,7 +522,7 @@ class SidecarIT {
 
   @Test
   void handleIngressRequest_negative_selfRequestWithInvalidToken() {
-    authToken = RandomStringUtils.random(20);
+    authToken = RandomStringUtils.secure().next(20);
     var signature = TestUtils.getSignature();
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
@@ -668,6 +669,53 @@ class SidecarIT {
       .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
       .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
       .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleEntitlementRequest_positive() {
+    TestUtils.givenJson()
+      .get("/entitlements/modules/" + TestConstants.MODULE_ID)
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .contentType(is(APPLICATION_JSON))
+      .body("$", hasItem(TestConstants.TENANT_NAME));
+  }
+
+  @Test
+  void handleEntitlementRequest_negative_wrongModuleId() {
+    TestUtils.givenJson()
+      .get("/entitlements/modules/mod-bar-1.0.0")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_FORBIDDEN))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("ForbiddenException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Access Denied")
+      );
+  }
+
+  @Test
+  void handleEntitlementRequest_negative_nonGetMethod() {
+    TestUtils.givenJson()
+      .post("/entitlements/modules/" + TestConstants.MODULE_ID)
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_NOT_FOUND))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("NotFoundException"),
+        "errors[0].code", is("route_not_found_error"),
+        "errors[0].message", is("Route is not found [method: POST, path: /entitlements/modules/"
+          + TestConstants.MODULE_ID + "]")
+      );
   }
 
   @Test
