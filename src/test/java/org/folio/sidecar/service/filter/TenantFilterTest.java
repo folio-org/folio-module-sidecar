@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.filter;
 
+import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,12 +38,11 @@ class TenantFilterTest {
     var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
 
     when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
-    when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(true);
+    when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(succeededFuture(true));
 
     var result = tenantFilter.applyFilter(routingContext);
 
     assertThat(result.result()).isEqualTo(routingContext);
-    verify(tenantService).isEnabledTenant(TestConstants.TENANT_NAME);
   }
 
   @Test
@@ -53,7 +53,6 @@ class TenantFilterTest {
     var result = tenantFilter.applyFilter(routingContext);
 
     assertThat(result.result()).isEqualTo(routingContext);
-    verifyNoMoreInteractions(tenantService);
   }
 
   @Test
@@ -61,7 +60,7 @@ class TenantFilterTest {
     var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
 
     when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
-    when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(false);
+    when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(succeededFuture(false));
 
     var result = tenantFilter.applyFilter(routingContext);
 

@@ -1,3 +1,7 @@
+## Version `v3.0.19` (24.04.2026)
+### Changes:
+* Implement API for returning entitlement information (MODSIDECAR-187)
+
 ## Version `v3.0.18` (06.01.2026)
 ### Changes:
 * 404 during timer call (MODSIDECAR-173)
