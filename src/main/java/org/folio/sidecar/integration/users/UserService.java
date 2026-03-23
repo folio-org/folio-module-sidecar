@@ -4,6 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 
@@ -62,18 +63,25 @@ public class UserService {
     requireNonNull(permissions, "Permissions must not be null");
 
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
+    var requestId = rc.request().getHeader(REQUEST_ID);
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
+      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, permissions.size(), requestId,
+        serviceToken));
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
-    String queryParams, String token) {
+    String queryParams, int permissionCount, String requestId, String token) {
+    var startedAt = System.nanoTime();
     return webClient.getAbs(buildUserPermissionsPath(modUsersProperties.getUrl(), userId) + "?" + queryParams)
       .putHeader(TENANT, tenant)
       .putHeader(TOKEN, token)
       .send()
+      .onSuccess(response -> log.info(
+        "Desired permissions resolved via mod-users-keycloak [requestId: {}, tenant: {}, userId: {}, "
+          + "permissionCount: {}, status: {}, durationMs: {}]",
+        requestId, tenant, userId, permissionCount, response.statusCode(), elapsedMillis(startedAt)))
       .flatMap(this::processResponsePermissions);
   }
 
@@ -112,6 +120,10 @@ public class UserService {
 
   private static String buildKey(String userId, String tenant) {
     return userId + "#" + tenant;
+  }
+
+  private static long elapsedMillis(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000L;
   }
 
   @RegisterForReflection

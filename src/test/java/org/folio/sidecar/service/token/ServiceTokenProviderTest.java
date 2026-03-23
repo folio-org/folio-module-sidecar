@@ -126,6 +126,7 @@ class ServiceTokenProviderTest {
 
     assertThat(tf.succeeded()).isTrue();
     assertThat(tf.result()).isEqualTo(TOKEN_RESPONSE.getAccessToken());
+    verify(tokenCache).getIfPresent(TENANT_NAME);
   }
 
   @Test
@@ -138,6 +139,7 @@ class ServiceTokenProviderTest {
 
     assertThat(tf.failed()).isTrue();
     assertThat(tf.cause()).hasMessageContaining("Failed to get token");
+    verify(tokenCache).getIfPresent(TENANT_NAME);
   }
 
   @Test

@@ -6,6 +6,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHORIZATION;
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
@@ -131,11 +132,16 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private Future<RoutingContext> authorizeAndCacheToken(JsonWebToken jwt, RoutingContext rc) {
     var tenant = getTenant(rc);
     var permission = getKeycloakPermissionName(rc);
+    var requestId = rc.request().getHeader(REQUEST_ID);
+    var startedAt = System.nanoTime();
 
     log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
 
     return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
+      .onSuccess(ignored -> log.info(
+        "Authorization cache miss resolved [requestId: {}, tenant: {}, permission: {}, durationMs: {}]",
+        requestId, tenant, permission, elapsedMillis(startedAt)))
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
   }
 
@@ -208,5 +214,9 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private static RoutingContext removePermissionNameValue(RoutingContext rc) {
     rc.remove(KC_PERMISSION_NAME);
     return rc;
+  }
+
+  private static long elapsedMillis(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000L;
   }
 }

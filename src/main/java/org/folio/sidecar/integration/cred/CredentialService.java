@@ -113,13 +113,19 @@ public class CredentialService {
       return Future.succeededFuture(creds);
     }
 
+    var startedAt = System.nanoTime();
     return secureStore.get(cacheKey)
       .map(secret -> {
         var credentials = credentialsFactory.apply(secret);
         cache.put(cacheKey, credentials);
         log.debug("Credentials stored in cache: key = {}", cacheKey);
+        log.info("Credentials loaded from secure store: key = {}, durationMs = {}", cacheKey, elapsedMillis(startedAt));
 
         return credentials;
       });
+  }
+
+  private static long elapsedMillis(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000L;
   }
 }

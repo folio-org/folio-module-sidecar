@@ -80,7 +80,15 @@ public class ServiceTokenProvider {
     log.info("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
       rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
-    return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
+    if (tokenCache.getIfPresent(tenant) != null) {
+      return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
+    }
+
+    var startedAt = System.nanoTime();
+    return Future.fromCompletionStage(tokenCache.get(tenant))
+      .onSuccess(ignored -> log.info("Service token cache miss resolved [requestId: {}, tenant: {}, durationMs: {}]",
+        requestId, tenant, elapsedMillis(startedAt)))
+      .map(TokenResponse::getAccessToken);
   }
 
   private Future<String> getTokenInternal(String tenant) {
@@ -140,5 +148,9 @@ public class ServiceTokenProvider {
       log.info("Retrieving service token cache for tenants: tenants = {}", toLoad);
       tokenCache.getAll(toLoad);
     }
+  }
+
+  private static long elapsedMillis(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000L;
   }
 }
