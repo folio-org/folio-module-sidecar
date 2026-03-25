@@ -6,6 +6,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Named;
+import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
@@ -21,6 +23,17 @@ public class UserCacheConfiguration {
       .initialCapacity(properties.getCacheInitialCapacity())
       .maximumSize(properties.getCacheMaxCapacity())
       .removalListener((k, jwt, cause) -> log.debug("Cached user removed: key={}, cause={}", k, cause))
+      .build();
+  }
+
+  @ApplicationScoped
+  @Named("permissionsCache")
+  public Cache<String, List<String>> permissionsCache(ModUsersProperties properties) {
+    return Caffeine.newBuilder()
+      .expireAfterWrite(properties.getPermissionsCacheExpirationSeconds(), SECONDS)
+      .initialCapacity(properties.getPermissionsCacheInitialCapacity())
+      .maximumSize(properties.getPermissionsCacheMaxCapacity())
+      .removalListener((k, v, cause) -> log.debug("Cached permissions removed: key={}, cause={}", k, cause))
       .build();
   }
 }

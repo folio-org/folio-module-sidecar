@@ -19,6 +19,7 @@ import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
@@ -31,13 +32,16 @@ public class UserService {
   private final WebClient webClient;
   private final ModUsersProperties modUsersProperties;
   private final Cache<String, User> userCache;
+  private final Cache<String, List<String>> permissionsCache;
   private final ServiceTokenProvider serviceTokenProvider;
 
   public UserService(@Named("webClientEgress") WebClient webClient, ModUsersProperties modUsersProperties,
-    Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
+    Cache<String, User> userCache, @Named("permissionsCache") Cache<String, List<String>> permissionsCache,
+    ServiceTokenProvider serviceTokenProvider) {
     this.webClient = webClient;
     this.modUsersProperties = modUsersProperties;
     this.userCache = userCache;
+    this.permissionsCache = permissionsCache;
     this.serviceTokenProvider = serviceTokenProvider;
   }
 
@@ -62,13 +66,25 @@ public class UserService {
     String tenant) {
     requireNonNull(permissions, "Permissions must not be null");
 
+    var cacheKey = buildPermissionsCacheKey(userId, tenant, permissions);
+    var cached = permissionsCache.getIfPresent(cacheKey);
+    if (cached != null) {
+      log.debug("Permissions cache hit: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
+      return succeededFuture(cached);
+    }
+
     var queryParams = permissions.stream().map(p -> "desiredPermissions=" + p).collect(joining("&"));
     var requestId = rc.request().getHeader(REQUEST_ID);
-    log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
+    log.debug("Permissions cache miss: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getToken(rc)
       .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, permissions.size(), requestId,
-        serviceToken));
+        serviceToken))
+      .onSuccess(resolved -> {
+        if (resolved != null) {
+          permissionsCache.put(cacheKey, resolved);
+        }
+      });
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
@@ -120,6 +136,11 @@ public class UserService {
 
   private static String buildKey(String userId, String tenant) {
     return userId + "#" + tenant;
+  }
+
+  private static String buildPermissionsCacheKey(String userId, String tenant, List<String> permissions) {
+    var sortedPermissions = permissions.stream().sorted().collect(Collectors.joining(","));
+    return userId + "#" + tenant + "#" + sortedPermissions;
   }
 
   private static long elapsedMillis(long startedAt) {

@@ -25,9 +25,9 @@ import org.folio.sidecar.integration.users.configuration.property.ModUsersProper
 import org.folio.sidecar.integration.users.model.User;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.support.types.UnitTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -39,14 +39,20 @@ class UserServiceTest {
   private static final String USER_ID = "00000000-0000-0000-0000-000000000000";
   private static final String MOD_URL = "http://mod-users-keycloak";
 
-  @InjectMocks private UserService userService;
+  private UserService userService;
 
   @Mock private WebClient webClient;
   @Mock private ModUsersProperties modUsersProperties;
   @Mock private ServiceTokenProvider serviceTokenProvider;
-  @Mock private Cache<String, User> cache;
+  @Mock private Cache<String, User> userCache;
+  @Mock private Cache<String, List<String>> permissionsCache;
   @Mock private HttpRequest<Buffer> httpRequest;
   @Mock private HttpResponse<Buffer> response;
+
+  @BeforeEach
+  void setUp() {
+    userService = new UserService(webClient, modUsersProperties, userCache, permissionsCache, serviceTokenProvider);
+  }
 
   @Test
   void findUser_positive_existsInCache() {
@@ -54,12 +60,12 @@ class UserServiceTest {
     var routingContext = routingContext(TARGET_TENANT);
     var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(cache.getIfPresent(key)).thenReturn(user);
+    when(userCache.getIfPresent(key)).thenReturn(user);
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
     assertThat(future.succeeded()).isTrue();
     verifyNoInteractions(webClient);
-    verifyNoMoreInteractions(cache);
+    verifyNoMoreInteractions(userCache);
   }
 
   @Test
@@ -70,7 +76,7 @@ class UserServiceTest {
     var key = USER_ID + "#" + TARGET_TENANT;
 
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
-    when(cache.getIfPresent(key)).thenReturn(null);
+    when(userCache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
@@ -82,9 +88,9 @@ class UserServiceTest {
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
     assertThat(future.succeeded()).isTrue();
-    verify(cache).getIfPresent(key);
-    verify(cache).put(key, user);
-    verifyNoMoreInteractions(cache, webClient);
+    verify(userCache).getIfPresent(key);
+    verify(userCache).put(key, user);
+    verifyNoMoreInteractions(userCache, webClient);
   }
 
   @Test
@@ -94,7 +100,7 @@ class UserServiceTest {
     var key = USER_ID + "#" + TARGET_TENANT;
 
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
-    when(cache.getIfPresent(key)).thenReturn(null);
+    when(userCache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
@@ -104,8 +110,8 @@ class UserServiceTest {
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
     assertThat(future.succeeded()).isFalse();
-    verify(cache).getIfPresent(key);
-    verifyNoMoreInteractions(cache, webClient);
+    verify(userCache).getIfPresent(key);
+    verifyNoMoreInteractions(userCache, webClient);
   }
 
   @Test
@@ -115,7 +121,7 @@ class UserServiceTest {
     var key = USER_ID + "#" + TARGET_TENANT;
 
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
-    when(cache.getIfPresent(key)).thenReturn(null);
+    when(userCache.getIfPresent(key)).thenReturn(null);
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
@@ -126,8 +132,8 @@ class UserServiceTest {
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
     assertThat(future.succeeded()).isFalse();
-    verify(cache).getIfPresent(key);
-    verifyNoMoreInteractions(cache, webClient);
+    verify(userCache).getIfPresent(key);
+    verifyNoMoreInteractions(userCache, webClient);
   }
 
   @Test
@@ -136,7 +142,9 @@ class UserServiceTest {
     var routingContext = routingContext(TENANT_NAME);
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var cacheKey = USER_ID + "#" + TENANT_NAME + "#" + "perm1,perm2";
 
+    when(permissionsCache.getIfPresent(cacheKey)).thenReturn(null);
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
@@ -146,11 +154,57 @@ class UserServiceTest {
     when(response.statusCode()).thenReturn(200);
     when(response.bodyAsJson(PermissionContainer.class)).thenReturn(new PermissionContainer(permissions));
 
-    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT_NAME);
 
     assertThat(userPermissions.succeeded()).isTrue();
+    assertThat(userPermissions.result()).containsExactly("perm1", "perm2");
+    verify(permissionsCache).getIfPresent(cacheKey);
+    verify(permissionsCache).put(cacheKey, permissions);
     verify(webClient).getAbs(url);
     verifyNoMoreInteractions(webClient);
+  }
+
+  @Test
+  void findUserPermissions_positive_cacheHit() {
+    var permissions = List.of("perm1", "perm2");
+    var cachedResult = List.of("perm1", "perm2");
+    var routingContext = routingContext(TENANT_NAME);
+    var cacheKey = USER_ID + "#" + TENANT_NAME + "#" + "perm1,perm2";
+
+    when(permissionsCache.getIfPresent(cacheKey)).thenReturn(cachedResult);
+
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT_NAME);
+
+    assertThat(userPermissions.succeeded()).isTrue();
+    assertThat(userPermissions.result()).containsExactly("perm1", "perm2");
+    verify(permissionsCache).getIfPresent(cacheKey);
+    verifyNoInteractions(webClient, serviceTokenProvider);
+  }
+
+  @Test
+  void findUserPermissions_positive_nullPermissionsNotCached() {
+    var permissions = List.of("perm1", "perm2");
+    var routingContext = routingContext(TENANT_NAME);
+    var url =
+      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var cacheKey = USER_ID + "#" + TENANT_NAME + "#" + "perm1,perm2";
+
+    when(permissionsCache.getIfPresent(cacheKey)).thenReturn(null);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
+    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(webClient.getAbs(url)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
+    when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
+    when(httpRequest.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(200);
+    when(response.bodyAsJson(PermissionContainer.class)).thenReturn(new PermissionContainer(null));
+
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT_NAME);
+
+    assertThat(userPermissions.succeeded()).isTrue();
+    assertThat(userPermissions.result()).isNull();
+    verify(permissionsCache).getIfPresent(cacheKey);
+    verifyNoMoreInteractions(permissionsCache);
   }
 
   @Test
@@ -159,7 +213,9 @@ class UserServiceTest {
     var routingContext = routingContext(TENANT_NAME);
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var cacheKey = USER_ID + "#" + TENANT_NAME + "#" + "perm1,perm2";
 
+    when(permissionsCache.getIfPresent(cacheKey)).thenReturn(null);
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
@@ -168,11 +224,12 @@ class UserServiceTest {
     when(httpRequest.send()).thenReturn(succeededFuture(response));
     when(response.statusCode()).thenReturn(400);
 
-    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT_NAME);
 
     assertThat(userPermissions.succeeded()).isFalse();
+    verify(permissionsCache).getIfPresent(cacheKey);
     verify(webClient).getAbs(url);
-    verifyNoMoreInteractions(webClient);
+    verifyNoMoreInteractions(webClient, permissionsCache);
   }
 
   @Test
@@ -181,7 +238,9 @@ class UserServiceTest {
     var routingContext = routingContext(TENANT_NAME);
     var url =
       MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var cacheKey = USER_ID + "#" + TENANT_NAME + "#" + "perm1,perm2";
 
+    when(permissionsCache.getIfPresent(cacheKey)).thenReturn(null);
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
     when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
@@ -189,10 +248,11 @@ class UserServiceTest {
     when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
     when(httpRequest.send()).thenReturn(failedFuture("failed"));
 
-    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT_NAME);
 
     assertThat(userPermissions.succeeded()).isFalse();
+    verify(permissionsCache).getIfPresent(cacheKey);
     verify(webClient).getAbs(url);
-    verifyNoMoreInteractions(webClient);
+    verifyNoMoreInteractions(webClient, permissionsCache);
   }
 }

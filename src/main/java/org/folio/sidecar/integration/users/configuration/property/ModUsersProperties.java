@@ -18,4 +18,11 @@ public class ModUsersProperties {
   @ConfigProperty(name = "mod-users-keycloak.cache-expiration-seconds") int cacheExpirationSeconds;
   @ConfigProperty(name = "mod-users-keycloak.cache-initial-capacity") int cacheInitialCapacity;
   @ConfigProperty(name = "mod-users-keycloak.cache-max-capacity") int cacheMaxCapacity;
+
+  @ConfigProperty(name = "mod-users-keycloak.permissions-cache-expiration-seconds")
+  int permissionsCacheExpirationSeconds;
+  @ConfigProperty(name = "mod-users-keycloak.permissions-cache-initial-capacity")
+  int permissionsCacheInitialCapacity;
+  @ConfigProperty(name = "mod-users-keycloak.permissions-cache-max-capacity")
+  int permissionsCacheMaxCapacity;
 }
