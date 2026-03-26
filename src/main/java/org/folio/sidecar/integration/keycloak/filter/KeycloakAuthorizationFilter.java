@@ -207,7 +207,12 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     if (authToken.containsClaim(SESSION_ID_CLAIM)) { // a client token does not have session_state claim
       keyJoiner.add(authToken.getClaim(SESSION_ID_CLAIM));
     }
-    keyJoiner.add(Long.toString(authToken.getExpirationTime()));
+    // Only include exp for user tokens (which have userId/sessionId claims).
+    // Service tokens lack these claims — their permissions rarely change at runtime.
+    // Staleness during upgrades is bounded by Caffeine TTL (~10 min).
+    if (authToken.containsClaim(USER_ID_CLAIM)) {
+      keyJoiner.add(Long.toString(authToken.getExpirationTime()));
+    }
     return keyJoiner.toString();
   }
 

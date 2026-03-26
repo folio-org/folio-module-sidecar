@@ -66,7 +66,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   private static final String KC_PERMISSION_NAME_KEY = "kcPermissionName";
 
   private static final long VALID_TOKEN_EXPIRATION_TIME = Instant.now().plusSeconds(60).getEpochSecond();
-  private static final long SYSTEM_TOKEN_EXPIRATION_TIME = Instant.now().plusSeconds(30).getEpochSecond();
 
   @Mock private KeycloakClient keycloakClient;
   @Mock private HttpResponse<Buffer> userTokenRptResponse;
@@ -343,7 +342,6 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private void prepareSystemTokenMocks(boolean cached) {
-    when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
     when(systemToken.containsClaim(USER_ID_CLAIM)).thenReturn(false);
     when(systemToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(false);
     when(authTokenCache.getIfPresent(systemTokenCacheKey())).thenReturn(cached ? systemToken : null);
@@ -391,7 +389,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private static String systemTokenCacheKey() {
-    return String.format("%s#%s#%s", KC_PERMISSION, TENANT_NAME, SYSTEM_TOKEN_EXPIRATION_TIME);
+    return String.format("%s#%s", KC_PERMISSION, TENANT_NAME);
   }
 
   protected ModuleBootstrapEndpoint moduleBootstrapEndpoint() {
