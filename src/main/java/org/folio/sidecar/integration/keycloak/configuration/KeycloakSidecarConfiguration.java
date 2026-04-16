@@ -1,6 +1,5 @@
 package org.folio.sidecar.integration.keycloak.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -11,6 +10,7 @@ import org.folio.jwt.openid.JsonWebTokenParser;
 import org.folio.jwt.openid.OpenidJwtParserProvider;
 import org.folio.jwt.openid.configuration.JwtParserConfiguration;
 import org.folio.sidecar.integration.keycloak.model.TokenIntrospectionResponse;
+import tools.jackson.databind.ObjectMapper;
 
 @Log4j2
 @Dependent
