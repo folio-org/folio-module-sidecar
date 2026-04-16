@@ -1,4 +1,4 @@
-## Version `v3.1.0` (in progress)
+## Version `v4.0.0` (16.04.2026)
 ### Changes:
 * Fixed port isn't in range issue (MODSIDECAR-108)
 * Restrict the Vertex WebClient to use only TLSv1.2 to enable TLS session resumption, as the BouncyCastle library currently does not support this feature for TLSv1.3. (MODSIDECAR-105)
