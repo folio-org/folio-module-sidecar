@@ -3,12 +3,12 @@ package org.folio.sidecar.support;
 import static io.restassured.RestAssured.given;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static tools.jackson.core.StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION;
+import static tools.jackson.databind.DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY;
+import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static tools.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonParser.Feature;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.specification.RequestSpecification;
 import java.io.File;
@@ -19,16 +19,23 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.folio.sidecar.service.SidecarSignatureService;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Log4j2
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TestUtils {
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-    .setSerializationInclusion(Include.NON_NULL)
-    .configure(Feature.INCLUDE_SOURCE_IN_LOCATION, true)
-    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+  public static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder()
+    .changeDefaultPropertyInclusion(include ->
+      include.withValueInclusion(JsonInclude.Include.NON_NULL)
+        .withContentInclusion(JsonInclude.Include.NON_NULL))
+    .configure(INCLUDE_SOURCE_IN_LOCATION, true)
+    .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
+    .configure(ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+    .configure(SORT_PROPERTIES_ALPHABETICALLY, false)
+    .build();
 
   @SneakyThrows
   public static String readString(String path) {

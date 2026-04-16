@@ -9,9 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.ws.rs.BadRequestException;
@@ -28,6 +25,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -42,7 +42,7 @@ class JsonConverterTest {
   @Spy private final ObjectMapper objectMapper = TestUtils.OBJECT_MAPPER;
 
   @Test
-  void toJson_positive() throws JsonProcessingException {
+  void toJson_positive() throws JacksonException {
     var actual = jsonConverter.toJson(TestClass.of(FIELD_VALUE));
     assertThat(actual).isEqualTo(JSON_BODY);
 
