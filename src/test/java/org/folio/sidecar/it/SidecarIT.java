@@ -522,7 +522,7 @@ class SidecarIT {
 
   @Test
   void handleIngressRequest_negative_selfRequestWithInvalidToken() {
-    authToken = RandomStringUtils.random(20);
+    authToken = RandomStringUtils.secure().next(20);
     var signature = TestUtils.getSignature();
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
