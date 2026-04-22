@@ -3,7 +3,7 @@ package org.folio.sidecar.service;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -66,7 +66,7 @@ class TenantServiceTest {
     tenantService.init();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
     verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
   }
 
@@ -83,7 +83,7 @@ class TenantServiceTest {
     verifyNoInteractions(tenantManagerClient);
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isFalse();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).failed()).isTrue();
   }
 
   @Test
@@ -100,14 +100,14 @@ class TenantServiceTest {
     tenantService.init();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isFalse();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).failed()).isTrue();
   }
 
   @Test
   void isEnabledTenant_negative_tenantAndEntitlementNotLoaded() {
     var result = tenantService.isEnabledTenant(TestConstants.TENANT_NAME);
 
-    Assertions.assertFalse(result);
+    assertThat(result.isComplete()).isFalse();
   }
 
   @Test
@@ -116,13 +116,11 @@ class TenantServiceTest {
     // enable
     tenantService.enableTenant(TestConstants.TENANT_NAME);
 
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
 
     // disable
     tenantService.disableTenant(TestConstants.TENANT_NAME);
 
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isFalse();
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, emptyEntitlementsEvent());
   }
 
@@ -131,7 +129,6 @@ class TenantServiceTest {
     tenantService.enableTenant(TestConstants.TENANT_NAME);
     tenantService.enableTenant(TestConstants.TENANT_NAME);
 
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
     verify(eventBus, only()).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
   }
 
@@ -139,7 +136,6 @@ class TenantServiceTest {
   void disableTenant_negative_notEnabled() {
     tenantService.disableTenant(TestConstants.TENANT_NAME);
 
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isFalse();
     verifyNoInteractions(eventBus);
   }
 
@@ -164,7 +160,7 @@ class TenantServiceTest {
     tenantService.executeTenantsAndEntitlementsTask();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
     verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
   }
 
@@ -202,7 +198,7 @@ class TenantServiceTest {
     tenantService.executeTenantsAndEntitlementsTask();
 
     // Second load should complete and enable tenant
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
     verify(tenantEntitlementClient, times(2))
       .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
     verify(eventBus).publish(eq(EntitlementsEvent.ENTITLEMENTS_EVENT), any(EntitlementsEvent.class));
@@ -230,7 +226,7 @@ class TenantServiceTest {
 
     verify(tenantEntitlementClient, times(1))
       .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).isTrue();
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
 
     // After cron reset, another execution should be allowed
     tenantService.resetTaskFlag();
@@ -242,8 +238,61 @@ class TenantServiceTest {
 
   @Test
   void isEnabledTenant_negative_nullOrEmpty() {
-    Assertions.assertFalse(tenantService.isEnabledTenant(null));
-    Assertions.assertFalse(tenantService.isEnabledTenant(""));
+    Assertions.assertFalse(tenantService.isEnabledTenant(null).result());
+    Assertions.assertFalse(tenantService.isEnabledTenant("").result());
+  }
+
+  @Test
+  void getEnabledTenants_positive() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    tenantService.init();
+
+    var future = tenantService.getEnabledTenants();
+
+    assertThat(future.succeeded()).isTrue();
+    assertThat(future.result()).containsExactly(TestConstants.TENANT_NAME);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void getEnabledTenants_positive_waitForLoading() {
+    var loadingPromise = Promise.<Void>promise();
+    when(retryTemplate.callAsync(any(Supplier.class))).thenReturn(loadingPromise.future());
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+
+    tenantService.init();
+
+    var future = tenantService.getEnabledTenants();
+    assertThat(future.isComplete()).isFalse();
+
+    loadingPromise.complete();
+
+    assertThat(future.isComplete()).isTrue();
+    assertThat(future.result()).isEmpty();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void getEnabledTenants_negative_loadingFailed() {
+    var error = new RuntimeException("load failed");
+    when(retryTemplate.callAsync(any(Supplier.class))).thenReturn(failedFuture(error));
+
+    tenantService.init();
+
+    var future = tenantService.getEnabledTenants();
+
+    assertThat(future.failed()).isTrue();
+    assertThat(future.cause()).isEqualTo(error);
   }
 
   @SuppressWarnings("unchecked")

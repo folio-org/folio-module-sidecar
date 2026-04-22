@@ -13,15 +13,18 @@ import jakarta.inject.Named;
 import java.util.Collections;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.configuration.properties.SidecarProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
 import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.PathProcessor;
+import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.configuration.properties.DynamicRoutingProperties;
 import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
 import org.folio.sidecar.service.routing.handler.ChainedHandler;
+import org.folio.sidecar.service.routing.handler.ModuleEntitlementHandler;
 import org.folio.sidecar.service.routing.handler.RoutingEntryHandler;
 import org.folio.sidecar.service.routing.handler.RoutingHandlerWithLookup;
 import org.folio.sidecar.service.routing.handler.ScRequestHandler;
@@ -51,12 +54,22 @@ public class RoutingConfiguration {
 
   @Named
   @ApplicationScoped
-  public ChainedHandler chainedHandler(@Named("basicIngressHandler") ChainedHandler ingressHandler,
+  public ChainedHandler chainedHandler(
+    @Named("moduleEntitlementHandler") Instance<ChainedHandler> moduleEntitlementHandler,
+    @Named("basicIngressHandler") ChainedHandler ingressHandler,
     @Named("basicEgressHandler") ChainedHandler egressHandler,
     @Named("dynamicEgressHandler") Instance<ChainedHandler> dynamicEgressHandler,
     @Named("gatewayEgressHandler") Instance<ChainedHandler> gatewayEgressHandler,
     @Named("notFoundHandler") ChainedHandler notFoundHandler) {
-    var handler = ingressHandler.next(egressHandler);
+    var handler = ingressHandler;
+
+    if (moduleEntitlementHandler.isResolvable()) {
+      // put module entitlement handler in front of ingress handler
+      handler = moduleEntitlementHandler.get().next(handler);
+      log.debug("Module entitlement handler added to the handlers chain");
+    }
+
+    handler = handler.next(egressHandler);
 
     if (dynamicEgressHandler.isResolvable()) {
       handler = handler.next(dynamicEgressHandler.get());
@@ -143,6 +156,16 @@ public class RoutingConfiguration {
     public ChainedHandler gatewayEgressHandler(@Named("gatewayLookup") RoutingLookup lookup,
       @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
       return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
+    }
+  }
+
+  public static class ModuleEntitlement {
+
+    @Named
+    @ApplicationScoped
+    @LookupIfProperty(name = "routing.module-entitlement.enabled", stringValue = "true")
+    public ChainedHandler moduleEntitlementHandler(ModuleProperties moduleProperties, TenantService tenantService) {
+      return new ModuleEntitlementHandler(moduleProperties.getId(), tenantService);
     }
   }
 }
