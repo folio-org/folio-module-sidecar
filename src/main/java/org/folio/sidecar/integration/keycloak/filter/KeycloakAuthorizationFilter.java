@@ -166,7 +166,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     }
 
     if (statusCode != OK.code()) {
-      log.debug("Failed to authorize request: {}", httpResponse.bodyAsString());
+      log.warn("Failed to authorize request: {}", httpResponse.bodyAsString());
       return failedFuture(new ForbiddenException(AUTHORIZATION_FAILURE_MSG));
     }
 
