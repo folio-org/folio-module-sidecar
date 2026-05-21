@@ -6,6 +6,7 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.model.ScRoutingEntry.GATEWAY_INTERFACE_ID;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeaderWithValue;
+import static org.folio.sidecar.utils.RoutingUtils.markAsEgressRequest;
 import static org.folio.sidecar.utils.TokenUtils.tokenHash;
 
 import io.vertx.core.Future;
@@ -18,6 +19,7 @@ import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.PathProcessor;
@@ -60,6 +62,8 @@ class EgressRequestHandler implements RoutingEntryHandler {
    */
   @Override
   public Future<Void> handle(ScRoutingEntry routingEntry, RoutingContext rc) {
+    markAsEgressRequest(rc);
+
     var rq = rc.request();
     log.debug("Handling egress request [method: {}, uri: {}, requestId: {}]",
       rq::method, dumpUri(rc), () -> rq.getHeader(REQUEST_ID));
@@ -68,7 +72,8 @@ class EgressRequestHandler implements RoutingEntryHandler {
       .map(v -> validateRoutingModuleId(routingEntry))
       .compose(v -> populateSystemToken(rc))
       .compose(v -> populateSystemUserToken(rc))
-      .compose(v -> forwardEgressRequest(rc, routingEntry));
+      .compose(v -> forwardEgressRequest(rc, routingEntry))
+      .recover(err -> invalidateServiceTokenOnUnauthorized(err, rc));
   }
 
   private Void validateRoutingModuleId(ScRoutingEntry routingEntry) {
@@ -139,5 +144,14 @@ class EgressRequestHandler implements RoutingEntryHandler {
 
       return null;
     };
+  }
+
+  private Future<Void> invalidateServiceTokenOnUnauthorized(Throwable err, RoutingContext rc) {
+    if (err instanceof EgressUnauthorizedException) {
+      var tenant = RoutingUtils.getTenant(rc);
+
+      serviceTokenProvider.invalidateToken(tenant);
+    }
+    return failedFuture(err);
   }
 }

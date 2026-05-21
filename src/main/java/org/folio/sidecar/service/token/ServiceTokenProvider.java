@@ -63,6 +63,11 @@ public class ServiceTokenProvider {
     return getTokenInternal(SUPER_TENANT);
   }
 
+  public void invalidateToken(String tenant) {
+    log.info("Invalidating service token cache for tenant: tenant = {}", tenant);
+    tokenCache.synchronous().invalidate(tenant);
+  }
+
   /**
    * Obtains a service access token using client_credentials flow.
    *

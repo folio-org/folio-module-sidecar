@@ -1,9 +1,12 @@
 package org.folio.sidecar.service.routing.handler;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
+import static org.folio.sidecar.utils.RoutingUtils.isEgressRequest;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
@@ -29,6 +32,7 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
 
@@ -229,12 +233,33 @@ public class RequestForwardingService {
 
   private void handleSuccessfulResponse(RoutingContext rc, HttpClientResponse resp, Promise<Void> result,
     HttpClientRequest httpClientRequest) {
+    if (resp.statusCode() == UNAUTHORIZED.code() && isEgressRequest(rc)) {
+      handleEgressUnauthorized(rc, resp, result, httpClientRequest);
+      return;
+    }
+
     var response = rc.response();
     response.headers().addAll(resp.headers());
     response.setStatusCode(resp.statusCode());
     rc.put("uht", System.currentTimeMillis());
 
     removeSidecarSignatureThenEndResponse(rc, resp, response, result, httpClientRequest);
+  }
+
+  private void handleEgressUnauthorized(RoutingContext rc, HttpClientResponse resp, Promise<Void> result,
+    HttpClientRequest httpClientRequest) {
+    log.info("Intercepted {} from upstream on egress request [method: {}, uri: {}]", () -> UNAUTHORIZED,
+      () -> rc.request().method(), dumpUri(rc));
+
+    // Drain upstream response body to release the connection
+    resp.handler(buf -> {});
+    resp.endHandler(v -> {
+      rc.put("urt", System.currentTimeMillis());
+      transactionLogHandler.log(rc, resp, httpClientRequest);
+
+      result.fail(new EgressUnauthorizedException("Failed to authorize egress request to: "
+        + rc.request().method() + " " + dumpUri(rc).get()));
+    });
   }
 
   /**
