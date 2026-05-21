@@ -2,6 +2,7 @@ package org.folio.sidecar.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.http.HttpMethod;
@@ -28,6 +29,26 @@ class RoutingUtilsTest {
     var routingContext = routingContext("111111/users", null);
     var actual = RoutingUtils.getRequestId(routingContext);
     assertThat(actual).isNotNull().matches("111111/users;\\d{6}/foo");
+  }
+
+  @Test
+  void isEgressRequest_positive() {
+    var routingContext = mock(RoutingContext.class);
+    when(routingContext.get(RoutingUtils.EGRESS_REQUEST_KEY)).thenReturn(Boolean.TRUE);
+    assertThat(RoutingUtils.isEgressRequest(routingContext)).isTrue();
+  }
+
+  @Test
+  void isEgressRequest_negative_notMarked() {
+    var routingContext = mock(RoutingContext.class);
+    assertThat(RoutingUtils.isEgressRequest(routingContext)).isFalse();
+  }
+
+  @Test
+  void markAsEgressRequest_positive() {
+    var routingContext = mock(RoutingContext.class);
+    RoutingUtils.markAsEgressRequest(routingContext);
+    verify(routingContext).put(RoutingUtils.EGRESS_REQUEST_KEY, true);
   }
 
   @Test

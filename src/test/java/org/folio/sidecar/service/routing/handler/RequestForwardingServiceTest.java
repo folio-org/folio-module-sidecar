@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.routing.handler;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.http.HttpMethod.POST;
@@ -36,10 +37,12 @@ import jakarta.ws.rs.InternalServerErrorException;
 import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
 import org.folio.sidecar.support.TestConstants;
+import org.folio.sidecar.utils.RoutingUtils;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -481,6 +484,43 @@ class RequestForwardingServiceTest {
     assertThat(result.failed()).isTrue();
     assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
     assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request: Unknown error");
+  }
+
+  @Test
+  void forwardEgress_negative_unauthorizedInterceptedOnEgressRequest() {
+    var egressSettingsMock = mock(WebClientConfig.WebClientSettings.class);
+    when(webClientConfig.egress()).thenReturn(egressSettingsMock);
+    var egressTlsMock = mock(WebClientConfig.TlsSettings.class);
+    when(egressSettingsMock.tls()).thenReturn(egressTlsMock);
+    when(egressTlsMock.enabled()).thenReturn(false);
+
+    var routingContext = routingContext(rc ->
+      when(rc.get(RoutingUtils.EGRESS_REQUEST_KEY)).thenReturn(Boolean.TRUE));
+
+    var encoder = new QueryStringEncoder(PATH);
+    routingContext.request().params().forEach(encoder::addParam);
+
+    when(httpClient.request(argThat(options ->
+      "sc-foo".equals(options.getHost())
+        && 8081 == options.getPort()
+        && encoder.toString().equals(options.getURI())
+        && POST == options.getMethod())))
+      .thenReturn(succeededFuture(httpClientRequest));
+
+    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
+    when(httpClientRequest.headers()).thenReturn(headers);
+    when(headers.setAll(any(MultiMap.class))).thenReturn(headers);
+    when(httpClientRequest.response()).thenReturn(succeededFuture(httpClientResponse));
+    when(httpClientResponse.statusCode()).thenReturn(UNAUTHORIZED.code());
+    when(httpClientResponse.endHandler(responseEndHandlerCaptor.capture())).thenReturn(httpClientResponse);
+
+    var result = service.forwardEgress(routingContext, absoluteUrl);
+    responseEndHandlerCaptor.getValue().handle(null);
+
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(EgressUnauthorizedException.class)
+      .hasMessageContaining("Failed to authorize egress request to:");
+    verify(transactionLogHandler).log(routingContext, httpClientResponse, httpClientRequest);
   }
 
   @CsvSource({

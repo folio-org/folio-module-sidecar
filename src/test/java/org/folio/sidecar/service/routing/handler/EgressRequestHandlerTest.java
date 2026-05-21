@@ -8,6 +8,7 @@ import static org.folio.sidecar.support.TestConstants.GATEWAY_URL;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.SYS_TOKEN;
 import static org.folio.sidecar.support.TestConstants.SYS_USER_TOKEN;
+import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.folio.sidecar.support.TestValues.scGatewayEntry;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,6 +27,7 @@ import jakarta.ws.rs.BadRequestException;
 import java.util.Optional;
 import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -235,6 +237,51 @@ class EgressRequestHandlerTest {
 
       assertThat(rf.failed()).isTrue();
       assertThat(rf.cause()).hasMessage("Filter validation failed");
+    }
+
+    @Test
+    void handle_negative_egressUnauthorizedExceptionInvalidatesServiceToken() {
+      prepareHttpRequest(req -> {
+        when(req.path()).thenReturn(fooEntitiesPath);
+        when(req.getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+      });
+      when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
+      when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
+      when(request.headers()).thenReturn(requestHeaders);
+      when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
+      when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.of(SYS_USER_TOKEN)));
+      when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
+      var egressUnauth = new EgressUnauthorizedException("Unauthorized egress");
+      when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(failedFuture(egressUnauth));
+
+      var rf = egressRequestHandler.handle(routingEntry(), rc);
+
+      assertThat(rf.failed()).isTrue();
+      assertThat(rf.cause()).isInstanceOf(EgressUnauthorizedException.class);
+      verify(serviceTokenProvider).invalidateToken(TENANT_NAME);
+      verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
+      verify(requestHeaders).set(OkapiHeaders.TOKEN, SYS_USER_TOKEN);
+    }
+
+    @Test
+    void handle_negative_otherExceptionDoesNotInvalidateToken() {
+      prepareHttpRequest(req -> when(req.path()).thenReturn(fooEntitiesPath));
+      when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
+      when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
+      when(request.headers()).thenReturn(requestHeaders);
+      when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
+      when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.of(SYS_USER_TOKEN)));
+      when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
+      when(requestForwardingService.forwardEgress(rc, absoluteUrl))
+        .thenReturn(failedFuture(new RuntimeException("Upstream error")));
+
+      var rf = egressRequestHandler.handle(routingEntry(), rc);
+
+      assertThat(rf.failed()).isTrue();
+      assertThat(rf.cause()).isInstanceOf(RuntimeException.class).hasMessage("Upstream error");
+      verify(serviceTokenProvider, never()).invalidateToken(anyString());
+      verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
+      verify(requestHeaders).set(OkapiHeaders.TOKEN, SYS_USER_TOKEN);
     }
   }
 

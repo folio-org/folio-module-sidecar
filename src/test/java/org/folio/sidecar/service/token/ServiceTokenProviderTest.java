@@ -85,6 +85,16 @@ class ServiceTokenProviderTest {
   }
 
   @Test
+  void invalidateToken_positive() {
+    var loadingCache = mock(LoadingCache.class);
+    when(tokenCache.synchronous()).thenReturn(loadingCache);
+
+    service.invalidateToken(TENANT_NAME);
+
+    verify(loadingCache).invalidate(TENANT_NAME);
+  }
+
+  @Test
   void syncCache_positive() {
     var cached = Map.ofEntries(
       entry("tenant-foo", completedFuture(new TokenResponse())),

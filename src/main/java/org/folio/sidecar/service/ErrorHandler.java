@@ -113,7 +113,7 @@ public class ErrorHandler {
       .add(
         EgressUnauthorizedException.class, (cause, rc) ->
           sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.AUTHORIZATION_ERROR,
-            "Service Unavailable. Retry latter", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
+            "Service Unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
       .addDefault((cause, rc) ->
         sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null));
   }
