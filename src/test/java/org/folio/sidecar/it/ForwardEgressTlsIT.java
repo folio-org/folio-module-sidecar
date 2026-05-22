@@ -1,11 +1,13 @@
 package org.folio.sidecar.it;
 
+import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_REQUEST_TIMEOUT;
+import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
@@ -119,7 +121,7 @@ class ForwardEgressTlsIT {
   }
 
   @Test
-  void handleEgressRequest_negative_routeNotFoundForInvalidHttpMethod() {
+  void handleEgressRequest_negative_routeNotFoundForInvalidHttpMethod()   {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
@@ -242,6 +244,29 @@ class ForwardEgressTlsIT {
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .header("x-response-time", Matchers.matchesPattern("\\d+ms"))
       .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleEgressRequest_negative_upstreamUnauthorizedIntercepted() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, "dummy")
+      .header(OkapiHeaders.TOKEN, USER_TOKEN)
+      .get("/bar/entities/unauthorized")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .header(RETRY_AFTER, is("1"))
+      .statusCode(is(SC_SERVICE_UNAVAILABLE))
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("EgressUnauthorizedException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Service Unavailable. Retry later")
+      );
   }
 
   @Test

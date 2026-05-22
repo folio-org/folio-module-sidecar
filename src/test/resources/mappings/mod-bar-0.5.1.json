@@ -171,6 +171,32 @@
     {
       "request": {
         "method": "GET",
+        "urlPath": "/bar/entities/unauthorized",
+        "headers": {
+          "Content-Type": {
+            "equalTo": "application/json"
+          },
+          "X-Okapi-Tenant": {
+            "equalTo": "testtenant"
+          },
+          "X-System-Token": {
+            "matches": ".+"
+          }
+        }
+      },
+      "response": {
+        "status": 401,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "errors": [{"message": "Token is invalid or expired"}]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
         "urlPath": "/bar/no-module-id-header",
         "headers": {
           "Content-Type": {
