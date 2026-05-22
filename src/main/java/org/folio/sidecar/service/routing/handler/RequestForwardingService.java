@@ -270,6 +270,9 @@ public class RequestForwardingService {
       result.fail(new EgressUnauthorizedException("Failed to authorize egress request to: "
         + rc.request().method() + " " + dumpUri(rc).get()));
     });
+
+    resp.exceptionHandler(error ->
+      result.fail(new InternalServerErrorException("Failed to drain unauthorized upstream response", error)));
   }
 
   /**
