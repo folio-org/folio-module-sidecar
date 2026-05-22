@@ -146,6 +146,14 @@ class EgressRequestHandler implements RoutingEntryHandler {
     };
   }
 
+  /**
+   * Recovery handler that evicts the service token cache entry when an egress 401 is detected.
+   * All other errors are re-propagated unchanged.
+   *
+   * @param err error from the egress pipeline
+   * @param rc  routing context
+   * @return a failed {@link Future} carrying the original error
+   */
   private Future<Void> invalidateServiceTokenOnUnauthorized(Throwable err, RoutingContext rc) {
     if (err instanceof EgressUnauthorizedException) {
       var tenant = RoutingUtils.getTenant(rc);

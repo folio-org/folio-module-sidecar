@@ -157,10 +157,21 @@ public class RoutingUtils {
     return Boolean.TRUE.equals(rc.get(SELF_REQUEST_KEY));
   }
 
+  /**
+   * Returns {@code true} if the request has been marked as an egress (module-to-module) request.
+   *
+   * @param rc routing context
+   * @return {@code true} if this is an egress request, {@code false} otherwise
+   */
   public static boolean isEgressRequest(RoutingContext rc) {
     return Boolean.TRUE.equals(rc.get(EGRESS_REQUEST_KEY));
   }
 
+  /**
+   * Marks the request as an egress (module-to-module) request in the routing context.
+   *
+   * @param rc routing context
+   */
   public static void markAsEgressRequest(RoutingContext rc) {
     rc.put(EGRESS_REQUEST_KEY, true);
   }

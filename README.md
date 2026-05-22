@@ -30,6 +30,7 @@ Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
     * [Ingress](#ingress)
     * [Egress](#egress)
     * [Access logging](#access-logging)
+* [Egress 401 Handling](#egress-401-handling)
 * [Module Entitlement Endpoint](#module-entitlement-endpoint)
 
 ## Introduction
@@ -459,6 +460,7 @@ Required when `SECRET_STORE_TYPE=FSSP`
   --data-urlencode 'client_id=sidecar-module-access-client' \
   --data-urlencode 'client_secret=supersecret'
   ```
+
 ### Access logging
 * For access logging Common Log Format(`host ident authuser date request status bytes user-agent`) is used,
 * value: `%X{remote-ip} %X{remote-host} %X{remote-user} %d{dd/MM/yyyy:HH:mm:ss z} %X{method} %X{path} %X{protocol} %X{status} %X{bytes} rt=%X{rt}  uct=%X{uct}  uht=%X{uht}  urt=%X{urt}  %X{user-agent} %X{x-okapi-tenant} %X{x-okapi-user-id} %X{x-okapi-request-id} %m%n`
@@ -482,6 +484,38 @@ Required when `SECRET_STORE_TYPE=FSSP`
 | x-okapi-tenant            | OKAPI tenant header value.                                                                                                                     |
 | x-okapi-user-id           | OKAPI user id header value.                                                                                                                    |
 | x-okapi-request-id        | OKAPI request id header value.                                                                                                                 |
+
+## Egress 401 Handling
+
+When a target module responds with `401 Unauthorized` on a module-to-module (egress) call, the
+sidecar intercepts the response before it reaches the original caller and takes the following steps:
+
+1. Drains and discards the upstream response body to cleanly release the HTTP connection.
+2. Evicts the system token for the affected tenant from the internal cache so the very next egress
+   call for that tenant will obtain a fresh token from Keycloak.
+3. Returns `503 Service Unavailable` to the original caller with a `Retry-After: 1` header.
+
+**What callers should do**
+
+Upon receiving `503 Service Unavailable` with a `Retry-After` header on an egress request, wait for
+the number of seconds indicated in the header and then retry the original request unchanged. By the
+time the retry arrives, the sidecar will have discarded the stale token; the next egress call to the
+same target will acquire a fresh one from Keycloak before forwarding.
+
+**Why the sidecar cannot retry the request itself**
+
+The sidecar cannot transparently retry egress requests for two reasons:
+
+* **Request body is already consumed.** By the time the upstream 401 is received, the original
+  request body has been forwarded to the target and is no longer held in the sidecar. Replaying the
+  request would require re-reading the body from the original caller, which is not possible in a
+  streaming proxy.
+* **Retry ownership belongs to the caller.** The sidecar has no visibility into how many times the
+  caller has already retried, what the caller's timeout budget is, or whether the operation is
+  idempotent. Retrying silently on the caller's behalf would hide the failure, could violate
+  idempotency, and risks amplifying the problem if the root cause persists (e.g. misconfigured
+  service-client credentials in Keycloak). Surfacing the failure as a `503` keeps retry logic and
+  backoff strategy under the caller's control.
 
 ## Module Entitlement Endpoint
 

@@ -246,6 +246,16 @@ public class RequestForwardingService {
     removeSidecarSignatureThenEndResponse(rc, resp, response, result, httpClientRequest);
   }
 
+  /**
+   * Handles a {@code 401 Unauthorized} response received on an egress request.
+   * Drains the upstream response body to release the connection, logs the event, and fails
+   * the result promise with {@link EgressUnauthorizedException}.
+   *
+   * @param rc                routing context
+   * @param resp              upstream HTTP response
+   * @param result            promise to fail once the body is fully drained
+   * @param httpClientRequest upstream request, used for transaction logging
+   */
   private void handleEgressUnauthorized(RoutingContext rc, HttpClientResponse resp, Promise<Void> result,
     HttpClientRequest httpClientRequest) {
     log.info("Intercepted {} from upstream on egress request [method: {}, uri: {}]", () -> UNAUTHORIZED,

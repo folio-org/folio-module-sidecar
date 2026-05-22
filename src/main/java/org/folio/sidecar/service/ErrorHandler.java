@@ -65,10 +65,29 @@ public class ErrorHandler {
     errHandler.handle(cause, rc);
   }
 
+  /**
+   * Sends an error response without additional headers.
+   *
+   * @param rc          routing context
+   * @param error       cause of the error
+   * @param status      HTTP status code
+   * @param code        application-level error code
+   * @param msgOverride message to use in the response body, or {@code null} to use the exception message
+   */
   private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride) {
     sendErrorResponse(rc, error, status, code, msgOverride, null);
   }
 
+  /**
+   * Sends an error response with optional additional response headers.
+   *
+   * @param rc                routing context
+   * @param error             cause of the error
+   * @param status            HTTP status code
+   * @param code              application-level error code
+   * @param msgOverride       message to use in the response body, or {@code null} to use the exception message
+   * @param additionalHeaders extra headers to include in the response, or {@code null} if none
+   */
   private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride,
     Map<String, String> additionalHeaders) {
     sidecarSignatureService.removeSignature(rc);
