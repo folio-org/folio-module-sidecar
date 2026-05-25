@@ -137,6 +137,11 @@
                 },
                 {
                   "methods": [ "GET" ],
+                  "pathPattern": "/bar/entities/{id}",
+                  "permissionsRequired": [ "item.get" ]
+                },
+                {
+                  "methods": [ "GET" ],
                   "pathPattern": "/bar/no-module-id-header",
                   "permissionsRequired": [ "bar.no-module-id-header.get" ]
                 }

@@ -1,6 +1,7 @@
 package org.folio.sidecar.service;
 
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
@@ -9,6 +10,7 @@ import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.REQUEST_TIMEOUT;
+import static org.jboss.resteasy.reactive.RestResponse.StatusCode.SERVICE_UNAVAILABLE;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.UNAUTHORIZED;
 
 import io.quarkus.security.ForbiddenException;
@@ -19,11 +21,13 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
@@ -33,6 +37,8 @@ import org.folio.sidecar.model.error.Parameter;
 @Log4j2
 @ApplicationScoped
 public class ErrorHandler {
+
+  private static final String EGRESS_UNAUTH_RETRY_DELAY = "1"; // in seconds
 
   private final JsonConverter jsonConverter;
   private final SidecarSignatureService sidecarSignatureService;
@@ -59,7 +65,31 @@ public class ErrorHandler {
     errHandler.handle(cause, rc);
   }
 
+  /**
+   * Sends an error response without additional headers.
+   *
+   * @param rc          routing context
+   * @param error       cause of the error
+   * @param status      HTTP status code
+   * @param code        application-level error code
+   * @param msgOverride message to use in the response body, or {@code null} to use the exception message
+   */
   private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride) {
+    sendErrorResponse(rc, error, status, code, msgOverride, null);
+  }
+
+  /**
+   * Sends an error response with optional additional response headers.
+   *
+   * @param rc                routing context
+   * @param error             cause of the error
+   * @param status            HTTP status code
+   * @param code              application-level error code
+   * @param msgOverride       message to use in the response body, or {@code null} to use the exception message
+   * @param additionalHeaders extra headers to include in the response, or {@code null} if none
+   */
+  private void sendErrorResponse(RoutingContext rc, Throwable error, int status, ErrorCode code, String msgOverride,
+    Map<String, String> additionalHeaders) {
     sidecarSignatureService.removeSignature(rc);
 
     log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}",
@@ -67,13 +97,18 @@ public class ErrorHandler {
 
     var response = rc.response();
     if (!response.ended()) {
-      response
-        .setStatusCode(status)
-        .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+      response.setStatusCode(status);
+
+      if (additionalHeaders != null) {
+        additionalHeaders.forEach(response::putHeader);
+      }
+
+      response.putHeader(CONTENT_TYPE, APPLICATION_JSON)
         .end(jsonConverter.toJson(buildResponseEntity(code, error, msgOverride)));
     }
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private ErrHandler createHandler() {
     return ErrHandler.builder()
       .add(
@@ -94,6 +129,10 @@ public class ErrorHandler {
       .add(
         TenantNotEnabledException.class, (cause, rc) ->
           sendErrorResponse(rc, cause, BAD_REQUEST, ErrorCode.UNKNOWN_TENANT, null))
+      .add(
+        EgressUnauthorizedException.class, (cause, rc) ->
+          sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.AUTHORIZATION_ERROR,
+            "Service Unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
       .addDefault((cause, rc) ->
         sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null));
   }

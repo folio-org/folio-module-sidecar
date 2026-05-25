@@ -1,12 +1,12 @@
 package org.folio.sidecar.service;
 
 import static io.vertx.core.Future.succeededFuture;
-import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
+import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +25,7 @@ import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
+import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -173,6 +174,20 @@ class ErrorHandlerTest {
   }
 
   @Test
+  void sendErrorResponse_positive_egressUnauthorizedError() {
+    var routingContext = routingContext();
+
+    errorHandler.sendErrorResponse(routingContext, new EgressUnauthorizedException("Unauthorized"));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/egress-unauthorized-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "1");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
   void sendErrorResponse_positive_responseIsEnded() {
     var routingContext = mock(RoutingContext.class);
     var response = mock(HttpServerResponse.class);
@@ -193,7 +208,7 @@ class ErrorHandlerTest {
     when(routingContext.response()).thenReturn(response);
     when(routingContext.request()).thenReturn(request);
     when(response.setStatusCode(responseStatusCaptor.capture())).thenReturn(response);
-    when(response.putHeader(CONTENT_TYPE, APPLICATION_JSON)).thenReturn(response);
+    when(response.putHeader(anyString(), anyString())).thenReturn(response);
     when(response.end(responseCaptor.capture())).thenReturn(succeededFuture());
     return routingContext;
   }

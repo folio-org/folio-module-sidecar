@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "EgressUnauthorizedException",
+      "code": "authorization_error",
+      "message": "Service Unavailable. Retry later"
+    }
+  ],
+  "total_records": 1
+}

@@ -42,6 +42,7 @@ public class RoutingUtils {
    */
   public static final String SC_ROUTING_ENTRY_KEY = "scRoutingEntry";
   public static final String SELF_REQUEST_KEY = "selfRequest";
+  public static final String EGRESS_REQUEST_KEY = "egressRequest";
   public static final String ORIGIN_TENANT = "originTenant";
   public static final String PARSED_TOKEN = "parsedToken";
   private static final int URI_MAX_LENGTH = 512;
@@ -154,6 +155,25 @@ public class RoutingUtils {
 
   public static boolean isSelfRequest(RoutingContext rc) {
     return Boolean.TRUE.equals(rc.get(SELF_REQUEST_KEY));
+  }
+
+  /**
+   * Returns {@code true} if the request has been marked as an egress (module-to-module) request.
+   *
+   * @param rc routing context
+   * @return {@code true} if this is an egress request, {@code false} otherwise
+   */
+  public static boolean isEgressRequest(RoutingContext rc) {
+    return Boolean.TRUE.equals(rc.get(EGRESS_REQUEST_KEY));
+  }
+
+  /**
+   * Marks the request as an egress (module-to-module) request in the routing context.
+   *
+   * @param rc routing context
+   */
+  public static void markAsEgressRequest(RoutingContext rc) {
+    rc.put(EGRESS_REQUEST_KEY, true);
   }
 
   public static boolean hasNoPermissionsRequired(RoutingContext rc) {

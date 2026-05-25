@@ -64,6 +64,16 @@ public class ServiceTokenProvider {
   }
 
   /**
+   * Evicts the cached service token for the given tenant, forcing a fresh token to be obtained on the next request.
+   *
+   * @param tenant tenant whose cache entry should be invalidated
+   */
+  public void invalidateToken(String tenant) {
+    log.info("Invalidating service token cache for tenant: tenant = {}", tenant);
+    tokenCache.synchronous().invalidate(tenant);
+  }
+
+  /**
    * Obtains a service access token using client_credentials flow.
    *
    * @param rc {@link RoutingContext} object to analyze
