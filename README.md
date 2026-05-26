@@ -536,3 +536,6 @@ This is intended for use by modules that consume Kafka events and need to filter
 The endpoint sits **before** the ingress filter chain and therefore requires no JWT token or `x-okapi-tenant` header. It can be called freely from within the same pod.
 
 This feature can be disabled via the `ROUTING_MODULE_ENTITLEMENT_ENABLED` environment variable (default: `true`). When disabled, the handler is not added to the routing chain at all.
+
+## AI Documentation
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/folio-org/folio-module-sidecar)
