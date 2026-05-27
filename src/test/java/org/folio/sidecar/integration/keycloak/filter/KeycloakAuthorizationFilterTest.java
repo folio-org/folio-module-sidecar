@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
@@ -222,6 +223,44 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Unauthorized");
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_negative_unexpectedStatusCodeForUserToken() {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(500, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn("{\"error\":\"Internal server error\"}");
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(KeycloakUnhandledAuthorizationException.class)
+      .hasMessage("Authorization service error");
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_negative_unexpectedStatusCodeForSystemToken() {
+    prepareSystemTokenMocks(false);
+    prepareSystemRptMocks(400, succeededFuture(systemTokenRptResponse));
+    when(systemTokenRptResponse.bodyAsString()).thenReturn("{\"error\":\"Bad request\"}");
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, systemToken));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(KeycloakUnhandledAuthorizationException.class)
+      .hasMessage("Authorization service error");
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(400);
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
