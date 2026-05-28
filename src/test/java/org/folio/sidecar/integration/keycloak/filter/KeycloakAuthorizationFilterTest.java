@@ -265,6 +265,44 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   @Test
+  void authorize_negative_unexpectedStatusCodeNullBody() {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(500, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn(null);
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(KeycloakUnhandledAuthorizationException.class)
+      .hasMessage("Authorization service error");
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_negative_unexpectedStatusCodeLargeBody() {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(500, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn("x".repeat(3000));
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(KeycloakUnhandledAuthorizationException.class)
+      .hasMessage("Authorization service error");
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
   void authorize_negative_rptRequestFailedForSystemToken() {
     prepareSystemTokenMocks(false);
     var failedResponse = Future.<HttpResponse<Buffer>>failedFuture(new ServiceUnavailableException("Unavailable"));
