@@ -1,3 +1,7 @@
+## Version `v4.1.0` (05.06.2026)
+### Changes:
+* Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
+
 ## Version `v4.0.0` (16.04.2026)
 ### Changes:
 * Fixed port isn't in range issue (MODSIDECAR-108)

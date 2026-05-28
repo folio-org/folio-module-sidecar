@@ -52,6 +52,11 @@
                 "permissionsRequired": [ "foo.xyz.collection.post" ]
               },
               {
+                "methods": [ "PATCH" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.patch" ]
+              },
+              {
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/bar",
                 "permissionsRequired": [ ]

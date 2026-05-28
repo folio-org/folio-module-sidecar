@@ -24,6 +24,9 @@
           },
           {
             "doesNotContain": "permission=%2Ffoo%2Fxyz%23POST"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fxyz%23PATCH"
           }
         ]
       },

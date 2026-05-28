@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "KeycloakUnhandledAuthorizationException",
+      "code": "authorization_error",
+      "message": "Authorization service error"
+    }
+  ],
+  "total_records": 1
+}

@@ -25,6 +25,7 @@ import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
+import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -113,6 +114,33 @@ class ErrorHandlerTest {
     assertThat(responseCaptor.getValue()).isEqualTo(
       TestUtils.minify(TestUtils.readString("json/unauthorized-error.json")));
     assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_UNAUTHORIZED);
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_keycloakUnhandledAuthorizationError_status500() {
+    var routingContext = routingContext();
+
+    var exception = new KeycloakUnhandledAuthorizationException(SC_INTERNAL_SERVER_ERROR);
+    errorHandler.sendErrorResponse(routingContext, exception);
+
+    assertThat(responseCaptor.getValue()).isEqualTo(
+      TestUtils.minify(TestUtils.readString("json/keycloak-unhandled-authorization-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_INTERNAL_SERVER_ERROR);
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_keycloakUnhandledAuthorizationError_status400() {
+    var routingContext = routingContext();
+
+    errorHandler.sendErrorResponse(routingContext, new KeycloakUnhandledAuthorizationException(SC_BAD_REQUEST));
+
+    assertThat(responseCaptor.getValue()).isEqualTo(
+      TestUtils.minify(TestUtils.readString("json/keycloak-unhandled-authorization-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_BAD_REQUEST);
     verify(jsonConverter).toJson(any(ErrorResponse.class));
     verify(sidecarSignatureService).removeSignature(routingContext);
   }

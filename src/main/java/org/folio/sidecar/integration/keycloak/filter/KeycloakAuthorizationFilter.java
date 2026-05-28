@@ -33,6 +33,7 @@ import java.util.StringJoiner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
 import org.folio.sidecar.service.CacheInvalidatable;
@@ -46,6 +47,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private static final String CACHE_KEY_DELIMITER = "#";
   private static final String KC_PERMISSION_NAME = "kcPermissionName";
   private static final String AUTHORIZATION_FAILURE_MSG = "Failed to authorize request";
+  private static final int MAX_BODY_LOG_LENGTH = 2048;
 
   private final KeycloakClient keycloakClient;
   private final Cache<String, JsonWebToken> authTokenCache;
@@ -149,7 +151,9 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     if (error instanceof SecurityException securityError) {
       throw securityError;
     }
-
+    if (error instanceof KeycloakUnhandledAuthorizationException kcError) {
+      throw kcError;
+    }
     throw new ForbiddenException(AUTHORIZATION_FAILURE_MSG, error);
   }
 
@@ -166,8 +170,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     }
 
     if (statusCode != OK.code()) {
-      log.debug("Failed to authorize request: {}", httpResponse.bodyAsString());
-      return failedFuture(new ForbiddenException(AUTHORIZATION_FAILURE_MSG));
+      return failedFuture(buildUnexpectedStatusError(routingContext, statusCode, httpResponse.bodyAsString()));
     }
 
     var tenant = getTenant(routingContext);
@@ -176,6 +179,20 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     log.debug("Caching access token: key = {}", cacheKey);
     authTokenCache.put(cacheKey, accessToken);
     return succeededFuture(routingContext);
+  }
+
+  private static KeycloakUnhandledAuthorizationException buildUnexpectedStatusError(RoutingContext rc, int statusCode,
+    String body) {
+    var tenant = getTenant(rc);
+    var permission = getKeycloakPermissionName(rc);
+    var truncatedBody = body != null && body.length() > MAX_BODY_LOG_LENGTH
+      ? body.substring(0, MAX_BODY_LOG_LENGTH) + "...[truncated]"
+      : body;
+
+    log.warn("Unexpected Keycloak authorization response: status = {}, tenant = {}, permission = {}, body = {}",
+      statusCode, tenant, permission, truncatedBody);
+
+    return new KeycloakUnhandledAuthorizationException(statusCode);
   }
 
   private static String getKeycloakPermissionName(RoutingContext rc) {
