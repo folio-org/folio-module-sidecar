@@ -28,6 +28,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
@@ -117,6 +118,11 @@ public class ErrorHandler {
       .add(
         UnauthorizedException.class, (cause, rc) ->
           sendErrorResponse(rc, cause, UNAUTHORIZED, ErrorCode.AUTHORIZATION_ERROR, "Unauthorized"))
+      .add(
+        KeycloakUnhandledAuthorizationException.class, (cause, rc) -> {
+          var status = ((KeycloakUnhandledAuthorizationException) cause).getStatusCode();
+          sendErrorResponse(rc, cause, status, ErrorCode.AUTHORIZATION_ERROR, "Authorization service error");
+        })
       .add(
         cause -> cause.getCause() instanceof TimeoutException, (cause, rc) ->
           sendErrorResponse(rc, cause.getCause(), REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout"))

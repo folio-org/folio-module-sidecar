@@ -3,6 +3,7 @@ package org.folio.sidecar.it;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
+import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.apache.http.HttpStatus.SC_OK;
@@ -445,14 +446,34 @@ class SidecarIT {
       .then()
       .log().ifValidationFails(LogDetail.ALL)
       .assertThat()
-      .statusCode(is(SC_FORBIDDEN))
+      .statusCode(is(SC_INTERNAL_SERVER_ERROR))
       .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
       .contentType(is(APPLICATION_JSON))
       .body(
         "total_records", is(1),
-        "errors[0].type", is("ForbiddenException"),
+        "errors[0].type", is("KeycloakUnhandledAuthorizationException"),
         "errors[0].code", is("authorization_error"),
-        "errors[0].message", is("Access Denied")
+        "errors[0].message", is("Authorization service error")
+      );
+  }
+
+  @Test
+  void handleIngressRequest_negative_rptKcBadRequest() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .patch("/foo/xyz")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_BAD_REQUEST))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("KeycloakUnhandledAuthorizationException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Authorization service error")
       );
   }
 

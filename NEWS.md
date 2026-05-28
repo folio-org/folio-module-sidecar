@@ -1,6 +1,7 @@
 ## Version `v4.1.0` (in progress)
 ### Changes:
 * Invalidate system token cache on egress 401 and return 503 with Retry-After header ([MODSIDECAR-178](https://folio-org.atlassian.net/browse/MODSIDECAR-178))
+* Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
 
 ## Version `v4.0.0` (16.04.2026)
 ### Changes:
