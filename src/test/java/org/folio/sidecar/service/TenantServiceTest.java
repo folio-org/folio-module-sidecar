@@ -167,6 +167,14 @@ class TenantServiceTest {
   }
 
   @Test
+  void resetTaskFlag_positive_alreadyTrue_isNoOp() {
+    tenantService.resetTaskFlag(); // false → true
+    tenantService.resetTaskFlag(); // already true, no-op
+
+    verifyNoInteractions(tokenProvider, tenantEntitlementClient, tenantManagerClient, eventBus);
+  }
+
+  @Test
   void executeTenantsAndEntitlementsTask_positive() {
     mockRetryTemplate();
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
@@ -306,6 +314,26 @@ class TenantServiceTest {
     tenantService.enableTenant("tenant1", "app-c-3.0.0");
     assertThat(tenantService.getAllApplicationIds())
       .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-2.0.0", "app-c-3.0.0");
+  }
+
+  @Test
+  void init_positive_duplicateTenantIdsInEntitlements_firstApplicationIdWins() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    var ent1 = Entitlement.of("app-first-1.0.0", TestConstants.TENANT_ID, emptyList());
+    var ent2 = Entitlement.of("app-second-2.0.0", TestConstants.TENANT_ID, emptyList());
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(ResultList.asSinglePage(ent1, ent2)));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    assertThatNoException().isThrownBy(() -> tenantService.init());
+
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).containsAnyOf("app-first-1.0.0", "app-second-2.0.0");
   }
 
   @Test

@@ -91,6 +91,19 @@ class TenantEntitlementConsumerIT {
   }
 
   @Test
+  void consume_positive_entitleEvent_nullApplicationId_skipsBootstrap() {
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE, null);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
+
+    sendEvent(event);
+
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
+    verify(tenantService).enableTenant(TENANT_NAME, null);
+    verifyNoInteractions(applicationManagerService);
+    verify(egressRoutingLookup, never()).onApplicationBootstrap(any(), any());
+  }
+
+  @Test
   void consume_positive_entitleEvent_bootstrapFails_logsWarning() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE, APPLICATION_ID);
     doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
