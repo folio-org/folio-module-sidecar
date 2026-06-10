@@ -133,6 +133,31 @@ class TenantServiceTest {
   }
 
   @Test
+  void enableTenant_nullApplicationId_noOp() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, null);
+
+    verifyNoInteractions(eventBus);
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).isEmpty();
+  }
+
+  @Test
+  void disableTenant_nullApplicationId_noOp() {
+    tenantService.disableTenant(TestConstants.TENANT_NAME, null);
+
+    verifyNoInteractions(eventBus);
+  }
+
+  @Test
+  void getApplicationIds_nullTenantName_returnsEmpty() {
+    assertThat(tenantService.getApplicationIds(null)).isEmpty();
+  }
+
+  @Test
+  void getApplicationIds_unknownTenantName_returnsEmpty() {
+    assertThat(tenantService.getApplicationIds("unknown-tenant")).isEmpty();
+  }
+
+  @Test
   void disableTenant_negative_notEnabled() {
     tenantService.disableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 

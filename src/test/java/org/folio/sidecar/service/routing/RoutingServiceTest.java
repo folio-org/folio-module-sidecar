@@ -167,6 +167,33 @@ class RoutingServiceTest {
   }
 
   @Test
+  void init_positive_applicationBootstrapFails_logsWarningAndContinues() {
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+    var appId = TestConstants.APPLICATION_ID;
+
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(appManagerService.getModuleBootstrap(appId))
+      .thenReturn(failedFuture(new RuntimeException("AM unreachable")));
+    when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId));
+    when(router.route("/*")).thenReturn(route);
+
+    routingService.init(router);
+
+    verify(tenantService).getAllApplicationIds();
+    verify(appManagerService).getModuleBootstrap(appId);
+    verify(egressLookup, never()).onApplicationBootstrap(any(), any());
+    verify(appManagerService).getModuleBootstrap();
+    verify(modulePermissionsService).putPermissions(anySet());
+    verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
+    verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
+    verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    verify(router).route("/*");
+    verify(route).handler(requestHandler1);
+    verify(route).handler(requestHandler2);
+  }
+
+  @Test
   void updateModuleRoutes_positive_updateIngressRoutes() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
     var appId = TestConstants.APPLICATION_ID;
