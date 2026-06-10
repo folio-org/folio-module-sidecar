@@ -70,8 +70,13 @@ public class TenantService {
   /**
    * Enables a tenant for the given applicationId.
    * A tenant remains enabled as long as at least one applicationId is registered for it.
+   * When applicationId is null (legacy events without applicationId) the call is a no-op.
    */
   public void enableTenant(String tenantName, String applicationId) {
+    if (applicationId == null) {
+      log.warn("enableTenant called with null applicationId for tenant: {}; ignoring", tenantName);
+      return;
+    }
     var apps = tenantApplications.computeIfAbsent(tenantName, k -> ConcurrentHashMap.newKeySet());
     if (apps.add(applicationId)) {
       log.info("Enabling tenant: {} for application: {}", tenantName, applicationId);
@@ -82,8 +87,13 @@ public class TenantService {
   /**
    * Disables a tenant for the given applicationId.
    * If the tenant has no more registered applicationIds it is fully disabled.
+   * When applicationId is null (legacy events without applicationId) the call is a no-op.
    */
   public void disableTenant(String tenantName, String applicationId) {
+    if (applicationId == null) {
+      log.warn("disableTenant called with null applicationId for tenant: {}; ignoring", tenantName);
+      return;
+    }
     var apps = tenantApplications.get(tenantName);
     if (apps == null) {
       return;
@@ -102,6 +112,9 @@ public class TenantService {
    * Returns the set of applicationIds registered for the given tenant.
    */
   public Set<String> getApplicationIds(String tenantName) {
+    if (tenantName == null) {
+      return Collections.emptySet();
+    }
     var apps = tenantApplications.get(tenantName);
     return apps == null ? Collections.emptySet() : Set.copyOf(apps);
   }
