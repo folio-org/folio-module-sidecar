@@ -4,6 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -19,6 +20,7 @@ import io.vertx.mutiny.core.eventbus.EventBus;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.te.TenantEntitlementClient;
@@ -304,6 +306,26 @@ class TenantServiceTest {
     tenantService.enableTenant("tenant1", "app-c-3.0.0");
     assertThat(tenantService.getAllApplicationIds())
       .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-2.0.0", "app-c-3.0.0");
+  }
+
+  @Test
+  void init_tenantManagerReturnsUnknownTenant_notAdded() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    // TM returns a tenant whose UUID does not match any entitlement tenantId → appId == null in addEnabledTenants
+    var unknownUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    var unknownTenant = Tenant.of(unknownUuid, "unknown-tenant", "desc");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(unknownTenant)));
+
+    assertThatNoException().isThrownBy(() -> tenantService.init());
+
+    assertThat(tenantService.isEnabledTenant("unknown-tenant").result()).isFalse();
   }
 
   @Test

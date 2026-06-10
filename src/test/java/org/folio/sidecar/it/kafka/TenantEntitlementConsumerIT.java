@@ -1,5 +1,6 @@
 package org.folio.sidecar.it.kafka;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.awaitility.Durations.FIVE_SECONDS;
 import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
@@ -8,11 +9,13 @@ import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
@@ -72,6 +75,46 @@ class TenantEntitlementConsumerIT {
     verify(tenantService).enableTenant(TENANT_NAME, APPLICATION_ID);
     verify(applicationManagerService).getModuleBootstrap(APPLICATION_ID);
     verify(egressRoutingLookup).onApplicationBootstrap(eq(APPLICATION_ID), anyList());
+  }
+
+  @Test
+  void consume_negative_notAssignedModule_noOp() {
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE, APPLICATION_ID);
+    doReturn(false).when(tenantService).isAssignedModule(MODULE_ID);
+
+    sendEvent(event);
+
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
+    verify(tenantService, never()).enableTenant(any(), any());
+    verify(tenantService, never()).disableTenant(any(), any());
+    verifyNoInteractions(applicationManagerService, egressRoutingLookup);
+  }
+
+  @Test
+  void consume_positive_entitleEvent_bootstrapFails_logsWarning() {
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE, APPLICATION_ID);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
+    when(applicationManagerService.getModuleBootstrap(APPLICATION_ID))
+      .thenReturn(failedFuture(new RuntimeException("AM unreachable")));
+
+    sendEvent(event);
+
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
+    verify(tenantService).enableTenant(TENANT_NAME, APPLICATION_ID);
+    verify(applicationManagerService).getModuleBootstrap(APPLICATION_ID);
+    verify(egressRoutingLookup, never()).onApplicationBootstrap(any(), any());
+  }
+
+  @Test
+  void consume_positive_revokeEvent_nullApplicationId_skipsEgressRevoke() {
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, null);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
+
+    sendEvent(event);
+
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
+    verify(tenantService).disableTenant(TENANT_NAME, null);
+    verify(egressRoutingLookup, never()).onApplicationRevoked(any());
   }
 
   @Test

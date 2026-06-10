@@ -8,6 +8,8 @@ import static io.vertx.core.http.HttpMethod.PUT;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP_EGRESS;
 import static org.folio.sidecar.support.TestValues.routingEntryWithPerms;
 import static org.folio.sidecar.utils.CollectionUtils.safeList;
@@ -20,6 +22,7 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -116,6 +119,40 @@ class EgressRoutingLookupTest {
     var missingRouteB = egressLookup.lookupRoute("/bar/entities", rcB);
     assertThat(missingRouteB.succeeded()).isTrue();
     assertThat(missingRouteB.result()).isEmpty();
+  }
+
+  @Test
+  void onRequiredModulesBootstrap_null_noOp() {
+    egressLookup = new EgressRoutingLookup(tenantService);
+    egressLookup.onRequiredModulesBootstrap(null, INIT);
+
+    when(tenantService.getApplicationIds("tenant-a")).thenReturn(Set.of("app-1"));
+    var result = egressLookup.lookupRoute("/any/path", routingContext(GET, "tenant-a"));
+    assertThat(result.result()).isEmpty();
+  }
+
+  @Test
+  void onRequiredModulesBootstrap_empty_noOp() {
+    egressLookup = new EgressRoutingLookup(tenantService);
+    egressLookup.onRequiredModulesBootstrap(Collections.emptyList(), INIT);
+
+    when(tenantService.getApplicationIds("tenant-a")).thenReturn(Set.of("app-1"));
+    var result = egressLookup.lookupRoute("/any/path", routingContext(GET, "tenant-a"));
+    assertThat(result.result()).isEmpty();
+  }
+
+  @Test
+  void onRequiredModulesBootstrap_update_populatesCache() {
+    egressLookup = new EgressRoutingLookup(tenantService);
+    var discovery = buildDiscovery("mod-bar-0.5.1", "http://mod-bar:8081", "app-1",
+      "bar", null, "/bar/entities", List.of("POST"));
+
+    egressLookup.onRequiredModulesBootstrap(List.of(discovery), UPDATE);
+
+    when(tenantService.getApplicationIds("tenant-a")).thenReturn(Set.of("app-1"));
+    var result = egressLookup.lookupRoute("/bar/entities", routingContext(POST, "tenant-a"));
+    assertThat(result.result()).isPresent();
+    assertThat(result.result().get().getModuleId()).isEqualTo("mod-bar-0.5.1");
   }
 
   @Test
