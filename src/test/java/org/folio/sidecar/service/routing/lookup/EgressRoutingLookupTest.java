@@ -85,6 +85,33 @@ class EgressRoutingLookupTest {
   }
 
   @Test
+  void lookupRoute_overlappingPaths_sortedAppIdWins_deterministic() {
+    egressLookup = new EgressRoutingLookup(tenantService);
+
+    // Two apps both expose the same path/method
+    var app1Discovery = buildDiscovery("mod-alpha-1.0.0", "http://mod-alpha:8081", "app-alpha-1.0.0",
+      "common", null, "/common/items", List.of("GET"));
+    var app2Discovery = buildDiscovery("mod-beta-1.0.0", "http://mod-beta:8081", "app-beta-1.0.0",
+      "common", null, "/common/items", List.of("GET"));
+
+    egressLookup.onApplicationBootstrap("app-alpha-1.0.0", List.of(app1Discovery));
+    egressLookup.onApplicationBootstrap("app-beta-1.0.0", List.of(app2Discovery));
+
+    // Tenant entitled to both apps
+    when(tenantService.getApplicationIds("tenant-x"))
+      .thenReturn(Set.of("app-alpha-1.0.0", "app-beta-1.0.0"));
+
+    var result1 = egressLookup.lookupRoute("/common/items", routingContext(GET, "tenant-x"));
+    var result2 = egressLookup.lookupRoute("/common/items", routingContext(GET, "tenant-x"));
+
+    // Both calls must return a result and it must be the same module (sorted: app-alpha before app-beta)
+    assertThat(result1.result()).isPresent();
+    assertThat(result2.result()).isPresent();
+    assertThat(result1.result().get().getModuleId()).isEqualTo(result2.result().get().getModuleId());
+    assertThat(result1.result().get().getModuleId()).isEqualTo("mod-alpha-1.0.0");
+  }
+
+  @Test
   void lookupRoute_perApplicationIsolation_tenantSeesOnlyItsAppRoutes() {
     egressLookup = new EgressRoutingLookup(tenantService);
 

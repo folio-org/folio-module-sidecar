@@ -6,7 +6,6 @@ import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeTy
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -82,11 +81,8 @@ class RoutingServiceTest {
   @Test
   void init_positive() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
-    var appId = TestConstants.APPLICATION_ID;
 
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
-    when(appManagerService.getModuleBootstrap(appId)).thenReturn(succeededFuture(bootstrap));
-    when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId));
     when(router.route("/*")).thenReturn(route);
 
     var listenersOrder = inOrder(listener1, listener2);
@@ -98,63 +94,39 @@ class RoutingServiceTest {
     verifyHandlers(routeOrder);
 
     verify(modulePermissionsService).putPermissions(anySet());
-    verify(tenantService).getAllApplicationIds();
-    verify(appManagerService).getModuleBootstrap(appId);
-    verify(egressLookup).onApplicationBootstrap(eq(appId), eq(bootstrap.getRequiredModules()));
+    // init must NOT call loadEgressBootstrapPerApplication itself; SidecarInitializer orchestrates that
+    verifyNoInteractions(tenantService, egressLookup);
+    verify(appManagerService).getModuleBootstrap();
   }
 
   @Test
-  void init_positive_multipleApplications() {
+  void loadEgressBootstrapPerApplication_positive_multipleApplications() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
     var appId1 = TestConstants.APPLICATION_ID;
     var appId2 = "application-1.0.0";
 
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(appManagerService.getModuleBootstrap(appId1)).thenReturn(succeededFuture(bootstrap));
     when(appManagerService.getModuleBootstrap(appId2)).thenReturn(succeededFuture(bootstrap));
     when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId1, appId2));
-    when(router.route("/*")).thenReturn(route);
 
-    routingService.init(router);
+    routingService.loadEgressBootstrapPerApplication();
 
     verify(tenantService).getAllApplicationIds();
     verify(appManagerService).getModuleBootstrap(appId1);
     verify(appManagerService).getModuleBootstrap(appId2);
-    verify(egressLookup).onApplicationBootstrap(eq(appId1), eq(bootstrap.getRequiredModules()));
-    verify(egressLookup).onApplicationBootstrap(eq(appId2), eq(bootstrap.getRequiredModules()));
-    verify(appManagerService).getModuleBootstrap();
-    verify(modulePermissionsService).putPermissions(anySet());
-    verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    // router setup
-    verify(router).route("/*");
-    verify(route).handler(requestHandler1);
-    verify(route).handler(requestHandler2);
+    verify(egressLookup).onApplicationBootstrap(appId1, bootstrap.getRequiredModules());
+    verify(egressLookup).onApplicationBootstrap(appId2, bootstrap.getRequiredModules());
   }
 
   @Test
-  void init_positive_noApplications() {
-    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
-
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+  void loadEgressBootstrapPerApplication_positive_noApplications() {
     when(tenantService.getAllApplicationIds()).thenReturn(Set.of());
-    when(router.route("/*")).thenReturn(route);
 
-    routingService.init(router);
+    routingService.loadEgressBootstrapPerApplication();
 
     verify(tenantService).getAllApplicationIds();
     verify(egressLookup, never()).onApplicationBootstrap(any(), any());
-    verify(appManagerService).getModuleBootstrap();
-    verify(modulePermissionsService).putPermissions(anySet());
-    verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(router).route("/*");
-    verify(route).handler(requestHandler1);
-    verify(route).handler(requestHandler2);
+    verifyNoInteractions(appManagerService);
   }
 
   @Test
@@ -167,40 +139,25 @@ class RoutingServiceTest {
   }
 
   @Test
-  void init_positive_applicationBootstrapFails_logsWarningAndContinues() {
-    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+  void loadEgressBootstrapPerApplication_positive_applicationBootstrapFails_logsWarningAndContinues() {
     var appId = TestConstants.APPLICATION_ID;
 
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
     when(appManagerService.getModuleBootstrap(appId))
       .thenReturn(failedFuture(new RuntimeException("AM unreachable")));
     when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId));
-    when(router.route("/*")).thenReturn(route);
 
-    routingService.init(router);
+    routingService.loadEgressBootstrapPerApplication();
 
     verify(tenantService).getAllApplicationIds();
     verify(appManagerService).getModuleBootstrap(appId);
     verify(egressLookup, never()).onApplicationBootstrap(any(), any());
-    verify(appManagerService).getModuleBootstrap();
-    verify(modulePermissionsService).putPermissions(anySet());
-    verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
-    verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(router).route("/*");
-    verify(route).handler(requestHandler1);
-    verify(route).handler(requestHandler2);
   }
 
   @Test
   void updateModuleRoutes_positive_updateIngressRoutes() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
-    var appId = TestConstants.APPLICATION_ID;
 
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
-    when(appManagerService.getModuleBootstrap(appId)).thenReturn(succeededFuture(bootstrap));
-    when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId));
     when(router.route("/*")).thenReturn(route);
 
     routingService.init(router);
@@ -220,11 +177,8 @@ class RoutingServiceTest {
   @Test
   void updateModuleRoutes_positive_updateEgressRoutes() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
-    var appId = TestConstants.APPLICATION_ID;
 
     when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
-    when(appManagerService.getModuleBootstrap(appId)).thenReturn(succeededFuture(bootstrap));
-    when(tenantService.getAllApplicationIds()).thenReturn(Set.of(appId));
     when(router.route("/*")).thenReturn(route);
 
     routingService.init(router);

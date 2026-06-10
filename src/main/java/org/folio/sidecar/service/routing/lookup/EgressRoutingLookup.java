@@ -50,14 +50,15 @@ public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListen
     var entry = findEntryInApplicationCaches(path, request, applicationIds);
 
     if (entry.isEmpty()) {
-      log.debug("Egress entry found: {}", entry);
+      log.debug("No egress entry found for path [{}]", path);
     }
     return succeededFuture(entry);
   }
 
   private Optional<ScRoutingEntry> findEntryInApplicationCaches(String path,
     HttpServerRequest request, Set<String> applicationIds) {
-    for (var appId : applicationIds) {
+    // Sorted for deterministic selection when tenant has multiple apps with overlapping routes
+    for (var appId : applicationIds.stream().sorted().toList()) {
       var appCache = cachePerApplication.get(appId);
       if (appCache != null) {
         var entry = lookup(request, path, appCache, true);

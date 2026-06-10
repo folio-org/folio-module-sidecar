@@ -104,7 +104,7 @@ class TenantEntitlementConsumerIT {
   }
 
   @Test
-  void consume_positive_entitleEvent_bootstrapFails_logsWarning() {
+  void consume_negative_entitleEvent_bootstrapFails_doesNotEnableTenant() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.ENTITLE, APPLICATION_ID);
     doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
     when(applicationManagerService.getModuleBootstrap(APPLICATION_ID))
@@ -113,7 +113,7 @@ class TenantEntitlementConsumerIT {
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(consumer).consume(event));
-    verify(tenantService).enableTenant(TENANT_NAME, APPLICATION_ID);
+    verify(tenantService, never()).enableTenant(TENANT_NAME, APPLICATION_ID);
     verify(applicationManagerService).getModuleBootstrap(APPLICATION_ID);
     verify(egressRoutingLookup, never()).onApplicationBootstrap(any(), any());
   }

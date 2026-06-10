@@ -43,14 +43,17 @@ public class TenantEntitlementConsumer {
   }
 
   private void handleEnableTenant(String tenantName, String applicationId) {
-    tenantService.enableTenant(tenantName, applicationId);
-    if (applicationId != null) {
-      applicationManagerService.getModuleBootstrap(applicationId)
-        .onSuccess(bootstrap -> egressRoutingLookup.onApplicationBootstrap(applicationId,
-          bootstrap.getRequiredModules()))
-        .onFailure(
-          err -> log.warn("Failed to load bootstrap for application {}: {}", applicationId, err.getMessage()));
+    if (applicationId == null) {
+      tenantService.enableTenant(tenantName, null);
+      return;
     }
+    applicationManagerService.getModuleBootstrap(applicationId)
+      .onSuccess(bootstrap -> {
+        tenantService.enableTenant(tenantName, applicationId);
+        egressRoutingLookup.onApplicationBootstrap(applicationId, bootstrap.getRequiredModules());
+      })
+      .onFailure(err -> log.warn("Failed to load bootstrap for application {}, tenant not enabled: {} {}",
+        applicationId, tenantName, err.getMessage()));
   }
 
   private boolean shouldEnableTenant(Type type) {

@@ -15,6 +15,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
 import org.folio.sidecar.service.routing.lookup.EgressRoutingLookup;
+import org.folio.sidecar.utils.GenericCompositeFuture;
 
 @Log4j2
 @ApplicationScoped
@@ -57,10 +59,7 @@ public class RoutingService implements DiscoveryListener {
   }
 
   public Future<Void> init(Router router) {
-    return loadBootstrapAndProcess(moduleBootstrap -> {
-      initFromBootstrap(router, moduleBootstrap);
-      loadEgressBootstrapPerApplication();
-    });
+    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
   }
 
   @Override
@@ -76,25 +75,43 @@ public class RoutingService implements DiscoveryListener {
     }
   }
 
-  private void loadEgressBootstrapPerApplication() {
+  /**
+   * Loads per-application egress bootstrap for every applicationId currently known to {@link TenantService}.
+   *
+   * <p>Must be called after {@link TenantService#init()} has populated tenant→application mappings;
+   * otherwise the iteration sees an empty set and no per-application caches are built.
+   *
+   * <p>Per-application failures are logged and swallowed so a single failing application does not block
+   * the others; the returned future always succeeds.
+   */
+  public Future<Void> loadEgressBootstrapPerApplication() {
     var applicationIds = tenantService.getAllApplicationIds();
-    for (var applicationId : applicationIds) {
-      appManagerService.getModuleBootstrap(applicationId)
-        .onSuccess(bootstrap -> egressLookup.onApplicationBootstrap(applicationId, bootstrap.getRequiredModules()))
-        .onFailure(error -> log.warn("Failed to load egress bootstrap for application: {}", applicationId, error));
+    if (applicationIds.isEmpty()) {
+      return Future.succeededFuture();
     }
+    var futures = new ArrayList<Future<Void>>(applicationIds.size());
+    for (var applicationId : applicationIds) {
+      Future<Void> f = appManagerService.getModuleBootstrap(applicationId)
+        .onSuccess(bootstrap -> egressLookup.onApplicationBootstrap(applicationId, bootstrap.getRequiredModules()))
+        .onFailure(error -> log.warn("Failed to load egress bootstrap for application: {}", applicationId, error))
+        .recover(error -> Future.succeededFuture(null))
+        .mapEmpty();
+      futures.add(f);
+    }
+    return GenericCompositeFuture.join(futures).mapEmpty();
   }
 
   private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
     return appManagerService.getModuleBootstrap()
       .map(moduleBootstrap -> {
         consumer.accept(moduleBootstrap);
-        return (Void) null;
+        return null;
       })
       .onFailure(error -> {
         log.error("Failed to initialize routes", error);
         Quarkus.asyncExit(0);
-      });
+      })
+      .mapEmpty();
   }
 
   private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {

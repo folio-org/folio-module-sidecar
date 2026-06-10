@@ -98,6 +98,21 @@ class ApplicationManagerClientTest {
   }
 
   @Test
+  void getModuleBootstrap_withApplicationId_encodesSpecialChars() {
+    when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(Future.succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
+
+    var actual = appManagerClient.getModuleBootstrap(MODULE_ID, "app id with spaces+special", AUTH_TOKEN);
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+    assertThat(uriCaptor.getValue())
+      .isEqualTo("http://am:8081/modules/mod-foo-0.2.1?applicationId=app+id+with+spaces%2Bspecial");
+  }
+
+  @Test
   void getModuleBootstrap_withNullApplicationId_noQueryParam() {
     when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
     when(request.putHeader(anyString(), anyString())).thenReturn(request);

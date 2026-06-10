@@ -317,7 +317,7 @@ class TenantServiceTest {
   }
 
   @Test
-  void init_positive_duplicateTenantIdsInEntitlements_firstApplicationIdWins() {
+  void init_positive_multipleApplicationsPerTenant_allRetained() {
     mockRetryTemplate();
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
@@ -334,7 +334,7 @@ class TenantServiceTest {
 
     assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
     assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
-      .containsAnyOf("app-first-1.0.0", "app-second-2.0.0");
+      .containsExactlyInAnyOrder("app-first-1.0.0", "app-second-2.0.0");
   }
 
   @Test

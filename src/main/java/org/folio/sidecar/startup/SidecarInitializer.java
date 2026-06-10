@@ -30,8 +30,10 @@ public class SidecarInitializer {
 
     // chain of initialization:
     // 1. routing service and everything that depends on it
-    // 2. tenant service
+    // 2. tenant service (populates tenant→application mappings)
+    // 3. egress bootstrap per application (requires tenant→app map to be populated)
     routingService.init(router)
-      .compose(unused -> tenantService.init());
+      .compose(unused -> tenantService.init())
+      .compose(unused -> routingService.loadEgressBootstrapPerApplication());
   }
 }

@@ -182,12 +182,13 @@ public class TenantService {
     retryFuture.onComplete(unused -> promise.complete(), promise::fail);
   }
 
-  private void addEnabledTenants(List<Tenant> tenants, Map<String, String> tenantIdToAppId) {
+  private void addEnabledTenants(List<Tenant> tenants, Map<String, Set<String>> tenantIdToAppIds) {
     tenantApplications.clear();
     for (var tenant : tenants) {
-      var appId = tenantIdToAppId.get(tenant.getId().toString());
-      if (appId != null) {
-        tenantApplications.computeIfAbsent(tenant.getName(), k -> ConcurrentHashMap.newKeySet()).add(appId);
+      var appIds = tenantIdToAppIds.get(tenant.getId().toString());
+      if (appIds != null && !appIds.isEmpty()) {
+        var apps = tenantApplications.computeIfAbsent(tenant.getName(), k -> ConcurrentHashMap.newKeySet());
+        apps.addAll(appIds);
       }
     }
     log.info("Module is enabled for tenants: {}", () -> tenants.stream().map(Tenant::getName).toList());
@@ -199,8 +200,9 @@ public class TenantService {
       EntitlementsEvent.of(Set.copyOf(tenantApplications.keySet())));
   }
 
-  private static Map<String, String> buildTenantIdToAppIdMap(ResultList<Entitlement> resultList) {
+  private static Map<String, Set<String>> buildTenantIdToAppIdMap(ResultList<Entitlement> resultList) {
     return resultList.getRecords().stream()
-      .collect(Collectors.toMap(Entitlement::getTenantId, Entitlement::getApplicationId, (a, b) -> a));
+      .collect(Collectors.groupingBy(Entitlement::getTenantId,
+        Collectors.mapping(Entitlement::getApplicationId, Collectors.toSet())));
   }
 }
