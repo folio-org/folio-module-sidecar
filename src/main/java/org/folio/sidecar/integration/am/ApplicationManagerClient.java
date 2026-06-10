@@ -36,9 +36,22 @@ public class ApplicationManagerClient {
    * @return {@link Future} of {@link ModuleBootstrap} object
    */
   public Future<ModuleBootstrap> getModuleBootstrap(String moduleId, String token) {
-    log.info("Loading module bootstrap: moduleId = {}", moduleId);
+    return getModuleBootstrap(moduleId, null, token);
+  }
 
-    return doGet(moduleUrl(moduleId), token)
+  /**
+   * Provides module bootstrap information from Application Manager.
+   *
+   * @param moduleId - module identifier
+   * @param applicationId - optional application identifier to scope the bootstrap lookup
+   * @param token - okapi token
+   * @return {@link Future} of {@link ModuleBootstrap} object
+   */
+  public Future<ModuleBootstrap> getModuleBootstrap(String moduleId, String applicationId, String token) {
+    log.info("Loading module bootstrap: moduleId = {}, applicationId = {}", moduleId, applicationId);
+
+    var url = moduleUrl(moduleId) + (applicationId != null ? "?applicationId=" + applicationId : "");
+    return doGet(url, token)
       .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
       .onSuccess(mb -> log.debug("Module bootstrapping info loaded: {}", mb))
       .onFailure(error -> log.warn("Failed to retrieve module bootstrap: {}", error.getMessage()));
