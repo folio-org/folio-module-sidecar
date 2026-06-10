@@ -114,27 +114,27 @@ class TenantServiceTest {
   void enableAndThenDisableTenant_positive() {
     var inOrder = inOrder(eventBus);
     // enable
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
 
     // disable
-    tenantService.disableTenant(TestConstants.TENANT_NAME);
+    tenantService.disableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, emptyEntitlementsEvent());
   }
 
   @Test
   void enableTenant_negative_alreadyEnabled() {
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     verify(eventBus, only()).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
   }
 
   @Test
   void disableTenant_negative_notEnabled() {
-    tenantService.disableTenant(TestConstants.TENANT_NAME);
+    tenantService.disableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     verifyNoInteractions(eventBus);
   }
@@ -234,6 +234,51 @@ class TenantServiceTest {
 
     verify(tenantEntitlementClient, times(2))
       .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+  }
+
+  @Test
+  void enable_storesApplicationId() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    // tenant has at least one applicationId → it is in the map
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactly("app-platform-minimal-2.0.53");
+    assertThat(tenantService.getAllApplicationIds()).containsExactly("app-platform-minimal-2.0.53");
+  }
+
+  @Test
+  void enable_multipleApplicationsForSameTenant() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-complete-1.2.0");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactlyInAnyOrder("app-platform-minimal-2.0.53", "app-platform-complete-1.2.0");
+  }
+
+  @Test
+  void disable_removesApplicationButKeepsTenantWhileOthersExist() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-complete-1.2.0");
+    tenantService.disableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactly("app-platform-complete-1.2.0");
+    // tenant still has an app, so it remains in map
+    assertThat(tenantService.getAllApplicationIds()).containsExactly("app-platform-complete-1.2.0");
+  }
+
+  @Test
+  void disable_lastApplication_disablesTenant() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.disableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).isEmpty();
+    assertThat(tenantService.getAllApplicationIds()).isEmpty();
+  }
+
+  @Test
+  void getAllApplicationIds_returnsAllAcrossTenants() {
+    tenantService.enableTenant("tenant1", "app-a-1.0.0");
+    tenantService.enableTenant("tenant2", "app-b-2.0.0");
+    tenantService.enableTenant("tenant1", "app-c-3.0.0");
+    assertThat(tenantService.getAllApplicationIds())
+      .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-2.0.0", "app-c-3.0.0");
   }
 
   @Test

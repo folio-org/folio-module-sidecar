@@ -2,6 +2,7 @@ package org.folio.sidecar.it.kafka;
 
 import static org.awaitility.Durations.FIVE_SECONDS;
 import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
+import static org.folio.sidecar.support.TestConstants.APPLICATION_ID;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
@@ -49,24 +50,24 @@ class TenantEntitlementConsumerIT {
   @ParameterizedTest
   @EnumSource(value = Type.class, names = {"ENTITLE", "UPGRADE"})
   void consume_positive_entitleOrUpgradeEvent(Type type) {
-    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type, null);
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type, APPLICATION_ID);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
 
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(consumer).consume(event));
-    verify(tenantService).enableTenant(TENANT_NAME);
+    verify(tenantService).enableTenant(TENANT_NAME, APPLICATION_ID);
   }
 
   @Test
   void consume_positive_revokeEvent() {
-    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, null);
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, APPLICATION_ID);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
 
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(consumer).consume(event));
-    verify(tenantService).disableTenant(TENANT_NAME);
+    verify(tenantService).disableTenant(TENANT_NAME, APPLICATION_ID);
   }
 
   private void sendEvent(TenantEntitlementEvent event) {

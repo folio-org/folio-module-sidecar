@@ -26,12 +26,13 @@ public class TenantEntitlementConsumer {
     }
 
     var tenantName = event.getTenantName();
+    var applicationId = event.getApplicationId();
     if (shouldEnableTenant(event.getType())) {
-      tenantService.enableTenant(tenantName);
+      tenantService.enableTenant(tenantName, applicationId);
       return;
     }
 
-    tenantService.disableTenant(tenantName);
+    tenantService.disableTenant(tenantName, applicationId);
   }
 
   private boolean shouldEnableTenant(Type type) {
