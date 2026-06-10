@@ -8,6 +8,7 @@ import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.lookup
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -45,28 +47,28 @@ public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListen
 
     var tenant = request.getHeader(OkapiHeaders.TENANT);
     var applicationIds = tenantService.getApplicationIds(tenant);
+    var entry = findEntryInApplicationCaches(path, request, applicationIds);
 
-    Optional<ScRoutingEntry> entry = Optional.empty();
-    String selectedAppId = null;
+    if (entry.isEmpty()) {
+      log.debug("Egress entry found: {}", entry);
+    }
+    return succeededFuture(entry);
+  }
+
+  private Optional<ScRoutingEntry> findEntryInApplicationCaches(String path,
+    HttpServerRequest request, Set<String> applicationIds) {
     for (var appId : applicationIds) {
       var appCache = cachePerApplication.get(appId);
       if (appCache != null) {
-        entry = lookup(request, path, appCache, true);
+        var entry = lookup(request, path, appCache, true);
         if (entry.isPresent()) {
-          selectedAppId = appId;
-          break;
+          log.debug("Egress route selected: applicationId={} interface={} module={} -> {}",
+            appId, entry.get().getInterfaceId(), entry.get().getModuleId(), entry.get().getLocation());
+          return entry;
         }
       }
     }
-
-    if (entry.isPresent()) {
-      log.debug("Egress route selected: applicationId={} interface={} module={} -> {}",
-          selectedAppId, entry.get().getInterfaceId(), entry.get().getModuleId(), entry.get().getLocation());
-    } else {
-      log.debug("Egress entry found: {}", entry);
-    }
-
-    return succeededFuture(entry);
+    return Optional.empty();
   }
 
   /**

@@ -101,9 +101,9 @@ class EgressRoutingLookupTest {
     assertThat(resultA.result()).isPresent();
     assertThat(resultA.result().get().getModuleId()).isEqualTo("mod-bar-0.5.1");
 
-    var resultAMiss = egressLookup.lookupRoute("/baz/items", rcA);
-    assertThat(resultAMiss.succeeded()).isTrue();
-    assertThat(resultAMiss.result()).isEmpty();
+    var missingRouteA = egressLookup.lookupRoute("/baz/items", rcA);
+    assertThat(missingRouteA.succeeded()).isTrue();
+    assertThat(missingRouteA.result()).isEmpty();
 
     // tenant-b is only entitled to app-2 → sees baz route, not bar
     when(tenantService.getApplicationIds("tenant-b")).thenReturn(Set.of("app-2"));
@@ -113,9 +113,9 @@ class EgressRoutingLookupTest {
     assertThat(resultB.result()).isPresent();
     assertThat(resultB.result().get().getModuleId()).isEqualTo("mod-baz-0.5.1");
 
-    var resultBMiss = egressLookup.lookupRoute("/bar/entities", rcB);
-    assertThat(resultBMiss.succeeded()).isTrue();
-    assertThat(resultBMiss.result()).isEmpty();
+    var missingRouteB = egressLookup.lookupRoute("/bar/entities", rcB);
+    assertThat(missingRouteB.succeeded()).isTrue();
+    assertThat(missingRouteB.result()).isEmpty();
   }
 
   @Test

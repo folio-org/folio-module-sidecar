@@ -32,20 +32,24 @@ public class TenantEntitlementConsumer {
     var tenantName = event.getTenantName();
     var applicationId = event.getApplicationId();
     if (shouldEnableTenant(event.getType())) {
-      tenantService.enableTenant(tenantName, applicationId);
-      if (applicationId != null) {
-        applicationManagerService.getModuleBootstrap(applicationId)
-          .onSuccess(bootstrap -> egressRoutingLookup.onApplicationBootstrap(applicationId,
-            bootstrap.getRequiredModules()))
-          .onFailure(
-            err -> log.warn("Failed to load bootstrap for application {}: {}", applicationId, err.getMessage()));
-      }
+      handleEnableTenant(tenantName, applicationId);
       return;
     }
 
     tenantService.disableTenant(tenantName, applicationId);
     if (applicationId != null && tenantService.getAllApplicationIds().stream().noneMatch(applicationId::equals)) {
       egressRoutingLookup.onApplicationRevoked(applicationId);
+    }
+  }
+
+  private void handleEnableTenant(String tenantName, String applicationId) {
+    tenantService.enableTenant(tenantName, applicationId);
+    if (applicationId != null) {
+      applicationManagerService.getModuleBootstrap(applicationId)
+        .onSuccess(bootstrap -> egressRoutingLookup.onApplicationBootstrap(applicationId,
+          bootstrap.getRequiredModules()))
+        .onFailure(
+          err -> log.warn("Failed to load bootstrap for application {}: {}", applicationId, err.getMessage()));
     }
   }
 
