@@ -10,6 +10,7 @@ import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,7 +63,7 @@ class TenantEntitlementConsumerIT {
   @EnumSource(value = Type.class, names = {"ENTITLE", "UPGRADE"})
   void consume_positive_entitleOrUpgradeEvent(Type type) {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type, APPLICATION_ID);
-    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
     when(applicationManagerService.getModuleBootstrap(APPLICATION_ID)).thenReturn(succeededFuture(MODULE_BOOTSTRAP));
 
     sendEvent(event);
@@ -76,9 +77,9 @@ class TenantEntitlementConsumerIT {
   @Test
   void consume_positive_revokeEvent_lastTenant_revokesEgressCache() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, APPLICATION_ID);
-    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
     // After disableTenant, no other tenant uses this applicationId
-    when(tenantService.getAllApplicationIds()).thenReturn(Collections.emptySet());
+    doReturn(Collections.emptySet()).when(tenantService).getAllApplicationIds();
 
     sendEvent(event);
 
@@ -90,9 +91,9 @@ class TenantEntitlementConsumerIT {
   @Test
   void consume_positive_revokeEvent_otherTenantPresent_keepsEgressCache() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, APPLICATION_ID);
-    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
     // Another tenant still uses this applicationId
-    when(tenantService.getAllApplicationIds()).thenReturn(Set.of(APPLICATION_ID));
+    doReturn(Set.of(APPLICATION_ID)).when(tenantService).getAllApplicationIds();
 
     sendEvent(event);
 
