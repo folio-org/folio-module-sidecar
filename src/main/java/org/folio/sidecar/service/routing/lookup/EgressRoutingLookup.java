@@ -47,17 +47,24 @@ public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListen
     var applicationIds = tenantService.getApplicationIds(tenant);
 
     Optional<ScRoutingEntry> entry = Optional.empty();
+    String selectedAppId = null;
     for (var appId : applicationIds) {
       var appCache = cachePerApplication.get(appId);
       if (appCache != null) {
         entry = lookup(request, path, appCache, true);
         if (entry.isPresent()) {
+          selectedAppId = appId;
           break;
         }
       }
     }
 
-    log.debug("Egress entry found: {}", entry);
+    if (entry.isPresent()) {
+      log.debug("Egress route selected: applicationId={} interface={} module={} -> {}",
+          selectedAppId, entry.get().getInterfaceId(), entry.get().getModuleId(), entry.get().getLocation());
+    } else {
+      log.debug("Egress entry found: {}", entry);
+    }
 
     return succeededFuture(entry);
   }
