@@ -333,7 +333,8 @@ class TenantServiceTest {
     assertThatNoException().isThrownBy(() -> tenantService.init());
 
     assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
-    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).containsAnyOf("app-first-1.0.0", "app-second-2.0.0");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsAnyOf("app-first-1.0.0", "app-second-2.0.0");
   }
 
   @Test
