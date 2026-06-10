@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.kafka;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor(staticName = "of")
 @RegisterForReflection
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TenantEntitlementEvent {
 
   /**
@@ -36,6 +38,12 @@ public class TenantEntitlementEvent {
    */
   @JsonProperty("type")
   private Type type;
+
+  /**
+   * An application identifier.
+   */
+  @JsonProperty("applicationId")
+  private String applicationId;
 
   public enum Type {
     ENTITLE,

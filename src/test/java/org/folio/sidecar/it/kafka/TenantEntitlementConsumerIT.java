@@ -49,7 +49,7 @@ class TenantEntitlementConsumerIT {
   @ParameterizedTest
   @EnumSource(value = Type.class, names = {"ENTITLE", "UPGRADE"})
   void consume_positive_entitleOrUpgradeEvent(Type type) {
-    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type);
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type, null);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
 
     sendEvent(event);
@@ -60,7 +60,7 @@ class TenantEntitlementConsumerIT {
 
   @Test
   void consume_positive_revokeEvent() {
-    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE);
+    var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE, null);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
 
     sendEvent(event);
