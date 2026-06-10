@@ -24,7 +24,9 @@ import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
 import org.folio.sidecar.service.ModulePermissionsService;
+import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
+import org.folio.sidecar.service.routing.lookup.EgressRoutingLookup;
 
 @Log4j2
 @ApplicationScoped
@@ -35,10 +37,12 @@ public class RoutingService implements DiscoveryListener {
   private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
   private final ModulePermissionsService modulePermissionsService;
+  private final TenantService tenantService;
+  private final EgressRoutingLookup egressLookup;
 
   public RoutingService(ApplicationManagerService appManagerService,
     @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
-    ModulePermissionsService modulePermissionsService) {
+    ModulePermissionsService modulePermissionsService, TenantService tenantService, EgressRoutingLookup egressLookup) {
     this.appManagerService = appManagerService;
 
     if (isEmpty(requestHandlers)) {
@@ -48,10 +52,15 @@ public class RoutingService implements DiscoveryListener {
 
     this.moduleBootstrapListeners = mbListeners;
     this.modulePermissionsService = modulePermissionsService;
+    this.tenantService = tenantService;
+    this.egressLookup = egressLookup;
   }
 
   public Future<Void> init(Router router) {
-    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+    return loadBootstrapAndProcess(moduleBootstrap -> {
+      initFromBootstrap(router, moduleBootstrap);
+      loadEgressBootstrapPerApplication();
+    });
   }
 
   @Override
@@ -64,6 +73,15 @@ public class RoutingService implements DiscoveryListener {
 
     if (type != null) {
       loadBootstrapAndProcess(updateModuleRoutesByType(type, moduleId));
+    }
+  }
+
+  private void loadEgressBootstrapPerApplication() {
+    var applicationIds = tenantService.getAllApplicationIds();
+    for (var applicationId : applicationIds) {
+      appManagerService.getModuleBootstrap(applicationId)
+        .onSuccess(bootstrap -> egressLookup.onApplicationBootstrap(applicationId, bootstrap.getRequiredModules()))
+        .onFailure(error -> log.warn("Failed to load egress bootstrap for application: {}", applicationId, error));
     }
   }
 

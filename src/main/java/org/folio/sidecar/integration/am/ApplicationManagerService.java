@@ -26,6 +26,17 @@ public class ApplicationManagerService {
     return callWithRetry(token -> client.getModuleBootstrap(moduleId, token));
   }
 
+  /**
+   * Provides module bootstrap information scoped to a specific applicationId.
+   *
+   * @param applicationId - application identifier to scope the bootstrap lookup
+   * @return {@link Future} of {@link ModuleBootstrap} object
+   */
+  public Future<ModuleBootstrap> getModuleBootstrap(String applicationId) {
+    var moduleId = moduleProperties.getId();
+    return callWithRetry(token -> client.getModuleBootstrap(moduleId, applicationId, token));
+  }
+
   public Future<ModuleDiscovery> getModuleDiscovery(String moduleId) {
     return callWithRetry(token -> client.getModuleDiscovery(moduleId, token));
   }
