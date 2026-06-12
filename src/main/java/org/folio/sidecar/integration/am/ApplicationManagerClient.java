@@ -10,6 +10,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
@@ -36,9 +38,23 @@ public class ApplicationManagerClient {
    * @return {@link Future} of {@link ModuleBootstrap} object
    */
   public Future<ModuleBootstrap> getModuleBootstrap(String moduleId, String token) {
-    log.info("Loading module bootstrap: moduleId = {}", moduleId);
+    return getModuleBootstrap(moduleId, null, token);
+  }
 
-    return doGet(moduleUrl(moduleId), token)
+  /**
+   * Provides module bootstrap information from Application Manager.
+   *
+   * @param moduleId - module identifier
+   * @param applicationId - optional application identifier to scope the bootstrap lookup
+   * @param token - okapi token
+   * @return {@link Future} of {@link ModuleBootstrap} object
+   */
+  public Future<ModuleBootstrap> getModuleBootstrap(String moduleId, String applicationId, String token) {
+    log.info("Loading module bootstrap: moduleId = {}, applicationId = {}", moduleId, applicationId);
+
+    var url = moduleUrl(moduleId)
+      + (applicationId != null ? "?applicationId=" + URLEncoder.encode(applicationId, StandardCharsets.UTF_8) : "");
+    return doGet(url, token)
       .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
       .onSuccess(mb -> log.debug("Module bootstrapping info loaded: {}", mb))
       .onFailure(error -> log.warn("Failed to retrieve module bootstrap: {}", error.getMessage()));

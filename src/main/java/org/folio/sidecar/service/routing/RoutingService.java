@@ -15,6 +15,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,10 @@ import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
 import org.folio.sidecar.service.ModulePermissionsService;
+import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
+import org.folio.sidecar.service.routing.lookup.EgressRoutingLookup;
+import org.folio.sidecar.utils.GenericCompositeFuture;
 
 @Log4j2
 @ApplicationScoped
@@ -35,10 +39,12 @@ public class RoutingService implements DiscoveryListener {
   private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
   private final ModulePermissionsService modulePermissionsService;
+  private final TenantService tenantService;
+  private final EgressRoutingLookup egressLookup;
 
   public RoutingService(ApplicationManagerService appManagerService,
     @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
-    ModulePermissionsService modulePermissionsService) {
+    ModulePermissionsService modulePermissionsService, TenantService tenantService, EgressRoutingLookup egressLookup) {
     this.appManagerService = appManagerService;
 
     if (isEmpty(requestHandlers)) {
@@ -48,6 +54,8 @@ public class RoutingService implements DiscoveryListener {
 
     this.moduleBootstrapListeners = mbListeners;
     this.modulePermissionsService = modulePermissionsService;
+    this.tenantService = tenantService;
+    this.egressLookup = egressLookup;
   }
 
   public Future<Void> init(Router router) {
@@ -67,16 +75,43 @@ public class RoutingService implements DiscoveryListener {
     }
   }
 
+  /**
+   * Loads per-application egress bootstrap for every applicationId currently known to {@link TenantService}.
+   *
+   * <p>Must be called after {@link TenantService#init()} has populated tenant→application mappings;
+   * otherwise the iteration sees an empty set and no per-application caches are built.
+   *
+   * <p>Per-application failures are logged and swallowed so a single failing application does not block
+   * the others; the returned future always succeeds.
+   */
+  public Future<Void> loadEgressBootstrapPerApplication() {
+    var applicationIds = tenantService.getAllApplicationIds();
+    if (applicationIds.isEmpty()) {
+      return Future.succeededFuture();
+    }
+    var futures = new ArrayList<Future<Void>>(applicationIds.size());
+    for (var applicationId : applicationIds) {
+      Future<Void> f = appManagerService.getModuleBootstrap(applicationId)
+        .onSuccess(bootstrap -> egressLookup.onApplicationBootstrap(applicationId, bootstrap.getRequiredModules()))
+        .onFailure(error -> log.warn("Failed to load egress bootstrap for application: {}", applicationId, error))
+        .recover(error -> Future.succeededFuture(null))
+        .mapEmpty();
+      futures.add(f);
+    }
+    return GenericCompositeFuture.join(futures).mapEmpty();
+  }
+
   private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
     return appManagerService.getModuleBootstrap()
       .map(moduleBootstrap -> {
         consumer.accept(moduleBootstrap);
-        return (Void) null;
+        return null;
       })
       .onFailure(error -> {
         log.error("Failed to initialize routes", error);
         Quarkus.asyncExit(0);
-      });
+      })
+      .mapEmpty();
   }
 
   private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {

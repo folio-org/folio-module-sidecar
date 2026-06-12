@@ -6,13 +6,16 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import io.quarkus.scheduler.Scheduled;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -39,7 +42,13 @@ public class TenantService {
   private final TenantEntitlementClient tenantEntitlementClient;
   private final ModuleProperties moduleProperties;
   private final EventBus eventBus;
-  private final Set<String> enabledTenants = new ConcurrentHashSet<>();
+
+  /**
+   * Maps tenant name → set of applicationIds that have entitled this tenant.
+   * A tenant is considered enabled if and only if its set is non-empty.
+   */
+  private final Map<String, Set<String>> tenantApplications = new ConcurrentHashMap<>();
+
   private final AtomicBoolean canExecuteTenantsAndEntitlementsTask = new AtomicBoolean(false);
 
   private Promise<Void> initPromise = Promise.promise();
@@ -58,18 +67,65 @@ public class TenantService {
     return result;
   }
 
-  public void enableTenant(String tenantName) {
-    if (enabledTenants.add(tenantName)) {
-      log.info("Enabling tenant: {}", tenantName);
+  /**
+   * Enables a tenant for the given applicationId.
+   * A tenant remains enabled as long as at least one applicationId is registered for it.
+   * When applicationId is null (legacy events without applicationId) the call is a no-op.
+   */
+  public void enableTenant(String tenantName, String applicationId) {
+    if (applicationId == null) {
+      log.warn("enableTenant called with null applicationId for tenant: {}; ignoring", tenantName);
+      return;
+    }
+    var apps = tenantApplications.computeIfAbsent(tenantName, k -> ConcurrentHashMap.newKeySet());
+    if (apps.add(applicationId)) {
+      log.info("Enabling tenant: {} for application: {}", tenantName, applicationId);
       notifyEntitlementsChanged();
     }
   }
 
-  public void disableTenant(String tenantName) {
-    if (enabledTenants.remove(tenantName)) {
-      log.info("Disabling tenant: {}", tenantName);
+  /**
+   * Disables a tenant for the given applicationId.
+   * If the tenant has no more registered applicationIds it is fully disabled.
+   * When applicationId is null (legacy events without applicationId) the call is a no-op.
+   */
+  public void disableTenant(String tenantName, String applicationId) {
+    if (applicationId == null) {
+      log.warn("disableTenant called with null applicationId for tenant: {}; ignoring", tenantName);
+      return;
+    }
+    var apps = tenantApplications.get(tenantName);
+    if (apps == null) {
+      return;
+    }
+    if (apps.remove(applicationId)) {
+      log.info("Disabling tenant: {} for application: {}", tenantName, applicationId);
+      if (apps.isEmpty()) {
+        tenantApplications.remove(tenantName);
+        log.info("Tenant {} fully disabled (no more applications)", tenantName);
+      }
       notifyEntitlementsChanged();
     }
+  }
+
+  /**
+   * Returns the set of applicationIds registered for the given tenant.
+   */
+  public Set<String> getApplicationIds(String tenantName) {
+    if (tenantName == null) {
+      return Collections.emptySet();
+    }
+    var apps = tenantApplications.get(tenantName);
+    return apps == null ? Collections.emptySet() : Set.copyOf(apps);
+  }
+
+  /**
+   * Returns all applicationIds across all enabled tenants.
+   */
+  public Set<String> getAllApplicationIds() {
+    return tenantApplications.values().stream()
+      .flatMap(Set::stream)
+      .collect(Collectors.toUnmodifiableSet());
   }
 
   public boolean isAssignedModule(String moduleId) {
@@ -77,13 +133,13 @@ public class TenantService {
   }
 
   public Future<Set<String>> getEnabledTenants() {
-    return loadingFuture.map(v -> Set.copyOf(enabledTenants));
+    return loadingFuture.map(v -> Set.copyOf(tenantApplications.keySet()));
   }
 
   public Future<Boolean> isEnabledTenant(String name) {
     return isEmpty(name)
       ? succeededFuture(false)
-      : loadingFuture.map(v -> enabledTenants.contains(name));
+      : loadingFuture.map(v -> tenantApplications.containsKey(name));
   }
 
   /**
@@ -113,30 +169,40 @@ public class TenantService {
     var retryFuture = retryTemplate.callAsync(() ->
       tokenProvider.getAdminToken().compose(token ->
         tenantEntitlementClient.getModuleEntitlements(moduleProperties.getId(), token)
-          .map(TenantService::getTenantIds)
-          .compose(tenantIds -> tenantManagerClient.getTenantInfo(tenantIds, token)
-            .onSuccess(this::addEnabledTenants)
-            .onFailure(throwable -> log.warn("Failed to load tenants", throwable)))
+          .compose(entitlements -> {
+            var tenantIdToAppId = buildTenantIdToAppIdMap(entitlements);
+            var tenantIds = List.copyOf(tenantIdToAppId.keySet());
+            return tenantManagerClient.getTenantInfo(tenantIds, token)
+              .onSuccess(tenants -> addEnabledTenants(tenants, tenantIdToAppId))
+              .onFailure(throwable -> log.warn("Failed to load tenants", throwable));
+          })
           .onFailure(throwable -> log.warn("Failed to load tenant entitlements", throwable)))
     );
 
     retryFuture.onComplete(unused -> promise.complete(), promise::fail);
   }
 
-  private void addEnabledTenants(List<Tenant> tenants) {
-    enabledTenants.clear();
-    tenants.forEach(tenant -> enabledTenants.add(tenant.getName()));
+  private void addEnabledTenants(List<Tenant> tenants, Map<String, Set<String>> tenantIdToAppIds) {
+    tenantApplications.clear();
+    for (var tenant : tenants) {
+      var appIds = tenantIdToAppIds.get(tenant.getId().toString());
+      if (appIds != null && !appIds.isEmpty()) {
+        var apps = tenantApplications.computeIfAbsent(tenant.getName(), k -> ConcurrentHashMap.newKeySet());
+        apps.addAll(appIds);
+      }
+    }
     log.info("Module is enabled for tenants: {}", () -> tenants.stream().map(Tenant::getName).toList());
     notifyEntitlementsChanged();
   }
 
   private void notifyEntitlementsChanged() {
-    eventBus.publish(EntitlementsEvent.ENTITLEMENTS_EVENT, EntitlementsEvent.of(Set.copyOf(enabledTenants)));
+    eventBus.publish(EntitlementsEvent.ENTITLEMENTS_EVENT,
+      EntitlementsEvent.of(Set.copyOf(tenantApplications.keySet())));
   }
 
-  private static List<String> getTenantIds(ResultList<Entitlement> resultList) {
-    return resultList.getRecords()
-      .stream().map(Entitlement::getTenantId)
-      .toList();
+  private static Map<String, Set<String>> buildTenantIdToAppIdMap(ResultList<Entitlement> resultList) {
+    return resultList.getRecords().stream()
+      .collect(Collectors.groupingBy(Entitlement::getTenantId,
+        Collectors.mapping(Entitlement::getApplicationId, Collectors.toSet())));
   }
 }

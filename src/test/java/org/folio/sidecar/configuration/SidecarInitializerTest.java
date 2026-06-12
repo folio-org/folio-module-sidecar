@@ -39,6 +39,7 @@ class SidecarInitializerTest {
     when(sidecarProperties.getName()).thenReturn("sc-mod-foo");
     when(routingService.init(router)).thenReturn(succeededFuture());
     when(tenantService.init()).thenReturn(succeededFuture());
+    when(routingService.loadEgressBootstrapPerApplication()).thenReturn(succeededFuture());
 
     var initOrder = inOrder(routingService, tenantService);
 
@@ -46,5 +47,6 @@ class SidecarInitializerTest {
 
     initOrder.verify(routingService).init(router);
     initOrder.verify(tenantService).init();
+    initOrder.verify(routingService).loadEgressBootstrapPerApplication();
   }
 }

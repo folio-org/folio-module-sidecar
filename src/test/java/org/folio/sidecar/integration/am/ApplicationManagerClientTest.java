@@ -5,6 +5,7 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 import static org.folio.sidecar.support.TestConstants.AM_PROPERTIES;
+import static org.folio.sidecar.support.TestConstants.APPLICATION_ID;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
@@ -68,6 +69,58 @@ class ApplicationManagerClientTest {
     when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
 
     var actual = appManagerClient.getModuleBootstrap(MODULE_ID, AUTH_TOKEN);
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+
+    verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
+    verify(request).putHeader(eq(TOKEN), anyString());
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1");
+    verify(jsonConverter).parseResponse(response, ModuleBootstrap.class);
+  }
+
+  @Test
+  void getModuleBootstrap_withApplicationId_appendsQueryParam() {
+    when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(Future.succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
+
+    var actual = appManagerClient.getModuleBootstrap(MODULE_ID, APPLICATION_ID, AUTH_TOKEN);
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+
+    verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
+    verify(request).putHeader(eq(TOKEN), anyString());
+    assertThat(uriCaptor.getValue())
+      .isEqualTo("http://am:8081/modules/mod-foo-0.2.1?applicationId=" + APPLICATION_ID);
+    verify(jsonConverter).parseResponse(response, ModuleBootstrap.class);
+  }
+
+  @Test
+  void getModuleBootstrap_withApplicationId_encodesSpecialChars() {
+    when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(Future.succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
+
+    var actual = appManagerClient.getModuleBootstrap(MODULE_ID, "app id with spaces+special", AUTH_TOKEN);
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+    assertThat(uriCaptor.getValue())
+      .isEqualTo("http://am:8081/modules/mod-foo-0.2.1?applicationId=app+id+with+spaces%2Bspecial");
+  }
+
+  @Test
+  void getModuleBootstrap_withNullApplicationId_noQueryParam() {
+    when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(Future.succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
+
+    var actual = appManagerClient.getModuleBootstrap(MODULE_ID, null, AUTH_TOKEN);
 
     assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
 

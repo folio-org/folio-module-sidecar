@@ -4,6 +4,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -19,6 +20,7 @@ import io.vertx.mutiny.core.eventbus.EventBus;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.te.TenantEntitlementClient;
@@ -114,29 +116,62 @@ class TenantServiceTest {
   void enableAndThenDisableTenant_positive() {
     var inOrder = inOrder(eventBus);
     // enable
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
 
     // disable
-    tenantService.disableTenant(TestConstants.TENANT_NAME);
+    tenantService.disableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     inOrder.verify(eventBus).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, emptyEntitlementsEvent());
   }
 
   @Test
   void enableTenant_negative_alreadyEnabled() {
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
-    tenantService.enableTenant(TestConstants.TENANT_NAME);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
+    tenantService.enableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
 
     verify(eventBus, only()).publish(EntitlementsEvent.ENTITLEMENTS_EVENT, tenantEntitlementsEvent());
   }
 
   @Test
-  void disableTenant_negative_notEnabled() {
-    tenantService.disableTenant(TestConstants.TENANT_NAME);
+  void enableTenant_nullApplicationId_noOp() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, null);
 
     verifyNoInteractions(eventBus);
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).isEmpty();
+  }
+
+  @Test
+  void disableTenant_nullApplicationId_noOp() {
+    tenantService.disableTenant(TestConstants.TENANT_NAME, null);
+
+    verifyNoInteractions(eventBus);
+  }
+
+  @Test
+  void getApplicationIds_nullTenantName_returnsEmpty() {
+    assertThat(tenantService.getApplicationIds(null)).isEmpty();
+  }
+
+  @Test
+  void getApplicationIds_unknownTenantName_returnsEmpty() {
+    assertThat(tenantService.getApplicationIds("unknown-tenant")).isEmpty();
+  }
+
+  @Test
+  void disableTenant_negative_notEnabled() {
+    tenantService.disableTenant(TestConstants.TENANT_NAME, TestConstants.APPLICATION_ID);
+
+    verifyNoInteractions(eventBus);
+  }
+
+  @Test
+  void resetTaskFlag_positive_alreadyTrue_isNoOp() {
+    tenantService.resetTaskFlag(); // false → true
+    tenantService.resetTaskFlag(); // already true, no-op
+
+    verifyNoInteractions(tokenProvider, tenantEntitlementClient, tenantManagerClient, eventBus);
   }
 
   @Test
@@ -234,6 +269,92 @@ class TenantServiceTest {
 
     verify(tenantEntitlementClient, times(2))
       .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+  }
+
+  @Test
+  void enable_storesApplicationId() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    // tenant has at least one applicationId → it is in the map
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactly("app-platform-minimal-2.0.53");
+    assertThat(tenantService.getAllApplicationIds()).containsExactly("app-platform-minimal-2.0.53");
+  }
+
+  @Test
+  void enable_multipleApplicationsForSameTenant() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-complete-1.2.0");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactlyInAnyOrder("app-platform-minimal-2.0.53", "app-platform-complete-1.2.0");
+  }
+
+  @Test
+  void disable_removesApplicationButKeepsTenantWhileOthersExist() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-complete-1.2.0");
+    tenantService.disableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactly("app-platform-complete-1.2.0");
+    // tenant still has an app, so it remains in map
+    assertThat(tenantService.getAllApplicationIds()).containsExactly("app-platform-complete-1.2.0");
+  }
+
+  @Test
+  void disable_lastApplication_disablesTenant() {
+    tenantService.enableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    tenantService.disableTenant(TestConstants.TENANT_NAME, "app-platform-minimal-2.0.53");
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME)).isEmpty();
+    assertThat(tenantService.getAllApplicationIds()).isEmpty();
+  }
+
+  @Test
+  void getAllApplicationIds_returnsAllAcrossTenants() {
+    tenantService.enableTenant("tenant1", "app-a-1.0.0");
+    tenantService.enableTenant("tenant2", "app-b-2.0.0");
+    tenantService.enableTenant("tenant1", "app-c-3.0.0");
+    assertThat(tenantService.getAllApplicationIds())
+      .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-2.0.0", "app-c-3.0.0");
+  }
+
+  @Test
+  void init_positive_multipleApplicationsPerTenant_allRetained() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    var ent1 = Entitlement.of("app-first-1.0.0", TestConstants.TENANT_ID, emptyList());
+    var ent2 = Entitlement.of("app-second-2.0.0", TestConstants.TENANT_ID, emptyList());
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(ResultList.asSinglePage(ent1, ent2)));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    assertThatNoException().isThrownBy(() -> tenantService.init());
+
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
+    assertThat(tenantService.getApplicationIds(TestConstants.TENANT_NAME))
+      .containsExactlyInAnyOrder("app-first-1.0.0", "app-second-2.0.0");
+  }
+
+  @Test
+  void init_tenantManagerReturnsUnknownTenant_notAdded() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    // TM returns a tenant whose UUID does not match any entitlement tenantId → appId == null in addEnabledTenants
+    var unknownUuid = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    var unknownTenant = Tenant.of(unknownUuid, "unknown-tenant", "desc");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(unknownTenant)));
+
+    assertThatNoException().isThrownBy(() -> tenantService.init());
+
+    assertThat(tenantService.isEnabledTenant("unknown-tenant").result()).isFalse();
   }
 
   @Test

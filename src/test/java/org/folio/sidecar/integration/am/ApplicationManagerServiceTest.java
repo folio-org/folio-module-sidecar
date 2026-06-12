@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.am;
 
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.support.TestConstants.APPLICATION_ID;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
@@ -47,6 +48,17 @@ class ApplicationManagerServiceTest {
     when(appManagerClient.getModuleBootstrap(MODULE_ID, AUTH_TOKEN)).thenReturn(succeededFuture(MODULE_BOOTSTRAP));
 
     var actual = service.getModuleBootstrap();
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+  }
+
+  @Test
+  void getModuleBootstrap_withApplicationId_positive() {
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(AUTH_TOKEN));
+    when(appManagerClient.getModuleBootstrap(MODULE_ID, APPLICATION_ID, AUTH_TOKEN))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP));
+
+    var actual = service.getModuleBootstrap(APPLICATION_ID);
 
     assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
   }
