@@ -113,7 +113,7 @@ public class TenantEgressRoutingService {
       }
       return loadTenantEgress(tenant, sortedApps);
     }).onFailure(error ->
-      log.warn("Egress refresh failed for tenant [{}] (keeping last known good): {}", tenant, error.getMessage()));
+      log.warn("Egress refresh failed for tenant [{}]: {}", tenant, error.getMessage()));
   }
 
   private Future<Void> loadTenantEgress(String tenant, List<String> sortedApps) {

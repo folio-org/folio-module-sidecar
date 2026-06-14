@@ -39,7 +39,7 @@ public class SidecarInitializer {
       .compose(unused -> tenantService.init())
       .compose(unused -> tenantEgressRoutingService.init())
       .onFailure(error -> {
-        log.error("Failed to initialize tenant-scoped egress routing; failing startup", error);
+        log.error("Failed to initialize sidecar startup; shutting down", error);
         Quarkus.asyncExit(1);
       });
   }
