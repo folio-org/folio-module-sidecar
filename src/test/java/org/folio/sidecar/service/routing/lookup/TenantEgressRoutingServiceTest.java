@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.assertj.core.api.Assertions;
@@ -58,7 +57,7 @@ class TenantEgressRoutingServiceTest {
     when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
       .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
     when(appManagerService.getModuleBootstrapEgress(any()))
-      .thenReturn(succeededFuture(Optional.of(Map.of(TENANT, found(List.of(provider("mod-bar-1.0.0")))))));
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
 
     var done = service.refreshTenant(TENANT);
 
@@ -86,7 +85,7 @@ class TenantEgressRoutingServiceTest {
       .thenReturn(slowEntitle.future())
       .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", emptyList()))));
     when(appManagerService.getModuleBootstrapEgress(any()))
-      .thenReturn(succeededFuture(Optional.of(Map.of(TENANT, found(List.of(provider("mod-bar-1.0.0")))))));
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
 
     var entitle = service.refreshTenant(TENANT);
     var revoke = service.refreshTenant(TENANT);

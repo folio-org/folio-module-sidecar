@@ -24,9 +24,8 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import java.util.List;
-import java.util.Map;
 import org.apache.http.HttpStatus;
-import org.folio.sidecar.integration.am.model.EgressBootstrapResult;
+import org.folio.sidecar.integration.am.model.BootstrapRequest;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.JsonConverter;
 import org.folio.support.types.UnitTest;
@@ -51,6 +50,7 @@ class ApplicationManagerClientTest {
   @Mock private HttpResponse<Buffer> response;
 
   @Captor private ArgumentCaptor<String> uriCaptor;
+  @Captor private ArgumentCaptor<Object> bodyCaptor;
 
   private ApplicationManagerClient appManagerClient;
 
@@ -83,28 +83,29 @@ class ApplicationManagerClientTest {
   }
 
   @Test
-  void getModuleBootstrapEgress_positive_returnsTenantMap() {
+  void getModuleBootstrapEgress_positive_returnsResult() {
     when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
     when(request.putHeader(anyString(), anyString())).thenReturn(request);
-    when(request.sendJson(any())).thenReturn(succeededFuture(response));
+    when(request.sendJson(bodyCaptor.capture())).thenReturn(succeededFuture(response));
     when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
     when(response.bodyAsString()).thenReturn(
-      "{\"egress\":{\"tenant1\":{\"found\":true,\"bootstrap\":{\"module\":{\"moduleId\":\"mod-foo-0.2.1\","
-        + "\"applicationId\":\"application-0.0.1\"},\"requiredModules\":[]}}}}");
+      "{\"egress\":{\"found\":true,\"bootstrap\":{\"module\":{\"moduleId\":\"mod-foo-0.2.1\","
+        + "\"applicationId\":\"application-0.0.1\"},\"requiredModules\":[]}}}");
 
     var actual = appManagerClient.getModuleBootstrapEgress(
-      MODULE_ID, Map.of("tenant1", List.of("application-0.0.1")), AUTH_TOKEN);
+      MODULE_ID, List.of("application-0.0.1"), AUTH_TOKEN);
 
     assertThat(actual.succeeded()).isTrue();
     var opt = actual.result();
     assertThat(opt).isPresent();
-    assertThat(opt.get()).containsKey("tenant1");
-    EgressBootstrapResult result = opt.get().get("tenant1");
-    assertThat(result.isFound()).isTrue();
+    assertThat(opt.get().isFound()).isTrue();
 
     verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
     verify(request).putHeader(eq(TOKEN), anyString());
     assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+    var body = (BootstrapRequest) bodyCaptor.getValue();
+    assertThat(body.getType()).isEqualTo("egress");
+    assertThat(body.getApplicationIds()).containsExactly("application-0.0.1");
   }
 
   @Test
@@ -115,10 +116,50 @@ class ApplicationManagerClientTest {
     when(response.statusCode()).thenReturn(HttpStatus.SC_NOT_FOUND);
 
     var actual = appManagerClient.getModuleBootstrapEgress(
-      MODULE_ID, Map.of("tenant1", List.of("application-0.0.1")), AUTH_TOKEN);
+      MODULE_ID, List.of("application-0.0.1"), AUTH_TOKEN);
 
     assertThat(actual.succeeded()).isTrue();
     assertThat(actual.result()).isEmpty();
+
+    verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
+    verify(request).putHeader(eq(TOKEN), anyString());
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+  }
+
+  @Test
+  void getModuleBootstrapIngress_positive() {
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.sendJson(bodyCaptor.capture())).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(
+      "{\"ingress\":{\"module\":{\"moduleId\":\"mod-foo-0.2.1\",\"applicationId\":\"application-0.0.1\"},"
+        + "\"requiredModules\":[]}}");
+
+    var actual = appManagerClient.getModuleBootstrapIngress(MODULE_ID, AUTH_TOKEN);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isNotNull();
+    assertThat(actual.result().getModule().getModuleId()).isEqualTo("mod-foo-0.2.1");
+
+    verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
+    verify(request).putHeader(eq(TOKEN), anyString());
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+    var body = (BootstrapRequest) bodyCaptor.getValue();
+    assertThat(body.getType()).isEqualTo("ingress");
+    assertThat(body.getApplicationIds()).isNull();
+  }
+
+  @Test
+  void getModuleBootstrapIngress_failure_propagates() {
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.sendJson(any())).thenReturn(Future.failedFuture(new RuntimeException("connection reset")));
+
+    var actual = appManagerClient.getModuleBootstrapIngress(MODULE_ID, AUTH_TOKEN);
+
+    assertThat(actual.failed()).isTrue();
+    assertThat(actual.cause()).hasMessageContaining("connection reset");
 
     verify(request).putHeader(CONTENT_TYPE, APPLICATION_JSON);
     verify(request).putHeader(eq(TOKEN), anyString());

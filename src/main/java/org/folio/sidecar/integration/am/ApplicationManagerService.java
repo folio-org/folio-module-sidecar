@@ -3,7 +3,6 @@ package org.folio.sidecar.integration.am;
 import io.vertx.core.Future;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
@@ -35,16 +34,25 @@ public class ApplicationManagerService {
   }
 
   /**
-   * Loads tenant-scoped egress bootstrap for this module.
+   * Loads scoped egress bootstrap for this module.
    *
-   * @param tenantApplications map of tenant name to list of application identifiers
-   * @return {@link Future} of {@link Optional} containing a map of tenant name to {@link EgressBootstrapResult},
+   * @param applicationIds list of application identifiers in scope
+   * @return {@link Future} of {@link Optional} containing the {@link EgressBootstrapResult},
    *   or empty if the endpoint is not deployed
    */
-  public Future<Optional<Map<String, EgressBootstrapResult>>> getModuleBootstrapEgress(
-    Map<String, List<String>> tenantApplications) {
+  public Future<Optional<EgressBootstrapResult>> getModuleBootstrapEgress(List<String> applicationIds) {
     var moduleId = moduleProperties.getId();
-    return callWithRetry(token -> client.getModuleBootstrapEgress(moduleId, tenantApplications, token));
+    return callWithRetry(token -> client.getModuleBootstrapEgress(moduleId, applicationIds, token));
+  }
+
+  /**
+   * Loads ingress bootstrap (this module's own routes).
+   *
+   * @return {@link Future} of {@link ModuleBootstrap}
+   */
+  public Future<ModuleBootstrap> getModuleBootstrapIngress() {
+    var moduleId = moduleProperties.getId();
+    return callWithRetry(token -> client.getModuleBootstrapIngress(moduleId, token));
   }
 
   private <T> Future<T> callWithRetry(Function<String, Future<T>> apiCall) {

@@ -1,7 +1,6 @@
 package org.folio.sidecar.integration.am.model;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import java.util.Map;
 import lombok.Data;
 
 @Data
@@ -9,5 +8,5 @@ import lombok.Data;
 public class ModuleBootstrapResponse {
 
   private ModuleBootstrap ingress;
-  private Map<String, EgressBootstrapResult> egress;
+  private EgressBootstrapResult egress;
 }
