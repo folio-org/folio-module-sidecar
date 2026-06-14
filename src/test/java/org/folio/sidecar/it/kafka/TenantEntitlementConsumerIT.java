@@ -5,17 +5,19 @@ import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
-import io.vertx.core.Future;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.ResourceArg;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.junit.mockito.InjectSpy;
 import io.smallrye.reactive.messaging.memory.InMemoryConnector;
 import io.smallrye.reactive.messaging.memory.InMemorySource;
+import io.vertx.core.Future;
 import jakarta.enterprise.inject.Any;
 import jakarta.inject.Inject;
 import org.awaitility.Awaitility;
@@ -74,6 +76,19 @@ class TenantEntitlementConsumerIT {
     awaitUntilAsserted(() -> verify(consumer).consume(event));
     verify(tenantService).disableTenant(TENANT_NAME);
     verify(tenantEgressRoutingService).refreshTenant(TENANT_NAME);
+  }
+
+  @Test
+  void consume_negative_notAssignedModule() {
+    var event = TenantEntitlementEvent.of("mod-other-1.0.0", TENANT_NAME, TENANT_UUID, Type.ENTITLE);
+    when(tenantService.isAssignedModule("mod-other-1.0.0")).thenReturn(false);
+
+    sendEvent(event);
+
+    awaitUntilAsserted(() -> verify(consumer).consume(event));
+    verify(tenantService, never()).enableTenant(any());
+    verify(tenantService, never()).disableTenant(any());
+    verify(tenantEgressRoutingService, never()).refreshTenant(any());
   }
 
   private void sendEvent(TenantEntitlementEvent event) {

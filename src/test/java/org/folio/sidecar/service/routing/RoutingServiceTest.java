@@ -139,6 +139,12 @@ class RoutingServiceTest {
   }
 
   @Test
+  void onDiscovery_positive_delegatesToEgressService() {
+    routingService.onDiscovery("mod-foo-1.0.0");
+    verify(tenantEgressRoutingService).onDiscovery("mod-foo-1.0.0");
+  }
+
+  @Test
   void updateModuleRoutes_negative_moduleNotFound() {
     routingService.updateModuleRoutes("unknown_module");
     verifyNoInteractions(appManagerService, listener1, listener2, router, route);
