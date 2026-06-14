@@ -73,6 +73,26 @@ class EgressRoutingLookupTest {
     assertThat(lookup.hasTenant("tenant1")).isFalse();
   }
 
+  @Test
+  void lookupRoute_matchesPathTemplate() {
+    lookup.updateTenantRoutes("tenant1",
+      List.of(discovery("mod-foo-1.0.0", "http://foo:8081", "/foo/{id}", "GET")));
+
+    mockRequest("tenant1", HttpMethod.GET);
+    var entry = lookup.lookupRoute("/foo/42", routingContext).result();
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-foo-1.0.0");
+  }
+
+  @Test
+  void lookupRoute_returnsEmptyForMethodMismatch() {
+    lookup.updateTenantRoutes("tenant1",
+      List.of(discovery("mod-foo-1.0.0", "http://foo:8081", "/foo/entries", "GET")));
+
+    mockRequest("tenant1", HttpMethod.POST);
+    assertThat(lookup.lookupRoute("/foo/entries", routingContext).result()).isEmpty();
+  }
+
   private void mockRequest(String tenant, HttpMethod method) {
     when(routingContext.request()).thenReturn(request);
     when(request.getHeader(TENANT)).thenReturn(tenant);
@@ -80,7 +100,11 @@ class EgressRoutingLookupTest {
   }
 
   private static ModuleBootstrapDiscovery discovery(String moduleId, String location, String path) {
-    var endpoint = new ModuleBootstrapEndpoint(path, "GET");
+    return discovery(moduleId, location, path, "GET");
+  }
+
+  private static ModuleBootstrapDiscovery discovery(String moduleId, String location, String path, String method) {
+    var endpoint = new ModuleBootstrapEndpoint(path, method);
     var iface = new ModuleBootstrapInterface();
     iface.setId("foo");
     iface.setEndpoints(List.of(endpoint));
