@@ -8,6 +8,7 @@ This directory contains detailed technical documentation for major features of t
 |---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-----------|
 | [JWT Token Verification](features/jwt-token-verification.md)  | Asynchronous JWT token verification and parsing with RSA signature verification, JWKS caching, and claim extraction   | Active    |
 | [Module Entitlement Query](features/module-entitlement-query.md) | Endpoint for querying which tenants are currently entitled for this module (`GET /entitlements/modules/{moduleId}`) | Active    |
+| [Tenant-Scoped Egress Routing](features/tenant-scoped-egress-routing.md) | Per-tenant egress route tables scoped to each tenant's installed applications, refreshed on entitlement and discovery events | Active    |
 
 ---
 
@@ -54,6 +55,30 @@ This directory contains detailed technical documentation for major features of t
 **Configuration:**
 - `ROUTING_MODULE_ENTITLEMENT_ENABLED` - Enable/disable the endpoint (default: `true`)
 - `MODULE_ID` - The module ID this sidecar serves; used to validate the path parameter
+
+---
+
+### Tenant-Scoped Egress Routing
+
+**What it does:** Maintains a per-tenant egress route table scoped to each tenant's installed applications, so outbound calls reach the provider version installed for that tenant; unmatched egress falls back to the gateway.
+
+**Key capabilities:**
+- Builds per-tenant egress tables from mgr-applications `POST /modules/{id}/bootstrap` (`type=egress`)
+- Loads tables at startup for active tenants (best-effort; never fails startup)
+- Refreshes on `${ENV}.entitlement` Kafka events and on module discovery events
+- Serializes per-tenant refreshes (latest event wins) and swaps tables atomically
+- Tolerates a missing `POST /bootstrap` endpoint (404/405) by forwarding egress to the gateway
+
+**Entry points:**
+- `SidecarInitializer.onStart` - startup ingress + scoped-egress initialization
+- `TenantEntitlementConsumer` - `${ENV}.entitlement` Kafka events
+- `RoutingService.onDiscovery` - scope-aware refresh on module discovery
+- `EgressRoutingLookup` - per-tenant egress route lookup
+
+**Configuration:**
+- `AM_CLIENT_URL` - mgr-applications base URL (default `http://mgr-applications:8081`)
+- `TE_CLIENT_URL` - mgr-tenant-entitlements base URL (default `http://mgr-tenant-entitlements:8081`)
+- `mp.messaging.incoming.entitlement.topic` - entitlement topic (default `${ENV:folio}.entitlement`)
 
 ---
 

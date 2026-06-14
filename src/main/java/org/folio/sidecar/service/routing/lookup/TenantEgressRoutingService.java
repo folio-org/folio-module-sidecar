@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toSet;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -45,7 +46,7 @@ public class TenantEgressRoutingService {
     this.moduleProperties = moduleProperties;
   }
 
-  @jakarta.inject.Inject
+  @Inject
   void setTenantService(TenantService tenantService) {
     this.tenantService = tenantService;
   }
