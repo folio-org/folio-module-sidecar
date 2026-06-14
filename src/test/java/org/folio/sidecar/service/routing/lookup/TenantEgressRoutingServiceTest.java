@@ -14,6 +14,8 @@ import io.vertx.core.Promise;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import org.assertj.core.api.Assertions;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.EgressBootstrapResult;
@@ -21,6 +23,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
 import org.folio.sidecar.integration.te.model.Entitlement;
+import org.folio.sidecar.service.TenantService;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +42,7 @@ class TenantEgressRoutingServiceTest {
   @Mock TenantEntitlementService tenantEntitlementService;
   @Mock EgressRoutingLookup egressRoutingLookup;
   @Mock ModuleProperties moduleProperties;
+  @Mock TenantService tenantService;
 
   private TenantEgressRoutingService service;
 
@@ -95,6 +99,37 @@ class TenantEgressRoutingServiceTest {
     var inOrder = org.mockito.Mockito.inOrder(egressRoutingLookup);
     inOrder.verify(egressRoutingLookup).updateTenantRoutes(eq(TENANT), any());
     inOrder.verify(egressRoutingLookup).removeTenantRoutes(TENANT);
+  }
+
+  @Test
+  void init_bootstrapNetworkError_failsStartup() {
+    service.setTenantService(tenantService);
+    when(tenantService.getEnabledTenants()).thenReturn(succeededFuture(Set.of(TENANT)));
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(Future.failedFuture(new RuntimeException("connection reset")));
+
+    var done = service.init();
+
+    Assertions.assertThat(done.failed()).isTrue();
+    Assertions.assertThat(done.cause()).hasMessageContaining("connection reset");
+    verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void init_bootstrap404_startsWithoutFailing() {
+    service.setTenantService(tenantService);
+    when(tenantService.getEnabledTenants()).thenReturn(succeededFuture(Set.of(TENANT)));
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.empty()));
+
+    var done = service.init();
+
+    assertSucceeded(done);
+    verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
   }
 
   private static void assertSucceeded(Future<Void> future) {

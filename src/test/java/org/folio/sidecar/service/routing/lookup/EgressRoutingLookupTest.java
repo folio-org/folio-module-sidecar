@@ -133,6 +133,36 @@ class EgressRoutingLookupTest {
     assertThat(entry.get().getModuleId()).isEqualTo("mod-v2-2.0.0");
   }
 
+  @Test
+  void lookupRoute_strictPriorityWithDifferentModuleVersions() {
+    // static (global) cache points the shared path at the NEWER provider version
+    lookup.onRequiredModulesBootstrap(
+      List.of(discovery("mod-provider-2.1.8", "http://provider-new:8081", "/egress/app-platform")),
+      INIT);
+    // tenant1's scoped table points the SAME path at the OLDER provider version
+    lookup.updateTenantRoutes("tenant1",
+      List.of(discovery("mod-provider-2.0.53", "http://provider-old:8081", "/egress/app-platform")));
+
+    // tenant1 has a scoped table -> must get the OLDER (scoped) version, never the globally-newer one
+    mockRequest("tenant1", HttpMethod.GET);
+    var scoped = lookup.lookupRoute("/egress/app-platform", routingContext).result();
+    assertThat(scoped).isPresent();
+    assertThat(scoped.get().getModuleId()).isEqualTo("mod-provider-2.0.53");
+
+    // tenant2 has NO scoped table -> falls back to the static cache (newer version)
+    mockRequest("tenant2", HttpMethod.GET);
+    var fallback = lookup.lookupRoute("/egress/app-platform", routingContext).result();
+    assertThat(fallback).isPresent();
+    assertThat(fallback.get().getModuleId()).isEqualTo("mod-provider-2.1.8");
+
+    // after tenant1's scoped table is removed, tenant1 also falls back to static
+    lookup.removeTenantRoutes("tenant1");
+    mockRequest("tenant1", HttpMethod.GET);
+    var afterRemove = lookup.lookupRoute("/egress/app-platform", routingContext).result();
+    assertThat(afterRemove).isPresent();
+    assertThat(afterRemove.get().getModuleId()).isEqualTo("mod-provider-2.1.8");
+  }
+
   private void mockRequest(String tenant, HttpMethod method) {
     when(routingContext.request()).thenReturn(request);
     when(request.getHeader(TENANT)).thenReturn(tenant);
