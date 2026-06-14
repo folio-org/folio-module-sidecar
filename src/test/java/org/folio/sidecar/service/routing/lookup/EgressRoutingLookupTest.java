@@ -2,6 +2,8 @@ package org.folio.sidecar.service.routing.lookup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.http.HttpMethod;
@@ -91,6 +93,44 @@ class EgressRoutingLookupTest {
 
     mockRequest("tenant1", HttpMethod.POST);
     assertThat(lookup.lookupRoute("/foo/entries", routingContext).result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_fallsBackToStaticWhenNoTenantTable() {
+    lookup.onRequiredModulesBootstrap(
+      List.of(discovery("mod-static-1.0.0", "http://static:8081", "/static/res")), INIT);
+
+    mockRequest("any-tenant", HttpMethod.GET);
+    var entry = lookup.lookupRoute("/static/res", routingContext).result();
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-static-1.0.0");
+  }
+
+  @Test
+  void lookupRoute_prefersTenantTableOverStatic() {
+    lookup.onRequiredModulesBootstrap(
+      List.of(discovery("mod-static-1.0.0", "http://static:8081", "/res")), INIT);
+    lookup.updateTenantRoutes("tenant1",
+      List.of(discovery("mod-tenant-1.0.0", "http://tenant:8081", "/res")));
+
+    mockRequest("tenant1", HttpMethod.GET);
+    var entry = lookup.lookupRoute("/res", routingContext).result();
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-tenant-1.0.0");
+  }
+
+  @Test
+  void onRequiredModulesBootstrap_updatesStaticCache() {
+    lookup.onRequiredModulesBootstrap(
+      List.of(discovery("mod-v1-1.0.0", "http://v1:8081", "/api/v1")), INIT);
+    lookup.onRequiredModulesBootstrap(
+      List.of(discovery("mod-v2-2.0.0", "http://v2:8081", "/api/v2")), UPDATE);
+
+    mockRequest("any-tenant", HttpMethod.GET);
+    assertThat(lookup.lookupRoute("/api/v1", routingContext).result()).isEmpty();
+    var entry = lookup.lookupRoute("/api/v2", routingContext).result();
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-v2-2.0.0");
   }
 
   private void mockRequest(String tenant, HttpMethod method) {

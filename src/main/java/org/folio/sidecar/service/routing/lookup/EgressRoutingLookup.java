@@ -1,6 +1,7 @@
 package org.folio.sidecar.service.routing.lookup;
 
 import static io.vertx.core.Future.succeededFuture;
+import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.calculateRoutes;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.getCollectedRoutes;
 import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.lookup;
@@ -11,6 +12,7 @@ import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,13 +20,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.model.ScRoutingEntry;
+import org.folio.sidecar.service.routing.ModuleBootstrapListener;
 
 @Log4j2
 @Named("egressLookup")
 @ApplicationScoped
-public class EgressRoutingLookup implements RoutingLookup {
+public class EgressRoutingLookup implements RoutingLookup, ModuleBootstrapListener {
 
   private final Map<String, Map<String, List<ScRoutingEntry>>> tenantEgressCaches = new ConcurrentHashMap<>();
+  private Map<String, List<ScRoutingEntry>> staticEgressCache = new HashMap<>();
 
   @Override
   public Future<Optional<ScRoutingEntry>> lookupRoute(String path, RoutingContext rc) {
@@ -35,13 +39,24 @@ public class EgressRoutingLookup implements RoutingLookup {
 
     var cache = tenant == null ? null : tenantEgressCaches.get(tenant);
     if (cache == null) {
-      log.debug("No egress route table for tenant [{}]", tenant);
-      return succeededFuture(Optional.empty());
+      log.debug("No scoped egress table for tenant [{}]; falling back to static egress", tenant);
+      var entry = lookup(request, path, staticEgressCache, true);
+      log.debug("Static egress entry found: {}", entry);
+      return succeededFuture(entry);
     }
 
     var entry = lookup(request, path, cache, true);
     log.debug("Egress entry found: {}", entry);
     return succeededFuture(entry);
+  }
+
+  @Override
+  public void onRequiredModulesBootstrap(List<ModuleBootstrapDiscovery> requiredModulesBootstrap,
+    ChangeType changeType) {
+    log.info("{} static module egress routes", changeType == INIT ? "Initializing" : "Updating");
+    staticEgressCache = getCollectedRoutes(requiredModulesBootstrap);
+    log.info("Static egress routes {}: count = {}", () -> changeType == INIT ? "initialized" : "updated",
+      () -> calculateRoutes(staticEgressCache));
   }
 
   /**
