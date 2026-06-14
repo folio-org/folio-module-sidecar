@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.te;
 
 import io.vertx.core.Future;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -21,6 +22,10 @@ public class TenantEntitlementService {
 
   public Future<ResultList<Entitlement>> getTenantEntitlements(String tenant, boolean withModules) {
     return callWithRetry(token -> tenantEntitlementClient.getTenantEntitlements(tenant, withModules, token));
+  }
+
+  public Future<List<Entitlement>> getAllTenantEntitlements(String tenant, boolean withModules) {
+    return callWithRetry(token -> tenantEntitlementClient.getAllTenantEntitlements(tenant, withModules, token));
   }
 
   private <T> Future<T> callWithRetry(Function<String, Future<T>> apiCall) {

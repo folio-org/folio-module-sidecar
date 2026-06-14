@@ -103,6 +103,33 @@ class TenantEntitlementClientTest {
   }
 
   @Test
+  void getAllTenantEntitlements_positive_collectsAllPages() {
+    // page 1: totalRecords=3, returns 2 entitlements; page 2: returns 1
+    var page1 = "{\"totalRecords\":3,\"entitlements\":["
+      + "{\"applicationId\":\"app-a-1.0.0\",\"tenantId\":\"t1\",\"modules\":[\"mod-foo-0.2.1\"]},"
+      + "{\"applicationId\":\"app-b-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+    var page2 = "{\"totalRecords\":3,\"entitlements\":["
+      + "{\"applicationId\":\"app-c-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(page1, page2);
+
+    var props = new TenantEntitlementClientProperties("http://te:8081", 2);
+    var teClient = new TenantEntitlementClient(webClient, jsonConverter, props);
+
+    var result = teClient.getAllTenantEntitlements("test-tenant", true, "token");
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).hasSize(3);
+    assertThat(result.result()).extracting(Entitlement::getApplicationId)
+      .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-1.0.0", "app-c-1.0.0");
+  }
+
+  @Test
   void getTenantEntitlements_positive_limitQueryParamIsAdded() {
     var mockClientProperties = org.mockito.Mockito.mock(TenantEntitlementClientProperties.class);
     org.mockito.Mockito.when(mockClientProperties.getBatchSize()).thenReturn(500);

@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.te;
 
+import static io.vertx.core.Future.succeededFuture;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -12,6 +13,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.te.model.Entitlement;
@@ -56,6 +59,38 @@ public class TenantEntitlementClient {
         .addQueryParam("includeModules", Boolean.toString(withModules)))
       .map(response -> jsonConverter.parseResponse(response, EntitlementList.class))
       .map(entitlements -> ResultList.of(entitlements.getTotalRecords(), entitlements.getEntitlements()));
+  }
+
+  /**
+   * Loads all entitlements for a tenant, following pagination to completion.
+   *
+   * @param tenant tenant name
+   * @param withModules whether to include the module list per entitlement
+   * @param token service token
+   * @return future of the full entitlement list across all pages
+   */
+  public Future<List<Entitlement>> getAllTenantEntitlements(String tenant, boolean withModules, String token) {
+    return collectEntitlements(tenant, withModules, token, 0, new ArrayList<>());
+  }
+
+  private Future<List<Entitlement>> collectEntitlements(String tenant, boolean withModules, String token,
+    int offset, List<Entitlement> accumulator) {
+    return doGet(entitlementUrl(), token, request -> request
+        .addQueryParam("tenant", tenant)
+        .addQueryParam("includeModules", Boolean.toString(withModules))
+        .addQueryParam("limit", Integer.toString(clientProperties.getBatchSize()))
+        .addQueryParam("offset", Integer.toString(offset)))
+      .map(response -> jsonConverter.parseResponse(response, EntitlementList.class))
+      .compose(list -> {
+        if (list.getEntitlements() != null) {
+          accumulator.addAll(list.getEntitlements());
+        }
+        var next = offset + clientProperties.getBatchSize();
+        if (list.getTotalRecords() != null && list.getTotalRecords() > next) {
+          return collectEntitlements(tenant, withModules, token, next, accumulator);
+        }
+        return succeededFuture(accumulator);
+      });
   }
 
   private Future<ResultList<Entitlement>> requestData(String moduleId, String token, int offset, int batchSize) {
