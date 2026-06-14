@@ -54,7 +54,12 @@ public class RoutingService implements DiscoveryListener {
   }
 
   public Future<Void> init(Router router) {
-    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+    return appManagerService.getModuleBootstrapIngress()
+      .map(moduleBootstrap -> {
+        initFromBootstrap(router, moduleBootstrap);
+        return (Void) null;
+      })
+      .onFailure(error -> log.error("Failed to initialize ingress routes", error));
   }
 
   @Override
@@ -72,13 +77,13 @@ public class RoutingService implements DiscoveryListener {
   }
 
   private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
-    return appManagerService.getModuleBootstrap()
+    return appManagerService.getModuleBootstrapIngress()
       .map(moduleBootstrap -> {
         consumer.accept(moduleBootstrap);
         return (Void) null;
       })
       .onFailure(error -> {
-        log.error("Failed to initialize routes", error);
+        log.error("Failed to update routes", error);
         Quarkus.asyncExit(0);
       });
   }

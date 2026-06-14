@@ -1,6 +1,7 @@
 package org.folio.sidecar.startup;
 
 import io.quarkus.runtime.Quarkus;
+import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -31,13 +32,19 @@ public class SidecarInitializer {
   public void onStart(@Observes Router router) {
     log.info("Initializing sidecar: {}", sidecarProperties.getName());
 
-    // chain of initialization:
-    // 1. routing service and everything that depends on it
-    // 2. tenant service
-    // 3. tenant-scoped egress routing (depends on tenants being loaded)
+    // Startup chain:
+    // 1. ingress routing (own module) — failure FAILS startup
+    // 2. tenant service — failure FAILS startup
+    // 3. tenant-scoped egress — best-effort; failure is recovered (tenants forward egress to the
+    //    gateway until a later refresh succeeds), so it never fails startup
     routingService.init(router)
       .compose(unused -> tenantService.init())
-      .compose(unused -> tenantEgressRoutingService.init())
+      .compose(unused -> tenantEgressRoutingService.init()
+        .recover(error -> {
+          log.warn("Scoped egress initialization failed; tenants without a scoped table will forward egress "
+            + "to the gateway until refreshed", error);
+          return Future.succeededFuture();
+        }))
       .onFailure(error -> {
         log.error("Failed to initialize sidecar startup; shutting down", error);
         Quarkus.asyncExit(1);

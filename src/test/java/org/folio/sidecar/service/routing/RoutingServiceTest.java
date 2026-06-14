@@ -77,7 +77,7 @@ class RoutingServiceTest {
   void init_positive() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(appManagerService.getModuleBootstrapIngress()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
 
     var listenersOrder = inOrder(listener1, listener2);
@@ -92,11 +92,14 @@ class RoutingServiceTest {
   }
 
   @Test
-  void init_negative() {
-    when(appManagerService.getModuleBootstrap()).thenReturn(failedFuture(new NotFoundException("not found")));
+  void init_negative_propagatesFailure() {
+    when(appManagerService.getModuleBootstrapIngress())
+      .thenReturn(failedFuture(new NotFoundException("not found")));
 
-    routingService.init(router);
+    var result = routingService.init(router);
 
+    Assertions.assertThat(result.failed()).isTrue();
+    Assertions.assertThat(result.cause()).isInstanceOf(NotFoundException.class);
     verifyNoInteractions(router);
   }
 
@@ -104,7 +107,7 @@ class RoutingServiceTest {
   void updateModuleRoutes_positive_updateIngressRoutes() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(appManagerService.getModuleBootstrapIngress()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
 
     routingService.init(router);
@@ -123,7 +126,7 @@ class RoutingServiceTest {
   void updateModuleRoutes_positive_updateEgressRoutes() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
-    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(appManagerService.getModuleBootstrapIngress()).thenReturn(succeededFuture(bootstrap));
     when(router.route("/*")).thenReturn(route);
 
     routingService.init(router);

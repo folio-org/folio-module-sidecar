@@ -101,7 +101,7 @@ class TenantEgressRoutingServiceTest {
   }
 
   @Test
-  void init_bootstrapNetworkError_failsStartup() {
+  void init_bootstrapNetworkError_propagatesFailure() {
     service.setTenantService(tenantService);
     when(tenantService.getEnabledTenants()).thenReturn(succeededFuture(Set.of(TENANT)));
     when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
