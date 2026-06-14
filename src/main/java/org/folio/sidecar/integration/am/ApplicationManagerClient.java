@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.am;
 
+import static io.vertx.core.Future.succeededFuture;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
@@ -10,8 +11,14 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.integration.am.model.BootstrapRequest;
+import org.folio.sidecar.integration.am.model.EgressBootstrapResult;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapResponse;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.service.JsonConverter;
 
@@ -53,6 +60,32 @@ public class ApplicationManagerClient {
       .onFailure(error -> log.warn("Failed to retrieve module discovery: {}", error.getMessage()));
   }
 
+  /**
+   * Loads tenant-scoped egress bootstrap. Returns an empty Optional when the endpoint is not deployed (HTTP 404/405),
+   * so the caller can skip scoped egress without failing.
+   *
+   * @param moduleId           module identifier
+   * @param tenantApplications map of tenant name to list of application identifiers
+   * @param token              service token
+   * @return {@link Future} of {@link Optional} containing a map of tenant name to {@link EgressBootstrapResult}
+   */
+  public Future<Optional<Map<String, EgressBootstrapResult>>> getModuleBootstrapEgress(String moduleId,
+    Map<String, List<String>> tenantApplications, String token) {
+    log.info("Loading egress bootstrap: moduleId = {}, tenants = {}", moduleId, tenantApplications.keySet());
+
+    return doPost(moduleUrl(moduleId) + "/bootstrap", BootstrapRequest.egress(tenantApplications), token)
+      .flatMap(response -> {
+        if (isEndpointMissing(response)) {
+          log.warn("POST /modules/{}/bootstrap unavailable (status {}); skipping scoped egress",
+            moduleId, response.statusCode());
+          return succeededFuture(Optional.empty());
+        }
+        var parsed = jsonConverter.parseResponse(response, ModuleBootstrapResponse.class);
+        var egress = parsed.getEgress() == null ? Map.<String, EgressBootstrapResult>of() : parsed.getEgress();
+        return succeededFuture(Optional.of(egress));
+      });
+  }
+
   private String moduleUrl(String moduleId) {
     return clientProperties.getUrl() + "/modules/" + moduleId;
   }
@@ -62,5 +95,16 @@ public class ApplicationManagerClient {
       .putHeader(CONTENT_TYPE, APPLICATION_JSON)
       .putHeader(TOKEN, token)
       .send();
+  }
+
+  private Future<HttpResponse<Buffer>> doPost(String url, Object body, String token) {
+    return webClient.postAbs(url)
+      .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+      .putHeader(TOKEN, token)
+      .sendJson(body);
+  }
+
+  private static boolean isEndpointMissing(HttpResponse<Buffer> response) {
+    return response.statusCode() == 404 || response.statusCode() == 405;
   }
 }
