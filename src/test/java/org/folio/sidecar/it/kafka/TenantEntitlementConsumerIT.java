@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
+import io.vertx.core.Future;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.ResourceArg;
 import io.quarkus.test.junit.TestProfile;
@@ -23,6 +24,7 @@ import org.folio.sidecar.integration.kafka.TenantEntitlementConsumer;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
 import org.folio.sidecar.service.TenantService;
+import org.folio.sidecar.service.routing.lookup.TenantEgressRoutingService;
 import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.extensions.InMemoryMessagingExtension;
 import org.folio.sidecar.support.profile.InMemoryMessagingTestProfile;
@@ -41,6 +43,7 @@ class TenantEntitlementConsumerIT {
 
   @InjectSpy TenantEntitlementConsumer consumer;
   @InjectMock TenantService tenantService;
+  @InjectMock TenantEgressRoutingService tenantEgressRoutingService;
 
   @Inject
   @Any
@@ -51,22 +54,26 @@ class TenantEntitlementConsumerIT {
   void consume_positive_entitleOrUpgradeEvent(Type type) {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+    when(tenantEgressRoutingService.refreshTenant(TENANT_NAME)).thenReturn(Future.succeededFuture());
 
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(consumer).consume(event));
     verify(tenantService).enableTenant(TENANT_NAME);
+    verify(tenantEgressRoutingService).refreshTenant(TENANT_NAME);
   }
 
   @Test
   void consume_positive_revokeEvent() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE);
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+    when(tenantEgressRoutingService.refreshTenant(TENANT_NAME)).thenReturn(Future.succeededFuture());
 
     sendEvent(event);
 
     awaitUntilAsserted(() -> verify(consumer).consume(event));
     verify(tenantService).disableTenant(TENANT_NAME);
+    verify(tenantEgressRoutingService).refreshTenant(TENANT_NAME);
   }
 
   private void sendEvent(TenantEntitlementEvent event) {

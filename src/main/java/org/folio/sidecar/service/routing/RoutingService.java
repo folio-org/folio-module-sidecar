@@ -25,6 +25,7 @@ import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
+import org.folio.sidecar.service.routing.lookup.TenantEgressRoutingService;
 
 @Log4j2
 @ApplicationScoped
@@ -35,10 +36,11 @@ public class RoutingService implements DiscoveryListener {
   private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
   private final ModulePermissionsService modulePermissionsService;
+  private final TenantEgressRoutingService tenantEgressRoutingService;
 
   public RoutingService(ApplicationManagerService appManagerService,
     @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
-    ModulePermissionsService modulePermissionsService) {
+    ModulePermissionsService modulePermissionsService, TenantEgressRoutingService tenantEgressRoutingService) {
     this.appManagerService = appManagerService;
 
     if (isEmpty(requestHandlers)) {
@@ -48,6 +50,7 @@ public class RoutingService implements DiscoveryListener {
 
     this.moduleBootstrapListeners = mbListeners;
     this.modulePermissionsService = modulePermissionsService;
+    this.tenantEgressRoutingService = tenantEgressRoutingService;
   }
 
   public Future<Void> init(Router router) {
@@ -57,6 +60,7 @@ public class RoutingService implements DiscoveryListener {
   @Override
   public void onDiscovery(String moduleId) {
     updateModuleRoutes(moduleId);
+    tenantEgressRoutingService.onDiscovery(moduleId);
   }
 
   public void updateModuleRoutes(String moduleId) {

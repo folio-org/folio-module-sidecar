@@ -4,11 +4,14 @@ import static org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type.EN
 import static org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type.UPGRADE;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
 import org.folio.sidecar.service.TenantService;
+import org.folio.sidecar.service.routing.lookup.TenantEgressRoutingService;
 
 @Log4j2
 @ApplicationScoped
@@ -16,22 +19,24 @@ import org.folio.sidecar.service.TenantService;
 public class TenantEntitlementConsumer {
 
   private final TenantService tenantService;
+  private final TenantEgressRoutingService tenantEgressRoutingService;
 
   @Incoming("entitlement")
-  public void consume(TenantEntitlementEvent event) {
+  public CompletionStage<Void> consume(TenantEntitlementEvent event) {
     log.debug("Consuming entitlement event: {}", event);
     var moduleId = event.getModuleId();
     if (!tenantService.isAssignedModule(moduleId)) {
-      return;
+      return CompletableFuture.completedFuture(null);
     }
 
     var tenantName = event.getTenantName();
     if (shouldEnableTenant(event.getType())) {
       tenantService.enableTenant(tenantName);
-      return;
+    } else {
+      tenantService.disableTenant(tenantName);
     }
 
-    tenantService.disableTenant(tenantName);
+    return tenantEgressRoutingService.refreshTenant(tenantName).toCompletionStage();
   }
 
   private boolean shouldEnableTenant(Type type) {

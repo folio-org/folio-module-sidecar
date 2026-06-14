@@ -23,6 +23,7 @@ import org.assertj.core.api.Assertions;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ModulePermissionsService;
+import org.folio.sidecar.service.routing.lookup.TenantEgressRoutingService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
@@ -46,18 +47,19 @@ class RoutingServiceTest {
   @Mock private ModuleBootstrapListener listener1;
   @Mock private ModuleBootstrapListener listener2;
   @Mock private ModulePermissionsService modulePermissionsService;
+  @Mock private TenantEgressRoutingService tenantEgressRoutingService;
 
   @BeforeEach
   void setUp() {
     routingService = new RoutingService(appManagerService,
       List.of(requestHandler1, requestHandler2), List.of(listener1, listener2),
-      modulePermissionsService);
+      modulePermissionsService, tenantEgressRoutingService);
   }
 
   @AfterEach
   void tearDown() {
     verifyNoMoreInteractions(appManagerService, requestHandler1, requestHandler2, listener1, listener2,
-      modulePermissionsService);
+      modulePermissionsService, tenantEgressRoutingService);
   }
 
   @Test
@@ -66,7 +68,7 @@ class RoutingServiceTest {
     var handlers = List.<Handler<RoutingContext>>of();
     
     Assertions.assertThatThrownBy(() -> new RoutingService(appManagerService, handlers,
-        listeners, modulePermissionsService))
+        listeners, modulePermissionsService, tenantEgressRoutingService))
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessage("Request handlers are not configured");
   }
