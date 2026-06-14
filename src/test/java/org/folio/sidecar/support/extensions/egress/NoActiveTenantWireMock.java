@@ -10,6 +10,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 /**
  * Scenario: no active tenants — the MTE module-entitlements endpoint returns an empty list.
  * TenantService will have an empty enabled-tenants set; TenantEgressRoutingService.init() skips.
+ * Startup ingress still succeeds via the ingress POST (type==ingress) served by EgressWireMockBase;
+ * no egress POST is made because there are no active tenants.
  * Expected result: EgressRoutingLookup has NO table for any tenant.
  */
 public class NoActiveTenantWireMock extends EgressWireMockBase {

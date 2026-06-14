@@ -1,0 +1,133 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/modules/mod-foo-0.2.1/bootstrap",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.type == 'ingress')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "ingress": {
+        "module": {
+          "moduleId": "mod-foo-0.2.1",
+          "applicationId": "application-0.0.1",
+          "location": "http://sc-foo:8081",
+          "interfaces": [
+            {
+              "id": "foo",
+              "version": "0.1",
+              "endpoints": [
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/foo/entities/{id}",
+                  "permissionsRequired": [ "foo.entities.item.get" ]
+                },
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/foo/entities",
+                  "permissionsRequired": [ "foo.entities.collection.get" ]
+                },
+                {
+                  "methods": [ "DELETE" ],
+                  "pathPattern": "/foo/xyz",
+                  "permissionsRequired": [ "foo.xyz.collection.delete" ]
+                },
+                {
+                  "methods": [ "PUT" ],
+                  "pathPattern": "/foo/xyz",
+                  "permissionsRequired": [ "foo.xyz.collection.put" ]
+                },
+                {
+                  "methods": [ "POST" ],
+                  "pathPattern": "/foo/xyz",
+                  "permissionsRequired": [ "foo.xyz.collection.post" ]
+                },
+                {
+                  "methods": [ "PATCH" ],
+                  "pathPattern": "/foo/xyz",
+                  "permissionsRequired": [ "foo.xyz.collection.patch" ]
+                },
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/foo/bar",
+                  "permissionsRequired": [ ]
+                },
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/bar/foo",
+                  "permissionsDesired": [ "bar.foo.desired.*", "bar.foo.item.get" ]
+                },
+                {
+                  "methods": [ "POST" ],
+                  "pathPattern": "/foo/expire/timer",
+                  "permissionsRequired": [ ]
+                },
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/foo/no-module-id-header",
+                  "permissionsRequired": [ "foo.no-module-id-header.get" ]
+                },
+                {
+                  "methods": [ "GET" ],
+                  "pathPattern": "/foo/module-permissions-storage",
+                  "permissionsRequired": [ "foo.module-permissions-storage.get" ],
+                  "modulePermissions": [
+                    "foo.item.get",
+                    "foo.item.post",
+                    "foo.collection.get",
+                    "foo.collection.all",
+                    "dez.collection.get"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "_tenant",
+              "version": "2.0",
+              "endpoints": [
+                {
+                  "methods": [ "POST" ],
+                  "pathPattern": "/_/tenant"
+                },
+                {
+                  "methods": [ "GET", "DELETE" ],
+                  "pathPattern": "/_/tenant/{id}"
+                }
+              ]
+            }
+          ],
+          "permissionSets": [
+            {
+              "permissionName": "foo.item.get"
+            },
+            {
+              "permissionName": "foo.item.post"
+            },
+            {
+              "permissionName": "foo.collection.get"
+            },
+            {
+              "permissionName": "foo.collection.all"
+            }
+          ]
+        },
+        "requiredModules": []
+      }
+    }
+  }
+}

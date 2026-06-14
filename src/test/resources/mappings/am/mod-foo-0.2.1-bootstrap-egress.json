@@ -1,0 +1,144 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/modules/mod-foo-0.2.1/bootstrap",
+    "headers": {
+      "X-Okapi-Token": {
+        "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+      },
+      "Content-Type": {
+        "equalTo": "application/json"
+      }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$[?(@.type == 'egress')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "egress": {
+        "found": true,
+        "bootstrap": {
+          "module": {
+            "moduleId": "mod-foo-0.2.1",
+            "applicationId": "application-0.0.1",
+            "location": "http://sc-foo:8081"
+          },
+          "requiredModules": [
+            {
+              "moduleId": "mod-bar-0.5.1",
+              "applicationId": "application-0.0.1",
+              "location": "{{request.baseUrl}}",
+              "interfaces": [
+                {
+                  "id": "bar",
+                  "version": "0.1",
+                  "endpoints": [
+                    {
+                      "methods": [ "POST" ],
+                      "pathPattern": "/bar/entities",
+                      "permissionsRequired": [ "item.post" ]
+                    },
+                    {
+                      "methods": [ "GET" ],
+                      "pathPattern": "/bar/entities",
+                      "permissionsRequired": [ "collection.get" ]
+                    },
+                    {
+                      "methods": [ "GET" ],
+                      "pathPattern": "/bar/entities/{id}",
+                      "permissionsRequired": [ "item.get" ]
+                    },
+                    {
+                      "methods": [ "GET" ],
+                      "pathPattern": "/bar/no-module-id-header",
+                      "permissionsRequired": [ "bar.no-module-id-header.get" ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "moduleId": "mod-baz-0.0.1",
+              "applicationId": "application-0.0.1",
+              "location": "{{request.baseUrl}}",
+              "interfaces": [
+                {
+                  "id": "bazqux",
+                  "version": "0.1",
+                  "interfaceType": "multiple",
+                  "endpoints": [
+                    {
+                      "methods": [
+                        "GET"
+                      ],
+                      "pathPattern": "/entities",
+                      "permissionsRequired": [
+                        "item.get"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "moduleId": "mod-qux-0.0.2",
+              "applicationId": "application-0.0.1",
+              "location": "{{request.baseUrl}}",
+              "interfaces": [
+                {
+                  "id": "bazqux",
+                  "version": "0.1",
+                  "interfaceType": "multiple",
+                  "endpoints": [
+                    {
+                      "methods": [
+                        "GET"
+                      ],
+                      "pathPattern": "/entities",
+                      "permissionsRequired": [
+                        "item.get"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "bardez",
+                  "version": "0.1",
+                  "endpoints": [
+                    {
+                      "methods": [
+                        "GET"
+                      ],
+                      "pathPattern": "/entities",
+                      "permissionsRequired": [
+                        "item.get"
+                      ]
+                    },
+                    {
+                      "methods": [
+                        "POST"
+                      ],
+                      "pathPattern": "/dez/items",
+                      "permissionsDesired": [
+                        "foo.item.*",
+                        "foo.collection.get",
+                        "dez.collection.get"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

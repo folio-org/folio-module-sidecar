@@ -3,6 +3,7 @@ package org.folio.sidecar.support.extensions.egress;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 
@@ -38,11 +39,13 @@ public class ActiveTenantWireMock extends EgressWireMockBase {
         .withHeader("Content-Type", "application/json")
         .withBody(TE_ENTITLEMENTS_WITH_MODULE_BODY)));
 
-    // AM: POST /modules/{moduleId}/bootstrap (egress type)
+    // AM: POST /modules/{moduleId}/bootstrap (body type==egress).
     // Returns found=true so TenantEgressRoutingService builds the route table.
+    // The ingress POST (type==ingress) is served by EgressWireMockBase.
     stub(wm, post(urlPathEqualTo("/modules/" + MODULE_ID + "/bootstrap"))
       .withHeader("X-Okapi-Token", equalTo(ADMIN_TOKEN))
       .withHeader("Content-Type", equalTo("application/json"))
+      .withRequestBody(matchingJsonPath("$[?(@.type == 'egress')]"))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")

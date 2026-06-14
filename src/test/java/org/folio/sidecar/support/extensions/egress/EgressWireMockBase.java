@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -22,9 +23,11 @@ import org.folio.sidecar.support.extensions.InjectWireMock;
  * Base for scenario-specific WireMock resources used in egress startup ITs.
  *
  * <p>Starts an isolated WireMock server with a minimal set of stubs that allow Quarkus to boot
- * (KC admin token, JWKS certs, MTE module-entitlements, TM tenants, AM ingress bootstrap GET).
- * Subclasses override {@link #addScenarioStubs(WireMockServer)} to layer scenario-specific stubs:
- * e.g. different MTE response to simulate no-tenant, or 404 on POST /bootstrap.
+ * (KC admin token, JWKS certs, MTE module-entitlements, TM tenants, AM ingress bootstrap POST).
+ * The ingress bootstrap is served via POST /modules/{id}/bootstrap matched on body type==ingress,
+ * so startup ingress always succeeds. Subclasses override {@link #addScenarioStubs(WireMockServer)}
+ * to layer scenario-specific stubs (egress POST matched on body type==egress): e.g. different MTE
+ * response to simulate no-tenant, or 404 on the egress POST /bootstrap.
  */
 @Log4j2
 abstract class EgressWireMockBase implements QuarkusTestResourceLifecycleManager {
@@ -59,17 +62,19 @@ abstract class EgressWireMockBase implements QuarkusTestResourceLifecycleManager
     """.formatted(APP_ID, TENANT_ID, MODULE_ID);
 
   protected static final String AM_INGRESS_BOOTSTRAP_BODY = """
-    {"module":{"moduleId":"%s","applicationId":"%s","location":"http://sc-foo:8081",
-      "interfaces":[{"id":"foo","version":"0.1","endpoints":[
-        {"methods":["GET"],"pathPattern":"/foo/entities",
-         "permissionsRequired":["foo.entities.collection.get"]},
-        {"methods":["POST"],"pathPattern":"/_/tenant"}
-      ]}]
-    },"requiredModules":[]}
+    {"ingress":{
+      "module":{"moduleId":"%s","applicationId":"%s","location":"http://sc-foo:8081",
+        "interfaces":[{"id":"foo","version":"0.1","endpoints":[
+          {"methods":["GET"],"pathPattern":"/foo/entities",
+           "permissionsRequired":["foo.entities.collection.get"]},
+          {"methods":["POST"],"pathPattern":"/_/tenant"}
+        ]}]
+      },"requiredModules":[]}
+    }
     """.formatted(MODULE_ID, APP_ID);
 
   protected static final String AM_EGRESS_BOOTSTRAP_FOUND_BODY = """
-    {"egress":{"%s":{"found":true,"bootstrap":{
+    {"egress":{"found":true,"bootstrap":{
       "module":{"moduleId":"%s","applicationId":"%s","location":"http://sc-foo:8081","interfaces":[]},
       "requiredModules":[
         {"moduleId":"mod-bar-0.5.1","applicationId":"%s","location":"http://mod-bar:8081",
@@ -77,8 +82,8 @@ abstract class EgressWireMockBase implements QuarkusTestResourceLifecycleManager
            {"methods":["GET"],"pathPattern":"/bar/entities"}
          ]}]}
       ]
-    }}}}
-    """.formatted(TENANT_NAME, MODULE_ID, APP_ID, APP_ID);
+    }}}
+    """.formatted(MODULE_ID, APP_ID, APP_ID);
 
   @Getter
   private WireMockServer server;
@@ -146,10 +151,13 @@ abstract class EgressWireMockBase implements QuarkusTestResourceLifecycleManager
         .withHeader("Content-Type", "application/json")
         .withBody(KEYCLOAK_CERTS_BODY)));
 
-    // AM ingress bootstrap GET — needed by RoutingService.init() at startup
-    stub(wm, get(urlPathEqualTo("/modules/" + MODULE_ID))
+    // AM ingress bootstrap POST (body type==ingress) — needed by RoutingService.init() at startup.
+    // Disambiguated from the egress POST (type==egress) by the request-body JSONPath matcher, so
+    // ingress always returns 200 even in scenarios where egress is missing or 404s.
+    stub(wm, post(urlPathEqualTo("/modules/" + MODULE_ID + "/bootstrap"))
       .withHeader("X-Okapi-Token", equalTo(ADMIN_TOKEN))
       .withHeader("Content-Type", equalTo("application/json"))
+      .withRequestBody(matchingJsonPath("$[?(@.type == 'ingress')]"))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
