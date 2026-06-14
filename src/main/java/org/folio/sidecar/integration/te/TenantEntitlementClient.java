@@ -46,7 +46,7 @@ public class TenantEntitlementClient {
   public Future<ResultList<Entitlement>> getModuleEntitlements(String moduleId, String token) {
     log.info("Loading module entitlements: moduleId = {}", moduleId);
 
-    return requestData(moduleId, token, 0, clientProperties.getBatchSize());
+    return collectModuleEntitlements(moduleId, token, 0, new ArrayList<>());
   }
 
   public Future<ResultList<Entitlement>> getTenantEntitlements(String tenant, boolean withModules, String token) {
@@ -93,30 +93,32 @@ public class TenantEntitlementClient {
       });
   }
 
-  private Future<ResultList<Entitlement>> requestData(String moduleId, String token, int offset, int batchSize) {
-    log.debug("Loading batch of tenant entitlements [offset: {}, limit: {}]", offset, batchSize);
+  private Future<ResultList<Entitlement>> collectModuleEntitlements(String moduleId, String token,
+    int offset, List<Entitlement> accumulator) {
+    var batchSize = clientProperties.getBatchSize();
+    log.debug("Loading batch of module entitlements [offset: {}, limit: {}]", offset, batchSize);
 
     return doGet(entitlementUrl("/modules/" + moduleId), token,
       request -> request
         .addQueryParam("limit", Integer.toString(batchSize))
         .addQueryParam("offset", Integer.toString(offset)))
-      // fix incorrect recursive call below
-      .onSuccess(response -> repeatRequestData(moduleId, token, offset, batchSize, response))
       .map(response -> jsonConverter.parseResponse(response, EntitlementList.class))
-      .map(entitlements -> ResultList.of(entitlements.getTotalRecords(), entitlements.getEntitlements()));
+      .compose(list -> {
+        if (list.getEntitlements() != null) {
+          accumulator.addAll(list.getEntitlements());
+        }
+        var total = list.getTotalRecords();
+        var next = offset + batchSize;
+        if (total != null && total > next) {
+          return collectModuleEntitlements(moduleId, token, next, accumulator);
+        }
+        return succeededFuture(ResultList.of(total, accumulator));
+      });
   }
 
   private void validateBatchSizeValue(Integer batchSize) {
     if (batchSize == null || batchSize < 1) {
       throw new IllegalArgumentException("Batch size should not be less than 1");
-    }
-  }
-
-  private void repeatRequestData(String appId, String token, int offset, int batchSize, HttpResponse<Buffer> response) {
-    var entitlementList = jsonConverter.parseResponse(response, EntitlementList.class);
-    var newOffset = offset + batchSize;
-    if (entitlementList.getTotalRecords() > newOffset) {
-      requestData(appId, token, newOffset, batchSize);
     }
   }
 
