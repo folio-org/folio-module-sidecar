@@ -79,7 +79,12 @@ public class TenantEgressRoutingService {
     var ref = tenantChains.computeIfAbsent(tenant, t -> new AtomicReference<>(succeededFuture()));
     var promise = Promise.<Void>promise();
     var previous = ref.getAndSet(promise.future());
-    previous.onComplete(ignored -> doRefreshTenant(tenant, force).onComplete(promise));
+    // Run doRefreshTenant inside Future.future so a synchronous throw (e.g. an unexpected programming error
+    // before the first Future is returned) is captured as a failed future and still settles this promise.
+    // Otherwise the unsettled promise would stay installed as the chain tail forever, silently wedging every
+    // subsequent refresh for this tenant.
+    previous.onComplete(ignored ->
+      Future.<Void>future(p -> doRefreshTenant(tenant, force).onComplete(p)).onComplete(promise));
     return promise.future();
   }
 

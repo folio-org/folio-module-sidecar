@@ -1,5 +1,6 @@
 ## Version `v4.1.0` (in progress)
 ### Changes:
+* Tenant-scoped egress routing: resolve egress per-tenant from the Application Manager `POST /modules/{id}/bootstrap` contract, and forward unmatched egress to the gateway via the new `SIDECAR_EGRESS_FALLBACK_TO_GATEWAY` toggle (default `true`) ([EUREKA-899](https://folio-org.atlassian.net/browse/EUREKA-899))
 * Invalidate system token cache on egress 401 and return 503 with Retry-After header ([MODSIDECAR-178](https://folio-org.atlassian.net/browse/MODSIDECAR-178))
 * Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
 

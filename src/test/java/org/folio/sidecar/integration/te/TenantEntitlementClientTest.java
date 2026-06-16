@@ -127,6 +127,10 @@ class TenantEntitlementClientTest {
     assertThat(result.result()).hasSize(3);
     assertThat(result.result()).extracting(Entitlement::getApplicationId)
       .containsExactlyInAnyOrder("app-a-1.0.0", "app-b-1.0.0", "app-c-1.0.0");
+
+    // pagination advanced on the wire: page 1 at offset 0, page 2 at offset 2 (batchSize=2)
+    verify(request).addQueryParam("offset", "0");
+    verify(request).addQueryParam("offset", "2");
   }
 
   @Test
@@ -154,6 +158,10 @@ class TenantEntitlementClientTest {
     assertThat(result.result().getRecords()).hasSize(3);
     assertThat(result.result().getRecords()).extracting(Entitlement::getTenantId)
       .containsExactlyInAnyOrder("t1", "t2", "t3");
+
+    // pagination advanced on the wire: page 1 at offset 0, page 2 at offset 2 (batchSize=2)
+    verify(request).addQueryParam("offset", "0");
+    verify(request).addQueryParam("offset", "2");
   }
 
   @Test

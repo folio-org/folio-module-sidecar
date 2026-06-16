@@ -24,11 +24,6 @@ public class ApplicationManagerService {
   private final ApplicationManagerClient client;
   private final ModuleProperties moduleProperties;
 
-  public Future<ModuleBootstrap> getModuleBootstrap() {
-    var moduleId = moduleProperties.getId();
-    return callWithRetry(token -> client.getModuleBootstrap(moduleId, token));
-  }
-
   public Future<ModuleDiscovery> getModuleDiscovery(String moduleId) {
     return callWithRetry(token -> client.getModuleDiscovery(moduleId, token));
   }

@@ -42,11 +42,12 @@ class ApplicationManagerServiceTest {
   }
 
   @Test
-  void getModuleBootstrap_positive() {
+  void getModuleBootstrapIngress_positive() {
     when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(AUTH_TOKEN));
-    when(appManagerClient.getModuleBootstrap(MODULE_ID, AUTH_TOKEN)).thenReturn(succeededFuture(MODULE_BOOTSTRAP));
+    when(appManagerClient.getModuleBootstrapIngress(MODULE_ID, AUTH_TOKEN))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP));
 
-    var actual = service.getModuleBootstrap();
+    var actual = service.getModuleBootstrapIngress();
 
     assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
   }

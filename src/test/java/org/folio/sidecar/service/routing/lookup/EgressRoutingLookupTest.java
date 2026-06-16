@@ -1,7 +1,9 @@
 package org.folio.sidecar.service.routing.lookup;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.MODULE_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
+import static org.folio.sidecar.utils.RoutingUtils.MULTIPLE_INTERFACE_TYPE;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.http.HttpMethod;
@@ -134,10 +136,67 @@ class EgressRoutingLookupTest {
     assertThat(lookup.lookupRoute("/egress/app-platform", routingContext).result()).isEmpty();
   }
 
+  @Test
+  void lookupRoute_multiInterface_resolvesFirstProviderByModuleIdHeader() {
+    // tenant1's scoped table has TWO providers exposing the SAME path as a "multiple" interface type;
+    // egress disambiguates by the X-Okapi-Module-Id header.
+    lookup.updateTenantRoutes("tenant1", multiInterfaceProviders());
+
+    mockMultiRequest("tenant1", HttpMethod.GET, "mod-bar-1.0.0");
+    var entry = lookup.lookupRoute("/shared/entities", routingContext).result();
+
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-bar-1.0.0");
+  }
+
+  @Test
+  void lookupRoute_multiInterface_resolvesSecondProviderByModuleIdHeader() {
+    lookup.updateTenantRoutes("tenant1", multiInterfaceProviders());
+
+    mockMultiRequest("tenant1", HttpMethod.GET, "mod-baz-1.0.0");
+    var entry = lookup.lookupRoute("/shared/entities", routingContext).result();
+
+    assertThat(entry).isPresent();
+    assertThat(entry.get().getModuleId()).isEqualTo("mod-baz-1.0.0");
+  }
+
+  @Test
+  void lookupRoute_multiInterface_returnsEmptyWhenModuleIdHeaderAbsent() {
+    lookup.updateTenantRoutes("tenant1", multiInterfaceProviders());
+
+    // No X-Okapi-Module-Id header: a "multiple" interface type cannot be disambiguated, so nothing matches.
+    mockRequest("tenant1", HttpMethod.GET);
+    assertThat(lookup.lookupRoute("/shared/entities", routingContext).result()).isEmpty();
+  }
+
   private void mockRequest(String tenant, HttpMethod method) {
     when(routingContext.request()).thenReturn(request);
     when(request.getHeader(TENANT)).thenReturn(tenant);
     when(request.method()).thenReturn(method);
+  }
+
+  private void mockMultiRequest(String tenant, HttpMethod method, String moduleId) {
+    mockRequest(tenant, method);
+    when(request.getHeader(MODULE_ID)).thenReturn(moduleId);
+  }
+
+  private static List<ModuleBootstrapDiscovery> multiInterfaceProviders() {
+    return List.of(
+      multiInterfaceDiscovery("mod-bar-1.0.0", "http://bar:8081", "/shared/entities"),
+      multiInterfaceDiscovery("mod-baz-1.0.0", "http://baz:8081", "/shared/entities"));
+  }
+
+  private static ModuleBootstrapDiscovery multiInterfaceDiscovery(String moduleId, String location, String path) {
+    var endpoint = new ModuleBootstrapEndpoint(path, "GET");
+    var iface = new ModuleBootstrapInterface();
+    iface.setId("shared");
+    iface.setInterfaceType(MULTIPLE_INTERFACE_TYPE);
+    iface.setEndpoints(List.of(endpoint));
+    var discovery = new ModuleBootstrapDiscovery();
+    discovery.setModuleId(moduleId);
+    discovery.setLocation(location);
+    discovery.setInterfaces(List.of(iface));
+    return discovery;
   }
 
   private static ModuleBootstrapDiscovery discovery(String moduleId, String location, String path) {

@@ -1,5 +1,6 @@
 package org.folio.sidecar.it.egress;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -38,10 +39,14 @@ class TenantEgressBootstrap404StartupIT {
 
   @Test
   void startup_bootstrapEndpoint404_startsWithoutEgressTable() {
-    // Wait until the AM POST /bootstrap call was attempted, proving egress init ran and handled 404.
+    // Verify the EGRESS-specific bootstrap POST (body type==egress) was attempted. That call is only made for
+    // an active tenant whose module is in scope, so it proves the absent table below is attributable to the 404
+    // fallback rather than to the tenant being filtered out earlier. The ingress POST (type==ingress) is always
+    // issued at startup and must NOT satisfy this assertion.
     await().atMost(10, SECONDS)
       .untilAsserted(() -> wireMockServer.verify(moreThanOrExactly(1),
-        postRequestedFor(urlPathMatching("/modules/.*/bootstrap"))));
+        postRequestedFor(urlPathMatching("/modules/.*/bootstrap"))
+          .withRequestBody(matchingJsonPath("$[?(@.type == 'egress')]"))));
 
     assertThat(egressRoutingLookup.hasTenant("testtenant"))
       .as("Expected NO egress table when bootstrap endpoint returns 404 (rollout fallback)")

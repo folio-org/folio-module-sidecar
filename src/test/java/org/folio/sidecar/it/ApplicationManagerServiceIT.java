@@ -40,31 +40,31 @@ class ApplicationManagerServiceIT {
   }
 
   @Test
-  void getModuleBootstrap_positive_applyRetries() {
-    when(amClient.getModuleBootstrap(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+  void getModuleBootstrapIngress_positive_applyRetries() {
+    when(amClient.getModuleBootstrapIngress(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(failedFuture(new ConnectException("error")))
       .thenReturn(succeededFuture(TestConstants.MODULE_BOOTSTRAP));
 
-    var bootstrap = service.getModuleBootstrap();
+    var bootstrap = service.getModuleBootstrapIngress();
 
     await().atMost(ofSeconds(5)).until(bootstrap::isComplete);
 
     assertTrue(bootstrap.succeeded());
     Assertions.assertEquals(TestConstants.MODULE_BOOTSTRAP, bootstrap.result());
 
-    verify(amClient, times(2)).getModuleBootstrap(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+    verify(amClient, times(2)).getModuleBootstrapIngress(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
   }
 
   @Test
-  void getModuleBootstrap_negative_retriesFailed() {
-    when(amClient.getModuleBootstrap(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+  void getModuleBootstrapIngress_negative_retriesFailed() {
+    when(amClient.getModuleBootstrapIngress(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
       .thenReturn(failedFuture(new ConnectException("error")));
 
-    var bootstrap = service.getModuleBootstrap();
+    var bootstrap = service.getModuleBootstrapIngress();
 
     await().atMost(ofSeconds(5)).until(bootstrap::isComplete);
 
     assertTrue(bootstrap.failed());
-    verify(amClient, atLeast(2)).getModuleBootstrap(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
+    verify(amClient, atLeast(2)).getModuleBootstrapIngress(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
   }
 }

@@ -70,10 +70,19 @@ public class RoutingService implements DiscoveryListener {
 
   public void updateModuleRoutes(String moduleId) {
     var type = knownModules.get(moduleId);
-
-    if (type != null) {
-      loadBootstrapAndProcess(updateModuleRoutesByType(type, moduleId));
+    if (type == null) {
+      return;
     }
+
+    if (type == REQUIRED) {
+      // A required (provider) module's discovery only changes egress targets, which are refreshed per-tenant
+      // by TenantEgressRoutingService.onDiscovery. The sidecar's own ingress routes are unaffected, so there is
+      // no need to reload the ingress bootstrap here.
+      log.debug("Discovery for required module [{}]: egress refreshed per-tenant, ingress reload skipped", moduleId);
+      return;
+    }
+
+    loadBootstrapAndProcess(updatePrimaryModuleRoutes());
   }
 
   private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
@@ -118,19 +127,10 @@ public class RoutingService implements DiscoveryListener {
     log.info("Known modules registered: {}", this::getKnownModulesAsString);
   }
 
-  private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type, String updatedModuleId) {
+  private Consumer<ModuleBootstrap> updatePrimaryModuleRoutes() {
     return moduleBootstrap -> {
-      if (type == PRIMARY) {
-        moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
-        modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
-        return;
-      }
-
-      moduleBootstrapListeners.forEach(listener -> listener
-        .onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), UPDATE));
-
-      log.info("Sidecar updated from module bootstrap: moduleId = {}, moduleType = {}, applicationId = {}",
-        updatedModuleId, type, moduleBootstrap.getModule().getApplicationId());
+      moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
+      modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
     };
   }
 

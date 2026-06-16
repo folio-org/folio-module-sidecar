@@ -123,7 +123,7 @@ class RoutingServiceTest {
   }
 
   @Test
-  void updateModuleRoutes_positive_updateEgressRoutes() {
+  void updateModuleRoutes_positive_requiredModuleSkipsIngressReload() {
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
 
     when(appManagerService.getModuleBootstrapIngress()).thenReturn(succeededFuture(bootstrap));
@@ -132,13 +132,13 @@ class RoutingServiceTest {
     routingService.init(router);
     reset(listener1, listener2, router, route);
 
-    var listenersOrder = inOrder(listener1, listener2);
-
+    // A required (provider) module's discovery is handled by per-tenant egress refresh, not an ingress
+    // bootstrap reload, so no second bootstrap fetch or listener notification happens here.
     routingService.updateModuleRoutes("mod-bar-0.5.1");
 
-    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
-    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), UPDATE);
-    verify(modulePermissionsService).putPermissions(anySet());
+    verify(appManagerService).getModuleBootstrapIngress();      // only the init-time fetch, none added here
+    verify(modulePermissionsService).putPermissions(anySet());  // only the init-time call
+    verifyNoInteractions(listener1, listener2);
   }
 
   @Test

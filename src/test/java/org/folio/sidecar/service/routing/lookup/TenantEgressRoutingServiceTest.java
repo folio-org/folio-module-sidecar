@@ -68,6 +68,25 @@ class TenantEgressRoutingServiceTest {
   }
 
   @Test
+  void refreshTenant_doRefreshThrowsSynchronously_settlesAndDoesNotWedgeChain() {
+    // First refresh: getAllTenantEntitlements throws synchronously (not a failed future), so doRefreshTenant
+    // throws before returning a Future. The refresh's promise must still settle (failed) so the per-tenant chain
+    // tail is not left unsettled; otherwise every later refresh for this tenant would wedge forever.
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenThrow(new RuntimeException("synchronous boom"))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
+
+    var first = service.refreshTenant(TENANT);
+    var second = service.refreshTenant(TENANT);
+
+    Assertions.assertThat(first.failed()).isTrue();
+    assertSucceeded(second);
+    verify(egressRoutingLookup).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
   void refreshTenant_moduleInactive_removesTable() {
     when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
       .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", emptyList()))));
