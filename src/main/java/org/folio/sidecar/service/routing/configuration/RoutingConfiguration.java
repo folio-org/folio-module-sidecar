@@ -28,6 +28,7 @@ import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.service.routing.configuration.properties.DynamicRoutingProperties;
 import org.folio.sidecar.service.routing.configuration.properties.TraceRoutingProperties;
 import org.folio.sidecar.service.routing.handler.ChainedHandler;
+import org.folio.sidecar.service.routing.handler.EgressGatewayFallbackHandler;
 import org.folio.sidecar.service.routing.handler.ModuleEntitlementHandler;
 import org.folio.sidecar.service.routing.handler.RoutingEntryHandler;
 import org.folio.sidecar.service.routing.handler.RoutingHandlerWithLookup;
@@ -64,6 +65,7 @@ public class RoutingConfiguration {
     @Named("basicEgressHandler") ChainedHandler egressHandler,
     @Named("dynamicEgressHandler") Instance<ChainedHandler> dynamicEgressHandler,
     @Named("gatewayEgressHandler") Instance<ChainedHandler> gatewayEgressHandler,
+    @Named("egressGatewayFallbackHandler") Instance<ChainedHandler> egressGatewayFallbackHandler,
     @Named("notFoundHandler") ChainedHandler notFoundHandler) {
     var handler = ingressHandler;
 
@@ -83,6 +85,13 @@ public class RoutingConfiguration {
     if (gatewayEgressHandler.isResolvable()) {
       handler = handler.next(gatewayEgressHandler.get());
       log.debug("Gateway egress handler added to the handlers chain");
+    }
+
+    if (egressGatewayFallbackHandler.isResolvable()) {
+      // last-resort: forward unmatched OUTBOUND (self/egress) requests to the gateway so a tenant without a scoped
+      // egress table still routes egress, while unmatched inbound requests fall through to not-found.
+      handler = handler.next(egressGatewayFallbackHandler.get());
+      log.debug("Egress gateway fallback handler added to the handlers chain");
     }
 
     return handler.next(notFoundHandler);
@@ -176,6 +185,14 @@ public class RoutingConfiguration {
     public ChainedHandler gatewayEgressHandler(@Named("gatewayLookup") RoutingLookup lookup,
       @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
       return new RoutingHandlerWithLookup(lookup, handler, pathProcessor);
+    }
+
+    @Named
+    @ApplicationScoped
+    @LookupIfProperty(name = "routing.egress.fallback-to-gateway.enabled", stringValue = "true")
+    public ChainedHandler egressGatewayFallbackHandler(@Named("gatewayLookup") RoutingLookup lookup,
+      @Named("egressRequestHandler") RoutingEntryHandler handler, PathProcessor pathProcessor) {
+      return new EgressGatewayFallbackHandler(new RoutingHandlerWithLookup(lookup, handler, pathProcessor));
     }
   }
 

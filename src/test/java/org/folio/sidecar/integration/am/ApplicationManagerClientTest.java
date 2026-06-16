@@ -14,6 +14,7 @@ import static org.folio.sidecar.support.TestUtils.readString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -148,6 +149,29 @@ class ApplicationManagerClientTest {
     var body = (BootstrapRequest) bodyCaptor.getValue();
     assertThat(body.getType()).isEqualTo("ingress");
     assertThat(body.getApplicationIds()).isNull();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void getModuleBootstrapIngress_endpointMissing_fallsBackToLegacyGet() {
+    when(webClient.postAbs(anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.sendJson(any())).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_METHOD_NOT_ALLOWED);
+
+    var getResponse = mock(HttpResponse.class);
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(getResponse));
+    when(getResponse.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(getResponse.bodyAsString()).thenReturn(readString("json/module-bootstrap.json"));
+
+    var actual = appManagerClient.getModuleBootstrapIngress(MODULE_ID, AUTH_TOKEN);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+
+    verify(webClient).postAbs("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+    verify(webClient).getAbs("http://am:8081/modules/mod-foo-0.2.1");
   }
 
   @Test

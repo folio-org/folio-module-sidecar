@@ -36,7 +36,12 @@ public class TenantEntitlementConsumer {
       tenantService.disableTenant(tenantName);
     }
 
-    return tenantEgressRoutingService.refreshTenant(tenantName).toCompletionStage();
+    // Trigger the egress refresh but acknowledge the event immediately. refreshTenant serializes per tenant (so
+    // ordering is preserved) and handles/logs its own failures. Acking now prevents a slow or failing refresh from
+    // (a) blocking the partition head-of-line for the full retry window, or (b) nacking the message - which, under
+    // the connector's default fail strategy, would halt consumption of all subsequent entitlement events.
+    tenantEgressRoutingService.refreshTenant(tenantName);
+    return CompletableFuture.completedFuture(null);
   }
 
   private boolean shouldEnableTenant(Type type) {

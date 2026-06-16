@@ -84,7 +84,7 @@ public class RoutingService implements DiscoveryListener {
       })
       .onFailure(error -> {
         log.error("Failed to update routes", error);
-        Quarkus.asyncExit(0);
+        Quarkus.asyncExit(1);
       });
   }
 

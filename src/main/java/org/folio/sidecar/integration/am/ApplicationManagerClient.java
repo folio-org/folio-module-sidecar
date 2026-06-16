@@ -84,7 +84,10 @@ public class ApplicationManagerClient {
   }
 
   /**
-   * Loads ingress bootstrap (this module's own routes). Any failure propagates so startup can fail.
+   * Loads ingress bootstrap (this module's own routes). When the bootstrap endpoint is not deployed (HTTP 404/405,
+   * i.e. an older mgr-applications), falls back to the legacy {@code GET /modules/{id}} so the sidecar can still
+   * start during a rollout where mgr-applications has not yet been upgraded. Any other failure propagates so startup
+   * can fail.
    *
    * @param moduleId module identifier
    * @param token    service token
@@ -93,7 +96,14 @@ public class ApplicationManagerClient {
   public Future<ModuleBootstrap> getModuleBootstrapIngress(String moduleId, String token) {
     log.info("Loading ingress bootstrap: moduleId = {}", moduleId);
     return doPost(moduleUrl(moduleId) + "/bootstrap", BootstrapRequest.ingress(), token)
-      .map(response -> jsonConverter.parseResponse(response, ModuleBootstrapResponse.class).getIngress())
+      .flatMap(response -> {
+        if (isEndpointMissing(response)) {
+          log.warn("POST /modules/{}/bootstrap unavailable (status {}); falling back to legacy GET /modules/{}",
+            moduleId, response.statusCode(), moduleId);
+          return getModuleBootstrap(moduleId, token);
+        }
+        return succeededFuture(jsonConverter.parseResponse(response, ModuleBootstrapResponse.class).getIngress());
+      })
       .onFailure(error -> log.warn("Failed to retrieve ingress bootstrap: {}", error.getMessage()));
   }
 

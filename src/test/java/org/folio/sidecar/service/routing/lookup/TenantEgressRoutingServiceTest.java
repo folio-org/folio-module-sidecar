@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -104,6 +105,7 @@ class TenantEgressRoutingServiceTest {
   void init_bootstrapNetworkError_propagatesFailure() {
     service.setTenantService(tenantService);
     when(tenantService.getEnabledTenants()).thenReturn(succeededFuture(Set.of(TENANT)));
+    when(tenantService.isEnabled(TENANT)).thenReturn(true);
     when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
       .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
     when(appManagerService.getModuleBootstrapEgress(any()))
@@ -114,6 +116,7 @@ class TenantEgressRoutingServiceTest {
     Assertions.assertThat(done.failed()).isTrue();
     Assertions.assertThat(done.cause()).hasMessageContaining("connection reset");
     verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
+    verify(egressRoutingLookup, never()).removeTenantRoutes(TENANT);
   }
 
   @Test
@@ -129,6 +132,116 @@ class TenantEgressRoutingServiceTest {
 
     assertSucceeded(done);
     verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void refreshTenant_egressFoundFalse_removesTable() {
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(notFound())));
+
+    var done = service.refreshTenant(TENANT);
+
+    assertSucceeded(done);
+    verify(egressRoutingLookup).removeTenantRoutes(TENANT);
+    verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void refreshTenant_foundTrueButNullBootstrap_removesTableWithoutNpe() {
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    var foundWithoutBootstrap = new EgressBootstrapResult();
+    foundWithoutBootstrap.setFound(true);
+    foundWithoutBootstrap.setBootstrap(null);
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(foundWithoutBootstrap)));
+
+    var done = service.refreshTenant(TENANT);
+
+    assertSucceeded(done);
+    verify(egressRoutingLookup).removeTenantRoutes(TENANT);
+    verify(egressRoutingLookup, never()).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void refreshTenant_applicationScopeUnchanged_skipsBootstrapReload() {
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
+
+    assertSucceeded(service.refreshTenant(TENANT));
+    assertSucceeded(service.refreshTenant(TENANT));
+
+    verify(appManagerService, times(1)).getModuleBootstrapEgress(any());
+    verify(egressRoutingLookup, times(1)).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void refreshTenant_disabledTenantRefreshFails_removesTableFailSafe() {
+    service.setTenantService(tenantService);
+    when(tenantService.isEnabled(TENANT)).thenReturn(false);
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(Future.failedFuture(new RuntimeException("bootstrap unavailable")));
+
+    var done = service.refreshTenant(TENANT);
+
+    Assertions.assertThat(done.failed()).isTrue();
+    verify(egressRoutingLookup).removeTenantRoutes(TENANT);
+  }
+
+  @Test
+  void refreshTenant_enabledTenantRefreshFails_keepsExistingTable() {
+    service.setTenantService(tenantService);
+    when(tenantService.isEnabled(TENANT)).thenReturn(true);
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(Future.failedFuture(new RuntimeException("bootstrap blip")));
+
+    var done = service.refreshTenant(TENANT);
+
+    Assertions.assertThat(done.failed()).isTrue();
+    verify(egressRoutingLookup, never()).removeTenantRoutes(TENANT);
+  }
+
+  @Test
+  void onDiscovery_trackedModule_forcesReloadEvenIfScopeUnchanged() {
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
+
+    assertSucceeded(service.refreshTenant(TENANT));
+
+    service.onDiscovery("mod-bar-1.0.0");
+
+    verify(appManagerService, times(2)).getModuleBootstrapEgress(any());
+    verify(egressRoutingLookup, times(2)).updateTenantRoutes(eq(TENANT), any());
+  }
+
+  @Test
+  void onDiscovery_untrackedModule_doesNotRefresh() {
+    when(tenantEntitlementService.getAllTenantEntitlements(eq(TENANT), anyBoolean()))
+      .thenReturn(succeededFuture(List.of(entitlement("app-1.0.0", List.of(MODULE_ID)))));
+    when(appManagerService.getModuleBootstrapEgress(any()))
+      .thenReturn(succeededFuture(Optional.of(found(List.of(provider("mod-bar-1.0.0"))))));
+
+    assertSucceeded(service.refreshTenant(TENANT));
+
+    service.onDiscovery("mod-unrelated-9.9.9");
+
+    verify(appManagerService, times(1)).getModuleBootstrapEgress(any());
+  }
+
+  private static EgressBootstrapResult notFound() {
+    var result = new EgressBootstrapResult();
+    result.setFound(false);
+    return result;
   }
 
   private static void assertSucceeded(Future<Void> future) {

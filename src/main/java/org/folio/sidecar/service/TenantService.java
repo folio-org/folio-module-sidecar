@@ -87,6 +87,18 @@ public class TenantService {
   }
 
   /**
+   * Returns the current enabled state of a tenant synchronously, without waiting for the initial load.
+   * Reflects the latest {@link #enableTenant}/{@link #disableTenant} mutation, which is what callers
+   * reacting to an entitlement event need (e.g. fail-safe egress cleanup on a disabled tenant).
+   *
+   * @param name tenant name
+   * @return {@code true} if the tenant is currently enabled
+   */
+  public boolean isEnabled(String name) {
+    return !isEmpty(name) && enabledTenants.contains(name);
+  }
+
+  /**
     * This logic is implemented in scope of MODSIDECAR-126.
     * Should be removed after design long term solution.
   */

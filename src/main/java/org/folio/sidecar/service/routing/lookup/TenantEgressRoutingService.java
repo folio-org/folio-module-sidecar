@@ -72,15 +72,21 @@ public class TenantEgressRoutingService {
    * refresh of the same tenant to settle before running, guaranteeing the latest event's result is the one retained.
    */
   public Future<Void> refreshTenant(String tenant) {
+    return refreshTenant(tenant, false);
+  }
+
+  private Future<Void> refreshTenant(String tenant, boolean force) {
     var ref = tenantChains.computeIfAbsent(tenant, t -> new AtomicReference<>(succeededFuture()));
     var promise = Promise.<Void>promise();
     var previous = ref.getAndSet(promise.future());
-    previous.onComplete(ignored -> doRefreshTenant(tenant).onComplete(promise));
+    previous.onComplete(ignored -> doRefreshTenant(tenant, force).onComplete(promise));
     return promise.future();
   }
 
   /**
-   * Refreshes only tenants whose tracked provider set contains the discovered module.
+   * Refreshes only tenants whose tracked provider set contains the discovered module. A discovery event changes a
+   * provider's location, not the tenant's application scope, so the refresh is forced to bypass the unchanged-scope
+   * short-circuit and actually re-fetch the egress bootstrap (otherwise the new location would never be picked up).
    */
   public void onDiscovery(String moduleId) {
     if (metadata.isEmpty()) {
@@ -95,26 +101,44 @@ public class TenantEgressRoutingService {
       return;
     }
     log.info("Discovery for {} refreshing tenant egress scopes: {}", moduleId, affected);
-    affected.forEach(this::refreshTenant);
+    affected.forEach(tenant -> refreshTenant(tenant, true));
   }
 
-  private Future<Void> doRefreshTenant(String tenant) {
+  private Future<Void> doRefreshTenant(String tenant, boolean force) {
     return tenantEntitlementService.getAllTenantEntitlements(tenant, true).compose(entitlements -> {
       if (!isModuleActive(entitlements)) {
-        egressRoutingLookup.removeTenantRoutes(tenant);
-        metadata.remove(tenant);
+        removeTenant(tenant);
         log.info("Module no longer active for tenant [{}]; removed egress route table", tenant);
         return succeededFuture();
       }
       var sortedApps = applicationScope(entitlements);
       var existing = metadata.get(tenant);
-      if (existing != null && existing.applicationScope().equals(sortedApps)) {
+      if (!force && existing != null && existing.applicationScope().equals(sortedApps)) {
         log.debug("Tenant [{}] application scope unchanged; skipping egress refresh", tenant);
         return succeededFuture();
       }
       return loadTenantEgress(tenant, sortedApps);
-    }).onFailure(error ->
-      log.warn("Egress refresh failed for tenant [{}]: {}", tenant, error.getMessage()));
+    }).onFailure(error -> {
+      log.warn("Egress refresh failed for tenant [{}]: {}", tenant, error.getMessage());
+      // Fail-safe: if the tenant has been disabled (e.g. a REVOKE) but the entitlement re-query failed, drop the
+      // stale egress table so outbound calls fall back to the gateway rather than routing to now-unentitled modules.
+      if (tenantService != null && !tenantService.isEnabled(tenant)) {
+        log.info("Tenant [{}] disabled and egress refresh failed; removing egress route table (fail-safe)", tenant);
+        removeTenant(tenant);
+      }
+    });
+  }
+
+  /**
+   * Authoritatively drops a tenant's egress state: its route table, tracked metadata, and serialization chain.
+   * Pruning the chain keeps {@link #tenantChains} from accumulating entries for tenants that churn over the lifetime
+   * of the instance; a later event for the tenant recreates a fresh chain. Per-tenant events are processed in order,
+   * so this does not break last-event-wins serialization.
+   */
+  private void removeTenant(String tenant) {
+    egressRoutingLookup.removeTenantRoutes(tenant);
+    metadata.remove(tenant);
+    tenantChains.remove(tenant);
   }
 
   private Future<Void> loadTenantEgress(String tenant, List<String> sortedApps) {
@@ -129,13 +153,16 @@ public class TenantEgressRoutingService {
   }
 
   private void applyTenantResult(String tenant, List<String> sortedApps, EgressBootstrapResult result) {
-    if (result == null || !result.isFound()) {
-      log.warn("Egress found=false for tenant [{}] (module not in scope); ensuring no egress table", tenant);
-      egressRoutingLookup.removeTenantRoutes(tenant);
-      metadata.remove(tenant);
+    if (result == null || !result.isFound() || result.getBootstrap() == null) {
+      log.warn("Egress unavailable for tenant [{}] (module not in scope or empty bootstrap); ensuring no egress table",
+        tenant);
+      removeTenant(tenant);
       return;
     }
     var requiredModules = result.getBootstrap().getRequiredModules();
+    if (requiredModules == null) {
+      requiredModules = List.of();
+    }
     egressRoutingLookup.updateTenantRoutes(tenant, requiredModules);
     var moduleIds = requiredModules.stream().map(ModuleBootstrapDiscovery::getModuleId).collect(toSet());
     metadata.put(tenant, new TenantEgressMetadata(sortedApps, moduleIds));
