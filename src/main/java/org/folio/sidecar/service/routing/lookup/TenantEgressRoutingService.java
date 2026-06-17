@@ -147,14 +147,15 @@ public class TenantEgressRoutingService {
   }
 
   private Future<Void> loadTenantEgress(String tenant, List<String> sortedApps) {
-    return appManagerService.getModuleBootstrapEgress(sortedApps).map(optional -> {
-      if (optional.isEmpty()) {
-        log.warn("POST /bootstrap unavailable; scoped egress inactive for tenant [{}]", tenant);
-        return null;
-      }
-      applyTenantResult(tenant, sortedApps, optional.get());
-      return null;
-    });
+    return appManagerService.getModuleBootstrapEgress(sortedApps)
+      .onSuccess(optional -> {
+        if (optional.isEmpty()) {
+          log.warn("POST /bootstrap unavailable; scoped egress inactive for tenant [{}]", tenant);
+        } else {
+          applyTenantResult(tenant, sortedApps, optional.get());
+        }
+      })
+      .mapEmpty();
   }
 
   private void applyTenantResult(String tenant, List<String> sortedApps, EgressBootstrapResult result) {

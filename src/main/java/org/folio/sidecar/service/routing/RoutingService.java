@@ -18,7 +18,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
@@ -82,13 +81,14 @@ public class RoutingService implements DiscoveryListener {
       return;
     }
 
-    loadBootstrapAndProcess(updatePrimaryModuleRoutes());
+    refreshPrimaryModuleRoutes();
   }
 
-  private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
+  private Future<Void> refreshPrimaryModuleRoutes() {
     return appManagerService.getModuleBootstrapIngress()
       .map(moduleBootstrap -> {
-        consumer.accept(moduleBootstrap);
+        moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
+        modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
         return (Void) null;
       })
       .onFailure(error -> {
@@ -125,13 +125,6 @@ public class RoutingService implements DiscoveryListener {
       discovery -> knownModules.put(discovery.getModuleId(), REQUIRED));
 
     log.info("Known modules registered: {}", this::getKnownModulesAsString);
-  }
-
-  private Consumer<ModuleBootstrap> updatePrimaryModuleRoutes() {
-    return moduleBootstrap -> {
-      moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
-      modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
-    };
   }
 
   private String getKnownModulesAsString() {
