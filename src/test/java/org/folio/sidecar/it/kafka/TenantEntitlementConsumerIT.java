@@ -6,9 +6,9 @@ import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -55,8 +55,11 @@ class TenantEntitlementConsumerIT {
   @EnumSource(value = Type.class, names = {"ENTITLE", "UPGRADE"})
   void consume_positive_entitleOrUpgradeEvent(Type type) {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, type);
-    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
-    when(tenantEgressRoutingService.refreshTenant(TENANT_NAME)).thenReturn(Future.succeededFuture());
+    // doReturn(...).when(...) (not when(...).thenReturn(...)): SidecarInitializer.onStart asynchronously invokes
+    // init() on these mocks during startup, which can race the invocation-based when() stubbing and corrupt it
+    // (Mockito WrongTypeOfReturnValue). doReturn stubbing is not invocation-based and is immune to that race.
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
+    doReturn(Future.succeededFuture()).when(tenantEgressRoutingService).refreshTenant(TENANT_NAME);
 
     sendEvent(event);
 
@@ -68,8 +71,8 @@ class TenantEntitlementConsumerIT {
   @Test
   void consume_positive_revokeEvent() {
     var event = TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE);
-    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
-    when(tenantEgressRoutingService.refreshTenant(TENANT_NAME)).thenReturn(Future.succeededFuture());
+    doReturn(true).when(tenantService).isAssignedModule(MODULE_ID);
+    doReturn(Future.succeededFuture()).when(tenantEgressRoutingService).refreshTenant(TENANT_NAME);
 
     sendEvent(event);
 
@@ -81,7 +84,7 @@ class TenantEntitlementConsumerIT {
   @Test
   void consume_negative_notAssignedModule() {
     var event = TenantEntitlementEvent.of("mod-other-1.0.0", TENANT_NAME, TENANT_UUID, Type.ENTITLE);
-    when(tenantService.isAssignedModule("mod-other-1.0.0")).thenReturn(false);
+    doReturn(false).when(tenantService).isAssignedModule("mod-other-1.0.0");
 
     sendEvent(event);
 
