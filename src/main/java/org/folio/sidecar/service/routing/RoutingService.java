@@ -56,9 +56,10 @@ public class RoutingService implements DiscoveryListener {
     return appManagerService.getModuleBootstrapIngress()
       .map(moduleBootstrap -> {
         initFromBootstrap(router, moduleBootstrap);
-        return (Void) null;
+        return moduleBootstrap;
       })
-      .onFailure(error -> log.error("Failed to initialize ingress routes", error));
+      .onFailure(error -> log.error("Failed to initialize ingress routes", error))
+      .mapEmpty();
   }
 
   @Override
@@ -89,12 +90,13 @@ public class RoutingService implements DiscoveryListener {
       .map(moduleBootstrap -> {
         moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), UPDATE));
         modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
-        return (Void) null;
+        return moduleBootstrap;
       })
       .onFailure(error -> {
         log.error("Failed to update routes", error);
         Quarkus.asyncExit(1);
-      });
+      })
+      .mapEmpty();
   }
 
   private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {

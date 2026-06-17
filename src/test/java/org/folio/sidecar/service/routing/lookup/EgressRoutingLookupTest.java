@@ -138,8 +138,8 @@ class EgressRoutingLookupTest {
 
   @Test
   void lookupRoute_multiInterface_resolvesFirstProviderByModuleIdHeader() {
-    // tenant1's scoped table has TWO providers exposing the SAME path as a "multiple" interface type;
-    // egress disambiguates by the X-Okapi-Module-Id header.
+    // tenant1's scoped table has two providers that expose the same path through a multiple-type interface,
+    // so egress disambiguates between them using the X-Okapi-Module-Id header
     lookup.updateTenantRoutes("tenant1", multiInterfaceProviders());
 
     mockMultiRequest("tenant1", HttpMethod.GET, "mod-bar-1.0.0");
