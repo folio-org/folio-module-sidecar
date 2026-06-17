@@ -102,10 +102,9 @@ public class RoutingService implements DiscoveryListener {
   private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
-    moduleBootstrapListeners.forEach(listener -> {
-      listener.onModuleBootstrap(moduleBootstrap.getModule(), INIT);
-      listener.onRequiredModulesBootstrap(moduleBootstrap.getRequiredModules(), INIT);
-    });
+    // Egress is now driven per-tenant by TenantEgressRoutingService (scoped tables + gateway fallback), so the old
+    // global onRequiredModulesBootstrap notification is no longer consumed by anyone and is not fired.
+    moduleBootstrapListeners.forEach(listener -> listener.onModuleBootstrap(moduleBootstrap.getModule(), INIT));
 
     modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
 

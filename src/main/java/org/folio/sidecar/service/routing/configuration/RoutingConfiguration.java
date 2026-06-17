@@ -89,7 +89,10 @@ public class RoutingConfiguration {
 
     if (egressGatewayFallbackHandler.isResolvable()) {
       // last-resort: forward unmatched OUTBOUND (self/egress) requests to the gateway so a tenant without a scoped
-      // egress table still routes egress, while unmatched inbound requests fall through to not-found.
+      // egress table still routes egress, while unmatched inbound requests fall through to not-found (404).
+      // Caveat: this inbound-stays-404 guarantee holds only when routing.forward-to-gateway.enabled is false (the
+      // default). With forward-to-gateway enabled, gatewayEgressHandler above forwards ALL unmatched requests
+      // (inbound included) and short-circuits the chain before this handler and not-found are ever reached.
       handler = handler.next(egressGatewayFallbackHandler.get());
       log.debug("Egress gateway fallback handler added to the handlers chain");
     }

@@ -15,6 +15,7 @@ import static org.folio.sidecar.support.TestUtils.readString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -131,6 +132,85 @@ class TenantEntitlementClientTest {
     // pagination advanced on the wire: page 1 at offset 0, page 2 at offset 2 (batchSize=2)
     verify(request).addQueryParam("offset", "0");
     verify(request).addQueryParam("offset", "2");
+  }
+
+  @Test
+  void getAllTenantEntitlements_totalEqualsBatchSize_issuesSingleRequest() {
+    // boundary: a full single page whose totalRecords equals the batch size must not trigger a second request
+    var page = "{\"totalRecords\":2,\"entitlements\":["
+      + "{\"applicationId\":\"app-a-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]},"
+      + "{\"applicationId\":\"app-b-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(page);
+
+    var props = new TenantEntitlementClientProperties("http://te:8081", 2);
+    var teClient = new TenantEntitlementClient(webClient, jsonConverter, props);
+
+    var result = teClient.getAllTenantEntitlements("test-tenant", true, "token");
+
+    assertThat(result.result()).hasSize(2);
+    verify(request).addQueryParam("offset", "0");
+    verify(request, never()).addQueryParam("offset", "2");
+  }
+
+  @Test
+  void getAllTenantEntitlements_nullTotalRecords_stopsAfterFirstPage() {
+    // boundary: a response without totalRecords must terminate after one page rather than loop
+    var page = "{\"entitlements\":["
+      + "{\"applicationId\":\"app-a-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(page);
+
+    var props = new TenantEntitlementClientProperties("http://te:8081", 2);
+    var teClient = new TenantEntitlementClient(webClient, jsonConverter, props);
+
+    var result = teClient.getAllTenantEntitlements("test-tenant", true, "token");
+
+    assertThat(result.result()).hasSize(1);
+    verify(request).addQueryParam("offset", "0");
+    verify(request, never()).addQueryParam("offset", "2");
+  }
+
+  @Test
+  void getAllTenantEntitlements_totalExceedsReturnedCount_terminatesByOffsetArithmetic() {
+    // boundary: termination relies on offset+batchSize vs totalRecords, not the returned page size. With total=5 and
+    // batchSize=2 the loop issues offsets 0, 2, 4 then stops (no offset 6) — no infinite loop, no missed last page.
+    var p0 = "{\"totalRecords\":5,\"entitlements\":["
+      + "{\"applicationId\":\"app-a-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]},"
+      + "{\"applicationId\":\"app-b-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+    var p2 = "{\"totalRecords\":5,\"entitlements\":["
+      + "{\"applicationId\":\"app-c-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]},"
+      + "{\"applicationId\":\"app-d-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+    var p4 = "{\"totalRecords\":5,\"entitlements\":["
+      + "{\"applicationId\":\"app-e-1.0.0\",\"tenantId\":\"t1\",\"modules\":[]}]}";
+
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(p0, p2, p4);
+
+    var props = new TenantEntitlementClientProperties("http://te:8081", 2);
+    var teClient = new TenantEntitlementClient(webClient, jsonConverter, props);
+
+    var result = teClient.getAllTenantEntitlements("test-tenant", true, "token");
+
+    assertThat(result.result()).hasSize(5);
+    verify(request).addQueryParam("offset", "0");
+    verify(request).addQueryParam("offset", "2");
+    verify(request).addQueryParam("offset", "4");
+    verify(request, never()).addQueryParam("offset", "6");
   }
 
   @Test

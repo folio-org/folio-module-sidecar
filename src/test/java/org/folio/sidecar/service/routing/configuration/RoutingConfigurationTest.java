@@ -59,6 +59,32 @@ class RoutingConfigurationTest {
     assertThat(invoked).containsExactly("notFound");
   }
 
+  @Test
+  void chainedHandler_fallbackDisabled_unmatchedEgress_fallsThroughToNotFound() {
+    // routing.egress.fallback-to-gateway.enabled=false -> the fallback handler is not resolvable and is omitted from
+    // the chain, so an unmatched (self or not) request reaches not-found (404) instead of being forwarded.
+    var chain = buildChainFallbackDisabled();
+
+    var handled = chain.handle(rc).result();
+
+    assertThat(handled).isTrue();
+    assertThat(invoked).containsExactly("notFound");
+  }
+
+  private ChainedHandler buildChainFallbackDisabled() {
+    when(moduleEntitlementHandler.isResolvable()).thenReturn(false);
+    when(dynamicEgressHandler.isResolvable()).thenReturn(false);
+    when(gatewayEgressHandler.isResolvable()).thenReturn(false);
+    when(egressGatewayFallbackHandler.isResolvable()).thenReturn(false);
+
+    ChainedHandler ingress = context -> succeededFuture(false);
+    ChainedHandler egress = context -> succeededFuture(false);
+    ChainedHandler notFound = recording("notFound");
+
+    return new RoutingConfiguration().chainedHandler(moduleEntitlementHandler, ingress, egress,
+      dynamicEgressHandler, gatewayEgressHandler, egressGatewayFallbackHandler, notFound);
+  }
+
   private ChainedHandler buildChain() {
     when(moduleEntitlementHandler.isResolvable()).thenReturn(false);
     when(dynamicEgressHandler.isResolvable()).thenReturn(false);

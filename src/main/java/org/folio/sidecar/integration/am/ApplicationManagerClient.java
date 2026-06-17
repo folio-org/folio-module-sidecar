@@ -102,7 +102,14 @@ public class ApplicationManagerClient {
             moduleId, response.statusCode(), moduleId);
           return getModuleBootstrap(moduleId, token);
         }
-        return succeededFuture(jsonConverter.parseResponse(response, ModuleBootstrapResponse.class).getIngress());
+        var ingress = jsonConverter.parseResponse(response, ModuleBootstrapResponse.class).getIngress();
+        if (ingress == null) {
+          // A 200 with no ingress payload (e.g. an AM that returned only egress, or an empty body) would otherwise
+          // NPE later in route initialization; fail explicitly so startup fails cleanly via the normal onFailure path.
+          return Future.<ModuleBootstrap>failedFuture(new IllegalStateException(
+            "Ingress bootstrap response has no ingress payload for module " + moduleId));
+        }
+        return succeededFuture(ingress);
       })
       .onFailure(error -> log.warn("Failed to retrieve ingress bootstrap: {}", error.getMessage()));
   }

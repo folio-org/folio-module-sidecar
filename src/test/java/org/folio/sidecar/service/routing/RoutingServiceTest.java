@@ -160,8 +160,6 @@ class RoutingServiceTest {
 
   private void verifyListeners(InOrder listenersOrder, ModuleBootstrap bootstrap) {
     listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
-    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
     listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
-    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
   }
 }
