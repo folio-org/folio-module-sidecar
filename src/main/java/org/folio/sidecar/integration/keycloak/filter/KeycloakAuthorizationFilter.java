@@ -53,7 +53,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private final Cache<String, JsonWebToken> authTokenCache;
 
   /**
-   * Evaluates if a user has access to a module endpoint by obtaining RPT token from Keycloak.
+   * Evaluates if a user has access to a module endpoint using Keycloak UMA authorization.
    *
    * @param routingContext {@link RoutingContext} object to analyze
    * @return succeeded {@link Future} if access is granted.

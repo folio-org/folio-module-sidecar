@@ -3,6 +3,7 @@ package org.folio.sidecar.integration.keycloak;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.utils.TokenRequestHelper.CLIENT_CREDENTIALS_GRANT_TYPE;
+import static org.folio.sidecar.utils.TokenRequestHelper.DECISION_RESPONSE_MODE;
 import static org.folio.sidecar.utils.TokenRequestHelper.IMPERSONATION_GRANT_TYPE;
 import static org.folio.sidecar.utils.TokenRequestHelper.RPT_GRANT_TYPE;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -86,10 +87,11 @@ class KeycloakClientTest {
     client.evaluatePermissions(TENANT_NAME, TEST_PERMISSION, TEST_TOKEN);
 
     var capturedRequestBody = bodyCaptor.getValue();
-    assertThat(capturedRequestBody).hasSize(3);
+    assertThat(capturedRequestBody).hasSize(4);
     assertThat(capturedRequestBody.get("grant_type")).isEqualTo(RPT_GRANT_TYPE);
     assertThat(capturedRequestBody.get("audience")).isEqualTo(TENANT_NAME + "-application");
     assertThat(capturedRequestBody.get("permission")).isEqualTo(TEST_PERMISSION);
+    assertThat(capturedRequestBody.get("response_mode")).isEqualTo(DECISION_RESPONSE_MODE);
 
     assertThat(uriCaptor.getValue()).isEqualTo(
       KEYCLOAK_URL + "/realms/" + TENANT_NAME + "/protocol/openid-connect/token");

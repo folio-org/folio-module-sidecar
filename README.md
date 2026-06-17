@@ -436,16 +436,17 @@ Required when `SECRET_STORE_TYPE=FSSP`
 * Extract tenant from token and compare it with `x-okapi-tenant`
 * Extract `user_id` JWT claim from token and put it as `x-okapi-user-id` header if not set (the JWT claim is mapped from
   corresponding keycloak user attribute).
-* Send authorization request to Keycloak for exchanging access token for RPT. If RPT response is ok, then access is
+* Send authorization request to Keycloak for evaluating the UMA decision. If the response is ok, then access is
   granted and the token is cached until expired.
-    * RPT request example:
+    * UMA decision request example:
   ```shell
   curl --location --request POST '<keycloak>/realms/diku/protocol/openid-connect/token' \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --header 'Authorization: Bearer <okapiToken>' \
   --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:uma-ticket' \
   --data-urlencode 'audience=diku-login-application' \
-  --data-urlencode 'permission=/users#GET'
+  --data-urlencode 'permission=/users#GET' \
+  --data-urlencode 'response_mode=decision'
   ```
 
 ### Egress
