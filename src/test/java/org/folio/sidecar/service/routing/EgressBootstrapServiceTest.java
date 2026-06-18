@@ -1,11 +1,14 @@
 package org.folio.sidecar.service.routing;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Collections.emptyList;
 import static org.folio.sidecar.support.TestConstants.APPLICATION_ID;
 import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP_EGRESS;
 import static org.folio.sidecar.support.TestConstants.TENANT_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -83,6 +86,17 @@ class EgressBootstrapServiceTest {
     service.refreshTenant(TENANT_NAME);
 
     verifyNoInteractions(tenantEntitlementService, appManagerService, egressRoutingLookup);
+  }
+
+  @Test
+  void onEntitlementsChanged_negative_buildFailureKeepsPreviousTable() {
+    mockEntitlements(TENANT_NAME);
+    when(appManagerService.getEgressBootstrap(List.of(APPLICATION_ID)))
+      .thenReturn(failedFuture(new RuntimeException("am down")));
+
+    service.onEntitlementsChanged(EntitlementsEvent.of(Set.of(TENANT_NAME)));
+
+    verify(egressRoutingLookup, never()).updateTenantEgressRoutes(anyString(), anyList());
   }
 
   private void mockEntitlements(String tenant) {
