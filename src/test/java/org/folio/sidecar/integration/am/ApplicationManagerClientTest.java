@@ -11,6 +11,7 @@ import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP_EGRESS;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestUtils.OBJECT_MAPPER;
 import static org.folio.sidecar.support.TestUtils.readString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -114,5 +115,50 @@ class ApplicationManagerClientTest {
     assertThat(bodyCaptor.getValue().getJsonArray("applicationIds"))
       .isEqualTo(new io.vertx.core.json.JsonArray(java.util.List.of("app-foo-1.0.0")));
     verify(jsonConverter).parseResponse(response, ModuleBootstrap.class);
+  }
+
+  @Test
+  void getEgressBootstrap_positive_multipleApplicationIds() {
+    var appIds = java.util.List.of("app-foo-1.0.0", "app-bar-2.0.0");
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.sendJsonObject(bodyCaptor.capture())).thenReturn(Future.succeededFuture(response));
+    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(readString("json/module-bootstrap-egress.json"));
+
+    var actual = appManagerClient.getEgressBootstrap(MODULE_ID, appIds, AUTH_TOKEN);
+
+    assertThat(actual.result().getRequiredModules())
+      .isEqualTo(MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+    assertThat(bodyCaptor.getValue().getJsonArray("applicationIds"))
+      .isEqualTo(new io.vertx.core.json.JsonArray(java.util.List.of("app-foo-1.0.0", "app-bar-2.0.0")));
+    verify(jsonConverter).parseResponse(response, ModuleBootstrap.class);
+  }
+
+  @Test
+  void getEgressBootstrap_negative_propagatesFailure() {
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.sendJsonObject(any())).thenReturn(Future.failedFuture(new RuntimeException("am down")));
+
+    var actual = appManagerClient.getEgressBootstrap(MODULE_ID, java.util.List.of("app-foo-1.0.0"), AUTH_TOKEN);
+
+    assertThat(actual.failed()).isTrue();
+    assertThat(actual.cause()).hasMessage("am down");
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
+  }
+
+  @Test
+  void getIngressBootstrap_negative_propagatesFailure() {
+    when(webClient.getAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(Future.failedFuture(new RuntimeException("am down")));
+
+    var actual = appManagerClient.getIngressBootstrap(MODULE_ID, AUTH_TOKEN);
+
+    assertThat(actual.failed()).isTrue();
+    assertThat(actual.cause()).hasMessage("am down");
+    assertThat(uriCaptor.getValue()).isEqualTo("http://am:8081/modules/mod-foo-0.2.1/bootstrap");
   }
 }

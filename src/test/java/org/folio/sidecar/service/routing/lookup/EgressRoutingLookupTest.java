@@ -163,6 +163,35 @@ class EgressRoutingLookupTest {
 
     var actual = egressLookup.lookupRoute("/bar/entities", rc);
 
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedNullTenant() {
+    egressLookup.tenantScoped = true;
+    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(null);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedIgnoresGlobalCache() {
+    egressLookup.tenantScoped = true;
+    egressLookup.onRequiredModulesBootstrap(MODULE_BOOTSTRAP_EGRESS.getRequiredModules(), INIT);
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
     assertThat(actual.result()).isEmpty();
   }
 

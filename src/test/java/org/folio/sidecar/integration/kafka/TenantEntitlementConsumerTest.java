@@ -8,6 +8,7 @@ import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import org.folio.sidecar.service.TenantService;
@@ -65,11 +66,24 @@ class TenantEntitlementConsumerTest {
   }
 
   @Test
+  void consume_positive_upgradeDoesNotRefreshWhenDisabled() {
+    consumer.tenantScoped = false;
+    when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(true);
+
+    consumer.consume(TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, UPGRADE));
+
+    verify(tenantService).enableTenant(TENANT_NAME);
+    verifyNoInteractions(egressBootstrapService);
+  }
+
+  @Test
   void consume_negative_notAssignedModuleIsIgnored() {
     when(tenantService.isAssignedModule(MODULE_ID)).thenReturn(false);
 
     consumer.consume(TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, UPGRADE));
 
+    verify(tenantService).isAssignedModule(MODULE_ID);
+    verifyNoMoreInteractions(tenantService);
     verifyNoInteractions(egressBootstrapService);
   }
 }
