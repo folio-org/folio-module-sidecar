@@ -50,4 +50,26 @@ class ApplicationManagerServiceTest {
 
     assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
   }
+
+  @Test
+  void getIngressBootstrap_positive() {
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(AUTH_TOKEN));
+    when(appManagerClient.getIngressBootstrap(MODULE_ID, AUTH_TOKEN)).thenReturn(succeededFuture(MODULE_BOOTSTRAP));
+
+    var actual = service.getIngressBootstrap();
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+  }
+
+  @Test
+  void getEgressBootstrap_positive() {
+    var appIds = java.util.List.of("app-foo-1.0.0");
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(AUTH_TOKEN));
+    when(appManagerClient.getEgressBootstrap(MODULE_ID, appIds, AUTH_TOKEN))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP));
+
+    var actual = service.getEgressBootstrap(appIds);
+
+    assertThat(actual.result()).isEqualTo(MODULE_BOOTSTRAP);
+  }
 }
