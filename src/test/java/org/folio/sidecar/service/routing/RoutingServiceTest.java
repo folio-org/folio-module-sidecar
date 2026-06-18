@@ -20,6 +20,7 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.NotFoundException;
 import java.util.List;
 import org.assertj.core.api.Assertions;
+import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.service.ModulePermissionsService;
@@ -46,27 +47,29 @@ class RoutingServiceTest {
   @Mock private ModuleBootstrapListener listener1;
   @Mock private ModuleBootstrapListener listener2;
   @Mock private ModulePermissionsService modulePermissionsService;
+  @Mock private EgressBootstrapService egressBootstrapService;
+  @Mock private ModuleProperties moduleProperties;
 
   @BeforeEach
   void setUp() {
     routingService = new RoutingService(appManagerService,
       List.of(requestHandler1, requestHandler2), List.of(listener1, listener2),
-      modulePermissionsService);
+      modulePermissionsService, egressBootstrapService, moduleProperties);
   }
 
   @AfterEach
   void tearDown() {
     verifyNoMoreInteractions(appManagerService, requestHandler1, requestHandler2, listener1, listener2,
-      modulePermissionsService);
+      modulePermissionsService, egressBootstrapService);
   }
 
   @Test
   void constructor_negative_noRequestHandlers() {
     var listeners = List.of(listener1, listener2);
     var handlers = List.<Handler<RoutingContext>>of();
-    
+
     Assertions.assertThatThrownBy(() -> new RoutingService(appManagerService, handlers,
-        listeners, modulePermissionsService))
+        listeners, modulePermissionsService, egressBootstrapService, moduleProperties))
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessage("Request handlers are not configured");
   }
@@ -140,6 +143,47 @@ class RoutingServiceTest {
   void updateModuleRoutes_negative_moduleNotFound() {
     routingService.updateModuleRoutes("unknown_module");
     verifyNoInteractions(appManagerService, listener1, listener2, router, route);
+  }
+
+  @Test
+  void init_positive_tenantScopedLoadsIngressOnly() {
+    routingService.tenantScoped = true;
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+    when(appManagerService.getIngressBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(router.route("/*")).thenReturn(route);
+
+    var listenersOrder = inOrder(listener1, listener2);
+
+    routingService.init(router);
+
+    listenersOrder.verify(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
+    listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
+    verify(route).handler(requestHandler1);
+    verify(route).handler(requestHandler2);
+    verify(modulePermissionsService).putPermissions(anySet());
+  }
+
+  @Test
+  void onDiscovery_positive_tenantScopedSelfIsNoOp() {
+    routingService.tenantScoped = true;
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+
+    routingService.onDiscovery(TestConstants.MODULE_ID);
+
+    verifyNoInteractions(appManagerService);
+  }
+
+  @Test
+  void onDiscovery_positive_tenantScopedOtherRefreshesTenants() {
+    routingService.tenantScoped = true;
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+
+    routingService.onDiscovery("mod-bar-0.5.1");
+
+    verify(egressBootstrapService).refreshAllTenants();
+    verifyNoInteractions(appManagerService);
   }
 
   private void verifyHandlers(InOrder routeOrder) {
