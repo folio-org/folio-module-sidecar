@@ -58,7 +58,7 @@ class RoutingServiceTest {
   @AfterEach
   void tearDown() {
     verifyNoMoreInteractions(appManagerService, requestHandler, listener1, listener2, modulePermissionsService,
-      egressBootstrapService);
+      egressBootstrapService, moduleProperties);
   }
 
   @Test
@@ -161,6 +161,7 @@ class RoutingServiceTest {
 
     routingService.onDiscovery(TestConstants.MODULE_ID);
 
+    verify(moduleProperties).getId();
     verifyNoInteractions(appManagerService);
   }
 
@@ -171,6 +172,7 @@ class RoutingServiceTest {
 
     routingService.onDiscovery("mod-bar-0.5.1");
 
+    verify(moduleProperties).getId();
     verify(egressBootstrapService).refreshAllTenants();
     verifyNoInteractions(appManagerService);
   }
