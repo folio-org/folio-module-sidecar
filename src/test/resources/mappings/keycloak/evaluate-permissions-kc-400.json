@@ -14,6 +14,9 @@
             "contains": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Auma-ticket"
           },
           {
+            "contains": "response_mode=decision"
+          },
+          {
             "contains": "permission=%2Ffoo%2Fxyz%23PATCH"
           }
         ]
