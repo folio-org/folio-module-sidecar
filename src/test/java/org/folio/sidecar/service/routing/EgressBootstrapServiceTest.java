@@ -10,6 +10,7 @@ import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -97,6 +98,63 @@ class EgressBootstrapServiceTest {
     service.onEntitlementsChanged(EntitlementsEvent.of(Set.of(TENANT_NAME)));
 
     verify(egressRoutingLookup, never()).updateTenantEgressRoutes(anyString(), anyList());
+  }
+
+  @Test
+  void onEntitlementsChanged_negative_disabledIsNoOp() {
+    service.tenantScoped = false;
+
+    service.onEntitlementsChanged(EntitlementsEvent.of(Set.of(TENANT_NAME)));
+
+    verifyNoInteractions(appManagerService, tenantEntitlementService, egressRoutingLookup);
+  }
+
+  @Test
+  void refreshAllTenants_negative_disabledIsNoOp() {
+    service.tenantScoped = false;
+
+    service.refreshAllTenants();
+
+    verifyNoInteractions(appManagerService, tenantEntitlementService, egressRoutingLookup);
+  }
+
+  @Test
+  void refreshAllTenants_positive_rebuildsKnownTenants() {
+    mockEntitlements(TENANT_NAME);
+    when(appManagerService.getEgressBootstrap(List.of(APPLICATION_ID)))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP_EGRESS));
+    service.onEntitlementsChanged(EntitlementsEvent.of(Set.of(TENANT_NAME)));
+
+    service.refreshAllTenants();
+
+    verify(egressRoutingLookup, times(2))
+      .updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+  }
+
+  @Test
+  void refreshTenant_positive_nonEmptyApplicationsBuildsTable() {
+    mockEntitlements(TENANT_NAME);
+    when(appManagerService.getEgressBootstrap(List.of(APPLICATION_ID)))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP_EGRESS));
+
+    service.refreshTenant(TENANT_NAME);
+
+    verify(egressRoutingLookup).updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+  }
+
+  @Test
+  void onEntitlementsChanged_positive_deduplicatesApplicationIds() {
+    when(tenantEntitlementService.getTenantEntitlements(TENANT_NAME, false))
+      .thenReturn(succeededFuture(ResultList.asSinglePage(
+        Entitlement.of(APPLICATION_ID, TENANT_ID, emptyList()),
+        Entitlement.of(APPLICATION_ID, TENANT_ID, emptyList()))));
+    when(appManagerService.getEgressBootstrap(List.of(APPLICATION_ID)))
+      .thenReturn(succeededFuture(MODULE_BOOTSTRAP_EGRESS));
+
+    service.onEntitlementsChanged(EntitlementsEvent.of(Set.of(TENANT_NAME)));
+
+    verify(appManagerService).getEgressBootstrap(List.of(APPLICATION_ID));
+    verify(egressRoutingLookup).updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
   }
 
   private void mockEntitlements(String tenant) {
