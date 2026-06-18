@@ -47,5 +47,6 @@ temp/
 .codemie/
 .agents/
 CLAUDE.md
-/.codegraph/.gitignore
-/.codegraph/.gitignore
+.codegraph/
+
+
