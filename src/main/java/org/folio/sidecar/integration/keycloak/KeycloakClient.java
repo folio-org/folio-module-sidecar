@@ -5,7 +5,7 @@ import static org.folio.sidecar.utils.TokenRequestHelper.prepareImpersonateReque
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareIntrospectRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.preparePasswordRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareRefreshRequestBody;
-import static org.folio.sidecar.utils.TokenRequestHelper.prepareRptRequestBody;
+import static org.folio.sidecar.utils.TokenRequestHelper.prepareUmaDecisionRequestBody;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -50,7 +50,7 @@ public class KeycloakClient {
 
   public Future<HttpResponse<Buffer>> evaluatePermissions(String tenant, String permission, String accessToken) {
     var clientId = tenant + properties.getLoginClientSuffix();
-    var requestBody = prepareRptRequestBody(clientId, permission);
+    var requestBody = prepareUmaDecisionRequestBody(clientId, permission);
     return webClient.postAbs(resolveTokenUrl(tenant))
       .bearerTokenAuthentication(accessToken)
       .sendForm(requestBody);

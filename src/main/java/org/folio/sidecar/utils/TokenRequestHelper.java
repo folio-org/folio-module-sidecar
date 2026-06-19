@@ -12,6 +12,7 @@ public class TokenRequestHelper {
   public static final String PASSWORD_GRANT_TYPE = "password";
   public static final String RPT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:uma-ticket";
   public static final String IMPERSONATION_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
+  public static final String DECISION_RESPONSE_MODE = "decision";
 
   private static final String GRANT_TYPE_FORM_FIELD = "grant_type";
   private static final String CLIENT_ID_FORM_FIELD = "client_id";
@@ -20,6 +21,7 @@ public class TokenRequestHelper {
   private static final String PASSWORD_FORM_FIELD = "password";
   private static final String PERMISSION_FORM_FIELD = "permission";
   private static final String AUDIENCE_FORM_FIELD = "audience";
+  private static final String RESPONSE_MODE_FORM_FIELD = "response_mode";
   private static final String REFRESH_TOKEN_FORM_FIELD = "refresh_token";
   private static final String REQUESTED_SUBJECT_FORM_FIELD = "requested_subject";
   private static final String TOKEN = "token";
@@ -40,11 +42,12 @@ public class TokenRequestHelper {
       .set(CLIENT_SECRET_FORM_FIELD, client.getClientSecret());
   }
 
-  public static MultiMap prepareRptRequestBody(String clientId, String permission) {
+  public static MultiMap prepareUmaDecisionRequestBody(String clientId, String permission) {
     return MultiMap.caseInsensitiveMultiMap()
       .set(GRANT_TYPE_FORM_FIELD, RPT_GRANT_TYPE)
       .set(PERMISSION_FORM_FIELD, permission)
-      .set(AUDIENCE_FORM_FIELD, clientId);
+      .set(AUDIENCE_FORM_FIELD, clientId)
+      .set(RESPONSE_MODE_FORM_FIELD, DECISION_RESPONSE_MODE);
   }
 
   public static MultiMap prepareRefreshRequestBody(ClientCredentials client, String refreshToken) {
