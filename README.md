@@ -137,7 +137,7 @@ native (no JVM) mode. Before building the container image run:
 ```shell
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-25
 ```
 
 Then, build the image with:
