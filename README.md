@@ -80,8 +80,12 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 ```shell script
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25
 ```
+
+The native builder image is the containerized Mandrel/GraalVM toolchain used by Quarkus to run `native-image`.
+It is independent of the application Java source/target version.
+Keep this image aligned with the Quarkus version and check the Quarkus Native Image guide or release notes for the supported Mandrel/GraalVM builder line.
 
 You can then execute your native executable with: `./target/folio-module-sidecar-1.0.0-SNAPSHOT.jar`
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
@@ -137,7 +141,7 @@ native (no JVM) mode. Before building the container image run:
 ```shell
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25
 ```
 
 Then, build the image with:
@@ -149,7 +153,7 @@ docker build -f docker/Dockerfile.native-micro -t folio-module-sidecar-native .
 Then run the container using:
 
 ```shell
-docker run -i --rm -p 8080:8080 quarkus/sidecar
+docker run -i --rm -p 8080:8080 folio-module-sidecar-native
 ```
 ### Building FIPS compatible image
 
@@ -164,7 +168,7 @@ docker build -f docker/Dockerfile.fips -t {{image-tag}}:{{image-version}}
 #### Using Docker
 
 To build a native executable in a container using a Linux image
-(e.g. quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 with size 1.29Gb) with the required build tools,
+(e.g. quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25 with size 1.29Gb) with the required build tools,
 use the following command:
 
 ```
