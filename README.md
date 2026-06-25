@@ -80,8 +80,12 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 ```shell script
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25
 ```
+
+The native builder image is the containerized Mandrel/GraalVM toolchain used by Quarkus to run `native-image`.
+It is independent of the application Java source/target version.
+Keep this image aligned with the Quarkus version and check the Quarkus Native Image guide or release notes for the supported Mandrel/GraalVM builder line.
 
 You can then execute your native executable with: `./target/folio-module-sidecar-1.0.0-SNAPSHOT.jar`
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.
