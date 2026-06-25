@@ -141,7 +141,7 @@ native (no JVM) mode. Before building the container image run:
 ```shell
 mvn install -Pnative -DskipTests \
   -Dquarkus.native.container-build=true \
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-25
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25
 ```
 
 Then, build the image with:
@@ -153,7 +153,7 @@ docker build -f docker/Dockerfile.native-micro -t folio-module-sidecar-native .
 Then run the container using:
 
 ```shell
-docker run -i --rm -p 8080:8080 quarkus/sidecar
+docker run -i --rm -p 8080:8080 folio-module-sidecar-native
 ```
 ### Building FIPS compatible image
 
@@ -168,7 +168,7 @@ docker build -f docker/Dockerfile.fips -t {{image-tag}}:{{image-version}}
 #### Using Docker
 
 To build a native executable in a container using a Linux image
-(e.g. quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 with size 1.29Gb) with the required build tools,
+(e.g. quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-25 with size 1.29Gb) with the required build tools,
 use the following command:
 
 ```
