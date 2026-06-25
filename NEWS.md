@@ -1,3 +1,7 @@
+## Version `v3.0.20` (IN PROGRESS)
+### Changes:
+* Tenant-scoped egress routing for application-scoped sidecars bootstrap, behind `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` (POC) ([EUREKA-899](https://folio-org.atlassian.net/browse/EUREKA-899))
+
 ## Version `v3.0.19` (24.04.2026)
 ### Changes:
 * Implement API for returning entitlement information (MODSIDECAR-187)
