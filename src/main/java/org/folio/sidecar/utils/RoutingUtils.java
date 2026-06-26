@@ -206,16 +206,6 @@ public class RoutingUtils {
     return isTrulyPublic(rc) || isWildcardPermissionRequired(rc);
   }
 
-  /**
-   * Transitional alias for {@link #isTrulyPublic(RoutingContext)}; removed once all filters migrate.
-   *
-   * @deprecated use {@link #isTrulyPublic(RoutingContext)} or {@link #requiresNoNamedPermission(RoutingContext)}
-   */
-  @Deprecated
-  public static boolean hasNoPermissionsRequired(RoutingContext rc) {
-    return isTrulyPublic(rc);
-  }
-
   public static boolean isTenantInstallRequest(RoutingContext rc) {
     var scRoutingEntry = getScRoutingEntry(rc);
     return TENANT_INTERFACE.equals(scRoutingEntry.getInterfaceId());
