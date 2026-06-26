@@ -9,8 +9,11 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.impl.headers.HeadersMultiMap;
 import io.vertx.ext.web.RoutingContext;
+import java.util.List;
 import java.util.Map;
+import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
+import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 
@@ -56,6 +59,75 @@ class RoutingUtilsTest {
     var routingContext = routingContext("111111/users", Map.of("X-Okapi-Token", "null"));
     assertThat(RoutingUtils.hasHeaderWithValue(routingContext, "X-Okapi-Token", false)).isTrue();
     assertThat(RoutingUtils.hasHeaderWithValue(routingContext, "X-Okapi-Token", true)).isFalse();
+  }
+
+  @Test
+  void isTrulyPublic_positive_emptyPermissions() {
+    assertThat(RoutingUtils.isTrulyPublic(rcWithPermissions(List.of()))).isTrue();
+  }
+
+  @Test
+  void isTrulyPublic_positive_nullPermissions() {
+    assertThat(RoutingUtils.isTrulyPublic(rcWithPermissions(null))).isTrue();
+  }
+
+  @Test
+  void isTrulyPublic_negative_namedPermission() {
+    assertThat(RoutingUtils.isTrulyPublic(rcWithPermissions(List.of("foo.item.get")))).isFalse();
+  }
+
+  @Test
+  void isTrulyPublic_negative_wildcard() {
+    assertThat(RoutingUtils.isTrulyPublic(rcWithPermissions(List.of("*")))).isFalse();
+  }
+
+  @Test
+  void isWildcardPermissionRequired_positive_singletonWildcard() {
+    assertThat(RoutingUtils.isWildcardPermissionRequired(rcWithPermissions(List.of("*")))).isTrue();
+  }
+
+  @Test
+  void isWildcardPermissionRequired_negative_mixedList() {
+    assertThat(RoutingUtils.isWildcardPermissionRequired(rcWithPermissions(List.of("*", "foo.item.get")))).isFalse();
+  }
+
+  @Test
+  void isWildcardPermissionRequired_negative_emptyList() {
+    assertThat(RoutingUtils.isWildcardPermissionRequired(rcWithPermissions(List.of()))).isFalse();
+  }
+
+  @Test
+  void isWildcardPermissionRequired_negative_namedPermission() {
+    assertThat(RoutingUtils.isWildcardPermissionRequired(rcWithPermissions(List.of("foo.item.get")))).isFalse();
+  }
+
+  @Test
+  void requiresNoNamedPermission_positive_trulyPublic() {
+    assertThat(RoutingUtils.requiresNoNamedPermission(rcWithPermissions(List.of()))).isTrue();
+  }
+
+  @Test
+  void requiresNoNamedPermission_positive_wildcard() {
+    assertThat(RoutingUtils.requiresNoNamedPermission(rcWithPermissions(List.of("*")))).isTrue();
+  }
+
+  @Test
+  void requiresNoNamedPermission_negative_namedPermission() {
+    assertThat(RoutingUtils.requiresNoNamedPermission(rcWithPermissions(List.of("foo.item.get")))).isFalse();
+  }
+
+  @Test
+  void requiresNoNamedPermission_negative_mixedList() {
+    assertThat(RoutingUtils.requiresNoNamedPermission(rcWithPermissions(List.of("*", "foo.item.get")))).isFalse();
+  }
+
+  private static RoutingContext rcWithPermissions(List<String> permissionsRequired) {
+    var endpoint = new ModuleBootstrapEndpoint("/foo/items", "GET");
+    endpoint.setPermissionsRequired(permissionsRequired);
+    var entry = ScRoutingEntry.of("mod-foo-1.0", "http://mod-foo", "mod-foo-api-1.0", endpoint);
+    var rc = mock(RoutingContext.class);
+    when(rc.get(RoutingUtils.SC_ROUTING_ENTRY_KEY)).thenReturn(entry);
+    return rc;
   }
 
   private static RoutingContext routingContext(String requestId, Map<String, String> headers) {

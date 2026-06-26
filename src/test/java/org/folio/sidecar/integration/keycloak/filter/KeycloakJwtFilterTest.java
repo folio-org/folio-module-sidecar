@@ -255,6 +255,57 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       .hasMessage("Failed to find JWT in request");
   }
 
+  // AC1 positive path (truly public): [] + missing token must be ALLOWED.
+  // Pairs with filter_negative_wildcardMissingToken to demonstrate the [] vs ["*"] difference (FR10).
+  @Test
+  void filter_positive_publicMissingToken() {
+    var requestHeaders = headers(Collections.emptyMap());
+    var routingContext = routingContext(scRoutingEntry("not-system"), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+    });
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).isEqualTo(routingContext);
+  }
+
+  @Test
+  void filter_negative_wildcardMissingToken() {
+    var requestHeaders = headers(Collections.emptyMap());
+    var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+    });
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Failed to find JWT in request");
+  }
+
+  @Test
+  void filter_negative_wildcardInvalidToken() {
+    var requestHeaders = headers(Map.of(TOKEN, AUTH_TOKEN));
+    var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {
+      when(rc.request()).thenReturn(request);
+      when(request.headers()).thenReturn(requestHeaders);
+    });
+
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+      new UnauthorizedException("Failed to parse JWT", new ParseException("Failed to parse JWT, invalid offset"))));
+
+    var result = keycloakJwtFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Failed to parse JWT");
+  }
+
   @Test
   void filter_negative_tokenMismatch() {
     var token1 = "dG9rZW4tb25l";
