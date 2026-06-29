@@ -101,7 +101,7 @@ from `folio-platform-minimal`):
 mvn clean quarkus:dev \
   -Dquarkus.http.port=19002 \
   -DSIDECAR_URL="http://localhost:19002" \
-  -DMODULE_ID="mod-users-18.2.0" \
+  -DMODULE_VERSION="18.2.0" \
   -DMODULE_NAME="mod-users" \
   -DMODULE_URL="http://localhost:9002" \
   -DAM_CLIENT_URL="http://mgr-applications:8081" \
@@ -215,8 +215,8 @@ for more details please visit https://quarkus.io/guides/building-native-image
 
 | Name                                         | Default value           | Required | Description                                                                                                                                                                                                                                                    |
 |:---------------------------------------------|:------------------------|:--------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| MODULE_NAME                                  |                         |   true   | Underlying module name. If `MODULE_ID` is not specified, required                                                                                                                                                                                              |
-| MODULE_VERSION                               |                         |   true   | Underlying module version. If `MODULE_ID` is not specified, required                                                                                                                                                                                           |
+| MODULE_NAME                                  |                         |   true   | Underlying module name.                                                                                                                                                                                                                                        |
+| MODULE_VERSION                               |                         |   true   | Underlying module version.                                                                                                                                                                                                                                     |
 | MODULE_URL                                   |                         |   true   | Underlying module URL.                                                                                                                                                                                                                                         |
 | MODULE_HEALTH_PATH                           | /admin/health           |  false   | Underlying module health check path.                                                                                                                                                                                                                           |
 | SIDECAR_URL                                  |                         |   true   | Self URL for module-to-module communication.                                                                                                                                                                                                                   |
