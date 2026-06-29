@@ -192,6 +192,53 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
   }
 
   @Test
+  void shouldSkip_negative_wildcardPermission() {
+    var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {});
+    var actual = keycloakTenantFilter.shouldSkip(routingContext);
+    assertThat(actual).isFalse();
+  }
+
+  @Test
+  void filter_positive_wildcardTenantMatches() {
+    var accessToken = mock(JsonWebToken.class);
+    var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {
+      when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(accessToken.getIssuer()).thenReturn(keycloakIssuer(TENANT_NAME));
+      when(rc.request().getHeader(TENANT)).thenReturn(TENANT_NAME);
+    });
+
+    when(sidecarProperties.isCrossTenantEnabled()).thenReturn(false);
+
+    var result = keycloakTenantFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    assertThat(result.result()).isEqualTo(routingContext);
+  }
+
+  @Test
+  void filter_negative_wildcardTenantMismatch() {
+    var accessToken = mock(JsonWebToken.class);
+    var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {
+      when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(false);
+      when(rc.get(PARSED_TOKEN)).thenReturn(accessToken);
+      when(rc.get(SYSTEM_TOKEN)).thenReturn(null);
+      when(accessToken.getIssuer()).thenReturn(keycloakIssuer("test-tenant-a"));
+      when(rc.request().getHeader(TENANT)).thenReturn("test-tenant-b");
+    });
+
+    when(sidecarProperties.isCrossTenantEnabled()).thenReturn(false);
+
+    var result = keycloakTenantFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("X-Okapi-Tenant header is not the same as resolved tenant");
+  }
+
+  @Test
   void shouldSkip_positive_selfRequest() {
     var routingContext = routingContext(scRoutingEntry("not-system", "foo.item.get"),
       rc -> when(rc.get(RoutingUtils.SELF_REQUEST_KEY)).thenReturn(true));
