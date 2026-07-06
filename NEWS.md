@@ -1,5 +1,6 @@
 ## Version `v4.1.0` (in progress)
 ### Changes:
+* Fail fast with retryable 503 when a required system-user token cannot be minted during egress.
 * Invalidate system token cache on egress 401 and return 503 with Retry-After header ([MODSIDECAR-178](https://folio-org.atlassian.net/browse/MODSIDECAR-178))
 * Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
 * Migrate UMA Permission Checks to Response Mode Decision ([MODSIDECAR-182](https://folio-org.atlassian.net/browse/MODSIDECAR-182))

@@ -465,6 +465,8 @@ Required when `SECRET_STORE_TYPE=FSSP`
   --data-urlencode 'client_id=sidecar-module-access-client' \
   --data-urlencode 'client_secret=supersecret'
   ```
+* If a module requires a system user and the sidecar cannot mint that token yet, the request fails fast with
+  `503 Service Unavailable` and `Retry-After: 1` instead of being forwarded without `x-okapi-token`.
 
 ### Access logging
 * For access logging Common Log Format(`host ident authuser date request status bytes user-agent`) is used,

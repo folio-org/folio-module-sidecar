@@ -17,9 +17,9 @@ import jakarta.ws.rs.BadRequestException;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.SystemUserTokenUnavailableException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.service.PathProcessor;
@@ -39,20 +39,16 @@ class EgressRequestHandler implements RoutingEntryHandler {
   private final ServiceTokenProvider serviceTokenProvider;
   private final SystemUserTokenProvider systemUserTokenProvider;
   private final ModuleProperties moduleProperties;
-  private final boolean ignoreGettingSystemUserTokenError;
 
   EgressRequestHandler(PathProcessor pathProcessor, RequestFilterService requestFilterService,
     RequestForwardingService requestForwardingService, ServiceTokenProvider serviceTokenProvider,
-    SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties,
-    @ConfigProperty(name = "handler.egress.ignore-system-user-token-error", defaultValue = "false")
-    boolean ignoreGettingSystemUserTokenError) {
+    SystemUserTokenProvider systemUserTokenProvider, ModuleProperties moduleProperties) {
     this.pathProcessor = pathProcessor;
     this.requestFilterService = requestFilterService;
     this.requestForwardingService = requestForwardingService;
     this.serviceTokenProvider = serviceTokenProvider;
     this.systemUserTokenProvider = systemUserTokenProvider;
     this.moduleProperties = moduleProperties;
-    this.ignoreGettingSystemUserTokenError = ignoreGettingSystemUserTokenError;
   }
 
   /**
@@ -100,16 +96,9 @@ class EgressRequestHandler implements RoutingEntryHandler {
     return !requireSystemUserToken(rc)
       ? succeededFuture()
       : systemUserTokenProvider.getToken(rc)
-        .map(setSysUserToken(rc))
-        .recover(err -> {
-          if (!ignoreGettingSystemUserTokenError) {
-            return failedFuture(err);
-          } else {
-            log.debug("Failed to get system user token: {}.\n"
-              + "The error is ignored because 'ignoreGettingSystemUserTokenError' is true", err.getMessage(), err);
-            return succeededFuture();
-          }
-        });
+        .recover(err -> failedFuture(new SystemUserTokenUnavailableException(
+          "System user token is unavailable. Retry later", err)))
+        .map(setSysUserToken(rc));
   }
 
   private boolean requireSystemUserToken(RoutingContext rc) {

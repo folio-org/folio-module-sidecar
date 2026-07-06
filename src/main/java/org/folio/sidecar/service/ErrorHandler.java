@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
+import org.folio.sidecar.exception.SystemUserTokenUnavailableException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
@@ -139,6 +140,10 @@ public class ErrorHandler {
         EgressUnauthorizedException.class, (cause, rc) ->
           sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.AUTHORIZATION_ERROR,
             "Service Unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
+      .add(
+        SystemUserTokenUnavailableException.class, (cause, rc) ->
+          sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.SERVICE_ERROR,
+            "System user token is unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
       .addDefault((cause, rc) ->
         sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null));
   }
