@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/modules/mod-foo-0.2.1/bootstrap",
+    "headers": {
+      "X-Okapi-Token": { "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4=" },
+      "Content-Type": { "equalTo": "application/json" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "module": {
+        "moduleId": "mod-foo-0.2.1",
+        "applicationId": "application-0.0.1",
+        "location": "http://sc-foo:8081",
+        "interfaces": [
+          {
+            "id": "foo",
+            "version": "0.1",
+            "endpoints": [
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/entities",
+                "permissionsRequired": [ "foo.entities.collection.get" ]
+              }
+            ]
+          }
+        ],
+        "permissionSets": []
+      },
+      "requiredModules": []
+    }
+  }
+}

@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.am;
 
 import io.vertx.core.Future;
 import jakarta.enterprise.context.ApplicationScoped;
+import java.util.List;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -24,6 +25,16 @@ public class ApplicationManagerService {
   public Future<ModuleBootstrap> getModuleBootstrap() {
     var moduleId = moduleProperties.getId();
     return callWithRetry(token -> client.getModuleBootstrap(moduleId, token));
+  }
+
+  public Future<ModuleBootstrap> getIngressBootstrap() {
+    var moduleId = moduleProperties.getId();
+    return callWithRetry(token -> client.getIngressBootstrap(moduleId, token));
+  }
+
+  public Future<ModuleBootstrap> getEgressBootstrap(List<String> applicationIds) {
+    var moduleId = moduleProperties.getId();
+    return callWithRetry(token -> client.getEgressBootstrap(moduleId, applicationIds, token));
   }
 
   public Future<ModuleDiscovery> getModuleDiscovery(String moduleId) {

@@ -6,10 +6,13 @@ import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
@@ -42,6 +45,26 @@ public class ApplicationManagerClient {
       .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
       .onSuccess(mb -> log.debug("Module bootstrapping info loaded: {}", mb))
       .onFailure(error -> log.warn("Failed to retrieve module bootstrap: {}", error.getMessage()));
+  }
+
+  public Future<ModuleBootstrap> getIngressBootstrap(String moduleId, String token) {
+    log.info("Loading ingress bootstrap: moduleId = {}", moduleId);
+
+    return doGet(moduleUrl(moduleId) + "/bootstrap", token)
+      .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
+      .onFailure(error -> log.warn("Failed to retrieve ingress bootstrap: {}", error.getMessage()));
+  }
+
+  public Future<ModuleBootstrap> getEgressBootstrap(String moduleId, List<String> applicationIds, String token) {
+    log.info("Loading egress bootstrap: moduleId = {}, applicationIds = {}", moduleId, applicationIds);
+
+    var body = new JsonObject().put("applicationIds", new JsonArray(applicationIds));
+    return webClient.postAbs(moduleUrl(moduleId) + "/bootstrap")
+      .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+      .putHeader(TOKEN, token)
+      .sendJsonObject(body)
+      .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
+      .onFailure(error -> log.warn("Failed to retrieve egress bootstrap: {}", error.getMessage()));
   }
 
   public Future<ModuleDiscovery> getModuleDiscovery(String moduleId, String token) {
