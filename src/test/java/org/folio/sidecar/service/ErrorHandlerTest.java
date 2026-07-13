@@ -27,6 +27,7 @@ import java.util.UUID;
 import org.apache.http.ParseException;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
+import org.folio.sidecar.exception.SystemUserTokenUnavailableException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -209,6 +210,21 @@ class ErrorHandlerTest {
 
     assertThat(responseCaptor.getValue())
       .isEqualTo(TestUtils.minify(TestUtils.readString("json/egress-unauthorized-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "1");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_systemUserTokenUnavailableError() {
+    var routingContext = routingContext();
+
+    errorHandler.sendErrorResponse(routingContext,
+      new SystemUserTokenUnavailableException("System user token is unavailable. Retry later", new RuntimeException()));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/system-user-token-unavailable-error.json")));
     assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
     verify(routingContext.response()).putHeader(RETRY_AFTER, "1");
     verify(jsonConverter).toJson(any(ErrorResponse.class));
