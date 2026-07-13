@@ -20,3 +20,4 @@ jobs:
       allow-snapshots-release: false
       do-sonar-scan: true
       do-docker: true
+      docker-enable-other-artifacts: true
