@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.SystemUserTokenUnavailableException;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -92,7 +93,7 @@ class EgressRequestHandlerTest {
     @BeforeEach
     void setUp() {
       egressRequestHandler = new EgressRequestHandler(pathProcessor, requestFilterService, requestForwardingService,
-        serviceTokenProvider, systemUserTokenProvider, moduleProperties, false);
+        serviceTokenProvider, systemUserTokenProvider, moduleProperties);
     }
 
     @Test
@@ -173,7 +174,9 @@ class EgressRequestHandlerTest {
       var rf = egressRequestHandler.handle(routingEntry(), rc);
 
       assertThat(rf.failed()).isTrue();
-      assertThat(rf.cause()).hasMessage("System user token is not found");
+      assertThat(rf.cause())
+        .isInstanceOf(SystemUserTokenUnavailableException.class)
+        .hasMessage("System user token is unavailable. Retry later");
 
       verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
       verify(requestHeaders, never()).set(eq(OkapiHeaders.TOKEN), anyString());
@@ -282,61 +285,6 @@ class EgressRequestHandlerTest {
       verify(serviceTokenProvider, never()).invalidateToken(anyString());
       verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
       verify(requestHeaders).set(OkapiHeaders.TOKEN, SYS_USER_TOKEN);
-    }
-  }
-
-  @Nested
-  class WhenIgnoreGettingSystemUserTokenError {
-
-    @BeforeEach
-    void setUp() {
-      egressRequestHandler = new EgressRequestHandler(pathProcessor, requestFilterService, requestForwardingService,
-        serviceTokenProvider, systemUserTokenProvider, moduleProperties, true);
-    }
-
-    @Test
-    void handle_positive_sysUserTokenIsEmpty() {
-      prepareHttpRequest(req -> when(req.path()).thenReturn(fooEntitiesPath));
-
-      when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
-      when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
-
-      when(request.headers()).thenReturn(requestHeaders);
-      when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
-      when(systemUserTokenProvider.getToken(rc)).thenReturn(succeededFuture(Optional.empty()));
-      when(moduleProperties.getId()).thenReturn(MODULE_ID);
-
-      when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-      when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(succeededFuture());
-
-      var rf = egressRequestHandler.handle(routingEntry(), rc);
-
-      assertThat(rf.succeeded()).isTrue();
-
-      verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
-      verify(requestHeaders, never()).set(eq(OkapiHeaders.TOKEN), anyString());
-    }
-
-    @Test
-    void handle_positive_sysUserTokenGetFailed() {
-      prepareHttpRequest(req -> when(req.path()).thenReturn(fooEntitiesPath));
-
-      when(requestFilterService.filterEgressRequest(rc)).thenReturn(succeededFuture(rc));
-      when(serviceTokenProvider.getToken(rc)).thenReturn(succeededFuture(SYS_TOKEN));
-
-      when(request.headers()).thenReturn(requestHeaders);
-      when(requestHeaders.contains(OkapiHeaders.TOKEN)).thenReturn(false);
-      when(systemUserTokenProvider.getToken(rc)).thenReturn(failedFuture("System user token is not found"));
-
-      when(pathProcessor.cleanIngressRequestPath(fooEntitiesPath)).thenReturn(fooEntitiesPath);
-      when(requestForwardingService.forwardEgress(rc, absoluteUrl)).thenReturn(succeededFuture());
-
-      var rf = egressRequestHandler.handle(routingEntry(), rc);
-
-      assertThat(rf.succeeded()).isTrue();
-
-      verify(requestHeaders).set(OkapiHeaders.SYSTEM_TOKEN, SYS_TOKEN);
-      verify(requestHeaders, never()).set(eq(OkapiHeaders.TOKEN), anyString());
     }
   }
 }

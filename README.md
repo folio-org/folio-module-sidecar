@@ -247,6 +247,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | SC_CLIENT_TLS_TRUSTSTORE_PROVIDER            |                         |  false   | Truststore provider for egress web client                                                                                                                                                                                                                      |
 | WEB_CLIENT_TLS_VERIFY_HOSTNAME               | false                   |  false   | Defines whether verify hostname for web client or not.                                                                                                                                                                                                         |
 | ROUTING_DYNAMIC_ENABLED                      | false                   |  false   | Enables/disables dynamic route feature. If `ROUTING_DYNAMIC_ENABLED` is enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` should be disabled.                                                                                                                        |
+| SIDECAR_TENANT_SCOPED_ROUTING_ENABLED        | false                   |  false   | Enables tenant-scoped EGRESS routing: egress routes are resolved per tenant (`X-Okapi-Tenant`) from each tenant's entitled applications, so multi-version environments route to the correct provider version. When enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` defaults to `true` so unresolved egress falls through to the gateway. Disabled by default; behavior is unchanged when off. |
 | ROUTING_MODULE_ENTITLEMENT_ENABLED           | true                    |  false   | Enables/disables the `GET /entitlements/modules/{moduleId}` endpoint for querying enabled tenant names. See [Module Entitlement Endpoint](#module-entitlement-endpoint).                                                                                       |
 | TENANT_SERVICE_RESET_TASK_CRON_DEFINITION    | 0 */5 * * * ?           |  false   | Property defines a cron expression that schedules a periodic task for resetting tenant services to load tenants and entitlements                                                                                                                               |
 
@@ -465,6 +466,8 @@ Required when `SECRET_STORE_TYPE=FSSP`
   --data-urlencode 'client_id=sidecar-module-access-client' \
   --data-urlencode 'client_secret=supersecret'
   ```
+* If a module requires a system user and the sidecar cannot mint that token yet, the request fails fast with
+  `503 Service Unavailable` and `Retry-After: 1` instead of being forwarded without `x-okapi-token`.
 
 ### Access logging
 * For access logging Common Log Format(`host ident authuser date request status bytes user-agent`) is used,
