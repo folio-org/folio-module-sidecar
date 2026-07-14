@@ -1,3 +1,7 @@
+## Version `v3.0.20` (14.07.2026)
+### Changes:
+* Enable other artifacts in Docker workflow configuration (MODSIDECAR-204)
+
 ## Version `v3.0.19` (24.04.2026)
 ### Changes:
 * Implement API for returning entitlement information (MODSIDECAR-187)
