@@ -466,8 +466,11 @@ Required when `SECRET_STORE_TYPE=FSSP`
   --data-urlencode 'client_id=sidecar-module-access-client' \
   --data-urlencode 'client_secret=supersecret'
   ```
-* If a module requires a system user and the sidecar cannot mint that token yet, the request fails fast with
-  `503 Service Unavailable` and `Retry-After: 1` instead of being forwarded without `x-okapi-token`.
+* For a token-less egress request the sidecar tries to obtain a system user token. If it cannot, the behaviour is
+  controlled by `handler.egress.ignore-system-user-token-error` (default `false`): when `false` the request fails;
+  when `true` it is forwarded without `x-okapi-token`. Set it to `true` for sidecars of modules that do not have a
+  system user (e.g. `mod-users-keycloak`), so their egress calls — including their own `POST /_/tenant` — are
+  forwarded token-less.
 
 ### Access logging
 * For access logging Common Log Format(`host ident authuser date request status bytes user-agent`) is used,
