@@ -1,4 +1,8 @@
-## Version `v4.1.0` (05.06.2026)
+## Version `v4.0.2` (14.07.2026)
+### Changes:
+* Enable other artifacts in Docker workflow configuration (MODSIDECAR-204)
+
+## Version `v4.0.1` (05.06.2026)
 ### Changes:
 * Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
 
