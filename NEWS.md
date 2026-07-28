@@ -1,3 +1,7 @@
+## Version `v4.0.3` (14.07.2026)
+### Changes:
+* Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
+
 ## Version `v4.0.2` (14.07.2026)
 ### Changes:
 * Enable other artifacts in Docker workflow configuration (MODSIDECAR-204)
