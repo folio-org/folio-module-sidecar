@@ -18,6 +18,7 @@ public class KeycloakProperties {
   @ConfigProperty(name = "keycloak.jwt-cache.forced-jwks-refresh-interval") int forcedJwksRefreshInterval;
   @ConfigProperty(name = "keycloak.jwks-base-url") String jwksBaseUrl;
   @ConfigProperty(name = "keycloak.login.client-suffix") String loginClientSuffix;
+  @ConfigProperty(name = "keycloak.request-timeout-ms", defaultValue = "15000") long requestTimeoutMs;
   @ConfigProperty(name = "keycloak.admin.client-id") String adminClientId;
   @ConfigProperty(name = "keycloak.service.client-id") String serviceClientId;
   @ConfigProperty(name = "keycloak.impersonation.client-id") String impersonationClientId;

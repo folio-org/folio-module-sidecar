@@ -6,6 +6,9 @@ import static org.folio.sidecar.utils.TokenRequestHelper.CLIENT_CREDENTIALS_GRAN
 import static org.folio.sidecar.utils.TokenRequestHelper.DECISION_RESPONSE_MODE;
 import static org.folio.sidecar.utils.TokenRequestHelper.IMPERSONATION_GRANT_TYPE;
 import static org.folio.sidecar.utils.TokenRequestHelper.RPT_GRANT_TYPE;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +40,7 @@ class KeycloakClientTest {
   private static final String TEST_CLIENT_ID = "client";
   private static final String TEST_CLIENT_SECRET = "secret";
   private static final String TEST_PERMISSION = "/foo/entries#GET";
+  private static final long REQUEST_TIMEOUT_MS = 15000L;
 
   @Mock private WebClient webClient;
   @Mock private KeycloakProperties properties;
@@ -46,6 +50,7 @@ class KeycloakClientTest {
   @Captor private ArgumentCaptor<String> uriCaptor;
   @Captor private ArgumentCaptor<MultiMap> bodyCaptor;
   @Captor private ArgumentCaptor<String> tokenCaptor;
+  @Captor private ArgumentCaptor<Long> timeoutCaptor;
 
   private KeycloakClient client;
 
@@ -81,10 +86,14 @@ class KeycloakClientTest {
   void evaluatePermissions() {
     when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
     when(request.bearerTokenAuthentication(tokenCaptor.capture())).thenReturn(request);
+    when(request.timeout(timeoutCaptor.capture())).thenReturn(request);
     when(request.sendForm(bodyCaptor.capture())).thenReturn(Future.succeededFuture(response));
     when(properties.getLoginClientSuffix()).thenReturn("-application");
+    when(properties.getRequestTimeoutMs()).thenReturn(REQUEST_TIMEOUT_MS);
 
     client.evaluatePermissions(TENANT_NAME, TEST_PERMISSION, TEST_TOKEN);
+
+    assertThat(timeoutCaptor.getValue()).isEqualTo(REQUEST_TIMEOUT_MS);
 
     var capturedRequestBody = bodyCaptor.getValue();
     assertThat(capturedRequestBody).hasSize(4);
@@ -103,9 +112,13 @@ class KeycloakClientTest {
   @Test
   void impersonateUserToken_positive() {
     when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.timeout(timeoutCaptor.capture())).thenReturn(request);
     when(request.sendForm(bodyCaptor.capture())).thenReturn(Future.succeededFuture(response));
+    when(properties.getRequestTimeoutMs()).thenReturn(REQUEST_TIMEOUT_MS);
 
     client.impersonateUserToken(TENANT_NAME, ClientCredentials.of(TEST_CLIENT_ID, TEST_CLIENT_SECRET), "testuser");
+
+    assertThat(timeoutCaptor.getValue()).isEqualTo(REQUEST_TIMEOUT_MS);
 
     var capturedRequestBody = bodyCaptor.getValue();
     assertThat(capturedRequestBody).hasSize(4);
@@ -116,5 +129,37 @@ class KeycloakClientTest {
 
     assertThat(uriCaptor.getValue()).isEqualTo(
       KEYCLOAK_URL + "/realms/" + TENANT_NAME + "/protocol/openid-connect/token");
+  }
+
+  @Test
+  void introspectToken_positive() {
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.timeout(timeoutCaptor.capture())).thenReturn(request);
+    when(request.sendForm(bodyCaptor.capture())).thenReturn(Future.succeededFuture(response));
+    when(properties.getRequestTimeoutMs()).thenReturn(REQUEST_TIMEOUT_MS);
+
+    client.introspectToken(TENANT_NAME, ClientCredentials.of(TEST_CLIENT_ID, TEST_CLIENT_SECRET), TEST_TOKEN);
+
+    assertThat(timeoutCaptor.getValue()).isEqualTo(REQUEST_TIMEOUT_MS);
+
+    var capturedRequestBody = bodyCaptor.getValue();
+    assertThat(capturedRequestBody.get("grant_type")).isEqualTo(CLIENT_CREDENTIALS_GRANT_TYPE);
+    assertThat(capturedRequestBody.get("token")).isEqualTo(TEST_TOKEN);
+
+    assertThat(uriCaptor.getValue()).isEqualTo(
+      KEYCLOAK_URL + "/realms/" + TENANT_NAME + "/protocol/openid-connect/token/introspect");
+  }
+
+  @Test
+  void evaluatePermissions_positive_timeoutDisabled() {
+    when(webClient.postAbs(uriCaptor.capture())).thenReturn(request);
+    when(request.bearerTokenAuthentication(tokenCaptor.capture())).thenReturn(request);
+    when(request.sendForm(bodyCaptor.capture())).thenReturn(Future.succeededFuture(response));
+    when(properties.getLoginClientSuffix()).thenReturn("-application");
+    when(properties.getRequestTimeoutMs()).thenReturn(0L);
+
+    client.evaluatePermissions(TENANT_NAME, TEST_PERMISSION, TEST_TOKEN);
+
+    verify(request, never()).timeout(anyLong());
   }
 }

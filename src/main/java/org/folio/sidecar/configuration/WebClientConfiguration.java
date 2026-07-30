@@ -115,6 +115,8 @@ public class WebClientConfiguration {
       .setName(settings.name())
       .setDecompressionSupported(settings.decompression())
       .setKeepAlive(true)
+      // applies to every client, not only the TLS ones
+      .setTcpKeepAlive(true)
       // timeouts
       .setConnectTimeout(settings.timeout().connect())
       .setKeepAliveTimeout(settings.timeout().keepAlive())
@@ -135,7 +137,6 @@ public class WebClientConfiguration {
       result.setSsl(true)
         .setReuseAddress(true)
         .setReusePort(true)
-        .setTcpKeepAlive(true)
         .setTrustAll(false);
     } else {
       result.setVerifyHost(tls.verifyHostname())
@@ -144,7 +145,6 @@ public class WebClientConfiguration {
         .removeEnabledSecureTransportProtocol("TLSv1.3")
         .addEnabledSecureTransportProtocol("TLSv1.2")
         .setReusePort(true)
-        .setTcpKeepAlive(true)
         .setTrustAll(false)
         .setTrustOptions(createKeyStoreOptions(tls, clientName));
     }
@@ -161,6 +161,7 @@ public class WebClientConfiguration {
   private static String optionsToString(WebClientOptions result) {
     return new ToStringBuilder(result)
       .append("isDecompressionSupported", result.isDecompressionSupported())
+      .append("tcpKeepAlive", result.isTcpKeepAlive())
       .append("connectTimeout", result.getConnectTimeout())
       .append("keepAliveTimeout", result.getKeepAliveTimeout())
       .append("idleTimeout", result.getIdleTimeout())

@@ -9,6 +9,7 @@ import static org.folio.sidecar.utils.TokenRequestHelper.prepareUmaDecisionReque
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -51,21 +52,31 @@ public class KeycloakClient {
   public Future<HttpResponse<Buffer>> evaluatePermissions(String tenant, String permission, String accessToken) {
     var clientId = tenant + properties.getLoginClientSuffix();
     var requestBody = prepareUmaDecisionRequestBody(clientId, permission);
-    return webClient.postAbs(resolveTokenUrl(tenant))
-      .bearerTokenAuthentication(accessToken)
+    return withTimeout(webClient.postAbs(resolveTokenUrl(tenant)).bearerTokenAuthentication(accessToken))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> impersonateUserToken(String realm, ClientCredentials client, String username) {
     var requestBody = prepareImpersonateRequestBody(client, username);
-    return webClient.postAbs(resolveTokenUrl(realm))
+    return withTimeout(webClient.postAbs(resolveTokenUrl(realm)))
       .sendForm(requestBody);
   }
 
   public Future<HttpResponse<Buffer>> introspectToken(String realm, ClientCredentials client, String token) {
     var requestBody = prepareIntrospectRequestBody(client, token);
     var url = String.format("%s/realms/%s/protocol/openid-connect/token/introspect", properties.getUrl(), realm);
-    return webClient.postAbs(url).sendForm(requestBody);
+    return withTimeout(webClient.postAbs(url)).sendForm(requestBody);
+  }
+
+  /**
+   * Bounds the calls that no caller otherwise bounds, so a stalled response cannot hold a pool slot indefinitely.
+   *
+   * @param request request to bound
+   * @return the same request, with a timeout applied unless it is configured as non-positive
+   */
+  private HttpRequest<Buffer> withTimeout(HttpRequest<Buffer> request) {
+    var timeout = properties.getRequestTimeoutMs();
+    return timeout > 0 ? request.timeout(timeout) : request;
   }
 
   private String resolveTokenUrl(String realm) {
