@@ -10,6 +10,8 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.sidecar.utils.RoutingUtils.FORWARDING_STAGE;
+import static org.folio.sidecar.utils.RoutingUtils.REQUEST_STAGE_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -128,6 +130,7 @@ class RequestForwardingServiceTest {
 
     assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
+    verify(routingContext).put(REQUEST_STAGE_KEY, FORWARDING_STAGE);
     verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
 
     // Trigger the captured handler manually

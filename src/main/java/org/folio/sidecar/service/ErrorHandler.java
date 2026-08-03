@@ -6,6 +6,8 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
+import static org.folio.sidecar.utils.RoutingUtils.getRequestElapsedTime;
+import static org.folio.sidecar.utils.RoutingUtils.getRequestStage;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
@@ -93,8 +95,10 @@ public class ErrorHandler {
     Map<String, String> additionalHeaders) {
     sidecarSignatureService.removeSignature(rc);
 
-    log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}",
-      () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage);
+    log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}, cause = {}, "
+        + "stage = {}, elapsed = {}ms",
+      () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage,
+      () -> rootCauseType(error), () -> getRequestStage(rc), () -> getRequestElapsedTime(rc));
 
     var response = rc.response();
     if (!response.ended()) {
@@ -141,6 +145,17 @@ public class ErrorHandler {
             "Service Unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
       .addDefault((cause, rc) ->
         sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null));
+  }
+
+  /**
+   * Resolves the root cause type, so that a wrapped error like a request timeout stays visible in the log.
+   *
+   * @param error error to inspect
+   * @return simple class name of the root cause, or {@code null} if it cannot be resolved
+   */
+  private static String rootCauseType(Throwable error) {
+    var rootCause = getRootCause(error);
+    return rootCause != null && rootCause != error ? rootCause.getClass().getSimpleName() : null;
   }
 
   private static ErrorResponse buildResponseEntity(ErrorCode code, Throwable throwable, String messageOverride) {
