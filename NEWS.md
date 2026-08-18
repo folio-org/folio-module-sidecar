@@ -1,5 +1,7 @@
 ## Version `v3.0.20` (18.08.2026)
 ### Changes:
+* Migrate CI from Jenkins to GitHub Actions Maven central workflow (MODSIDECAR-179)
+* Enable other artifacts in Docker workflow configuration (MODSIDECAR-204)
 * Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
 
 ## Version `v3.0.19` (24.04.2026)

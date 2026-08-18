@@ -45,3 +45,4 @@ temp/
 # AI tools
 .claude/
 .codemie/
+.agents/
