@@ -1,3 +1,7 @@
+## Version `v3.0.22` (In Progress)
+### Changes:
+* Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
+
 ## Version `v3.0.21` (25.09.2026)
 ### Changes:
 * Preserve 401 Unauthorized for expired/invalid tokens during Keycloak UMA authorization after Keycloak 26.6 upgrade (MODSIDECAR-225)
