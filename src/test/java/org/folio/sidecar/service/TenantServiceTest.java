@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.integration.te.TenantEntitlementClient;
 import org.folio.sidecar.integration.te.model.Entitlement;
 import org.folio.sidecar.integration.tm.TenantManagerClient;
@@ -83,7 +84,9 @@ class TenantServiceTest {
     verifyNoInteractions(tenantManagerClient);
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).failed()).isTrue();
+    var result = tenantService.isEnabledTenant(TestConstants.TENANT_NAME);
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(EntitlementsNotLoadedException.class);
   }
 
   @Test
@@ -100,7 +103,31 @@ class TenantServiceTest {
     tenantService.init();
 
     assertThat(tenantService.isAssignedModule(TestConstants.MODULE_ID)).isTrue();
-    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).failed()).isTrue();
+    var result = tenantService.isEnabledTenant(TestConstants.TENANT_NAME);
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(EntitlementsNotLoadedException.class);
+  }
+
+  @Test
+  void executeTenantsAndEntitlementsTask_positive_afterInitialLoadFailure() {
+    mockRetryTemplate();
+    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
+    when(tokenProvider.getAdminToken()).thenReturn(succeededFuture(TestConstants.AUTH_TOKEN));
+    when(tenantEntitlementClient.getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN))
+      .thenReturn(failedFuture(new RuntimeException("Connection refused")))
+      .thenReturn(succeededFuture(
+        ResultList.asSinglePage(Entitlement.of(TestConstants.APPLICATION_ID, TestConstants.TENANT_ID, emptyList()))));
+
+    var tenant = Tenant.of(TestConstants.TENANT_UUID, TestConstants.TENANT_NAME, "tenant description");
+    when(tenantManagerClient.getTenantInfo(List.of(TestConstants.TENANT_ID), TestConstants.AUTH_TOKEN))
+      .thenReturn(succeededFuture(List.of(tenant)));
+
+    tenantService.init();
+    tenantService.executeTenantsAndEntitlementsTask();
+
+    assertThat(tenantService.isEnabledTenant(TestConstants.TENANT_NAME).result()).isTrue();
+    verify(tenantEntitlementClient, times(2))
+      .getModuleEntitlements(TestConstants.MODULE_ID, TestConstants.AUTH_TOKEN);
   }
 
   @Test
@@ -292,7 +319,21 @@ class TenantServiceTest {
     var future = tenantService.getEnabledTenants();
 
     assertThat(future.failed()).isTrue();
-    assertThat(future.cause()).isEqualTo(error);
+    assertThat(future.cause()).isInstanceOf(EntitlementsNotLoadedException.class).hasCause(error);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void isEnabledTenant_negative_loadingFailed() {
+    var error = new RuntimeException("load failed");
+    when(retryTemplate.callAsync(any(Supplier.class))).thenReturn(failedFuture(error));
+
+    tenantService.init();
+
+    var future = tenantService.isEnabledTenant(TestConstants.TENANT_NAME);
+
+    assertThat(future.failed()).isTrue();
+    assertThat(future.cause()).isInstanceOf(EntitlementsNotLoadedException.class).hasCause(error);
   }
 
   @SuppressWarnings("unchecked")

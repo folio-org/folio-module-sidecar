@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.filter;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.utils.RoutingUtils.SELF_REQUEST_KEY;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.http.HttpMethod;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.service.TenantService;
 import org.folio.sidecar.support.TestConstants;
@@ -68,6 +70,21 @@ class TenantFilterTest {
     assertThat(result.cause())
       .isInstanceOf(TenantNotEnabledException.class)
       .hasMessage("Application is not enabled for tenant: %s", TestConstants.TENANT_NAME);
+    verify(tenantService).executeTenantsAndEntitlementsTask();
+  }
+
+  @Test
+  void filter_negative_entitlementsNotLoaded() {
+    var routingContext = TestValues.routingContext(TestConstants.TENANT_NAME);
+    var loadError = new EntitlementsNotLoadedException(new RuntimeException("Connection refused"));
+
+    when(routingContext.get(SELF_REQUEST_KEY)).thenReturn(false);
+    when(tenantService.isEnabledTenant(TestConstants.TENANT_NAME)).thenReturn(failedFuture(loadError));
+
+    var result = tenantFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isInstanceOf(EntitlementsNotLoadedException.class);
     verify(tenantService).executeTenantsAndEntitlementsTask();
   }
 

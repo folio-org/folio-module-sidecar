@@ -26,6 +26,7 @@ import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
@@ -211,6 +212,38 @@ class ErrorHandlerTest {
       .isEqualTo(TestUtils.minify(TestUtils.readString("json/egress-unauthorized-error.json")));
     assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
     verify(routingContext.response()).putHeader(RETRY_AFTER, "1");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_entitlementsNotLoadedError() {
+    var routingContext = routingContext();
+
+    var cause = new RuntimeException("Connection refused: mgr-tenant-entitlements/10.152.183.253:80");
+    errorHandler.sendErrorResponse(routingContext, new EntitlementsNotLoadedException(cause));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/entitlements-not-loaded-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_entitlementsNotLoadedError_withTimeoutCause() {
+    // guards against the generic "cause.getCause() instanceof TimeoutException" branch pre-empting
+    // EntitlementsNotLoadedException dispatch when the wrapped MTE failure happens to be a timeout
+    var routingContext = routingContext();
+
+    var cause = new java.util.concurrent.TimeoutException("Timed out waiting for mgr-tenant-entitlements");
+    errorHandler.sendErrorResponse(routingContext, new EntitlementsNotLoadedException(cause));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/entitlements-not-loaded-error-timeout-cause.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
     verify(jsonConverter).toJson(any(ErrorResponse.class));
     verify(sidecarSignatureService).removeSignature(routingContext);
   }
