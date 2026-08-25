@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "type": "EntitlementsNotLoadedException",
+      "code": "entitlements_not_loaded_error",
+      "message": "Tenant entitlements are not loaded yet. Retry later",
+      "parameters": [
+        {
+          "key": "cause",
+          "value": "Connection refused: mgr-tenant-entitlements/10.152.183.253:80"
+        }
+      ]
+    }
+  ],
+  "total_records": 1
+}
