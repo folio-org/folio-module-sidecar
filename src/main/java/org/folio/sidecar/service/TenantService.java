@@ -1,5 +1,6 @@
 package org.folio.sidecar.service;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.integration.te.TenantEntitlementClient;
 import org.folio.sidecar.integration.te.model.Entitlement;
 import org.folio.sidecar.integration.tm.TenantManagerClient;
@@ -50,8 +52,11 @@ public class TenantService {
 
     loadTenantsAndEntitlements(initPromise);
 
-    var result = initPromise.future().onSuccess(unused ->
-      log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()));
+    var result = initPromise.future()
+      .onSuccess(unused ->
+        log.info("Successfully initialized tenant entitlements for module: {}", moduleProperties.getId()))
+      // Allow the first request after an initial load failure to start a refresh immediately.
+      .onFailure(unused -> canExecuteTenantsAndEntitlementsTask.set(true));
 
     initPromise = null; // once utilized the initialization promise is no longer needed
 
@@ -77,19 +82,28 @@ public class TenantService {
   }
 
   public Future<Set<String>> getEnabledTenants() {
-    return loadingFuture.map(v -> Set.copyOf(enabledTenants));
+    return withLoadedEntitlements().map(v -> Set.copyOf(enabledTenants));
   }
 
   public Future<Boolean> isEnabledTenant(String name) {
     return isEmpty(name)
       ? succeededFuture(false)
-      : loadingFuture.map(v -> enabledTenants.contains(name));
+      : withLoadedEntitlements().map(v -> enabledTenants.contains(name));
   }
 
   /**
-    * This logic is implemented in scope of MODSIDECAR-126.
-    * Should be removed after design long term solution.
-  */
+   * Returns the current entitlement-loading future, translating a failed load (e.g. mgr-tenant-entitlements
+   * was unreachable) into an {@link EntitlementsNotLoadedException} so that callers can treat it as a
+   * transient, retriable condition rather than propagating the raw connectivity error indefinitely.
+   */
+  private Future<Void> withLoadedEntitlements() {
+    return loadingFuture.recover(cause -> failedFuture(new EntitlementsNotLoadedException(cause)));
+  }
+
+  /**
+   * This logic is implemented in scope of MODSIDECAR-126.
+   * Should be removed after design long term solution.
+   */
   public void executeTenantsAndEntitlementsTask() {
     if (canExecuteTenantsAndEntitlementsTask.compareAndSet(true, false)) {
       var promise = Promise.<Void>promise();

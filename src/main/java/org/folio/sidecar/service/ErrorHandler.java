@@ -30,6 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
@@ -42,6 +43,7 @@ import org.folio.sidecar.model.error.Parameter;
 public class ErrorHandler {
 
   private static final String EGRESS_UNAUTH_RETRY_DELAY = "1"; // in seconds
+  private static final String ENTITLEMENTS_NOT_LOADED_RETRY_DELAY = "5"; // in seconds
 
   private final JsonConverter jsonConverter;
   private final SidecarSignatureService sidecarSignatureService;
@@ -127,6 +129,11 @@ public class ErrorHandler {
           var status = ((KeycloakUnhandledAuthorizationException) cause).getStatusCode();
           sendErrorResponse(rc, cause, status, ErrorCode.AUTHORIZATION_ERROR, "Authorization service error");
         })
+      .add(
+        EntitlementsNotLoadedException.class, (cause, rc) ->
+          sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.ENTITLEMENTS_NOT_LOADED_ERROR,
+            "Tenant entitlements are not loaded yet. Retry later",
+            Map.of(RETRY_AFTER, ENTITLEMENTS_NOT_LOADED_RETRY_DELAY)))
       .add(
         cause -> cause.getCause() instanceof TimeoutException, (cause, rc) ->
           sendErrorResponse(rc, cause.getCause(), REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout"))
