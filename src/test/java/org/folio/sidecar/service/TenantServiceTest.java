@@ -134,7 +134,8 @@ class TenantServiceTest {
   void isEnabledTenant_negative_tenantAndEntitlementNotLoaded() {
     var result = tenantService.isEnabledTenant(TestConstants.TENANT_NAME);
 
-    assertThat(result.isComplete()).isFalse();
+    assertThat(result.failed()).isTrue();
+    assertThat(result.cause()).isInstanceOf(EntitlementsNotLoadedException.class);
   }
 
   @Test
@@ -292,20 +293,15 @@ class TenantServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void getEnabledTenants_positive_waitForLoading() {
+  void getEnabledTenants_negative_loadingInProgress() {
     var loadingPromise = Promise.<Void>promise();
     when(retryTemplate.callAsync(any(Supplier.class))).thenReturn(loadingPromise.future());
-    when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
 
     tenantService.init();
 
     var future = tenantService.getEnabledTenants();
-    assertThat(future.isComplete()).isFalse();
-
-    loadingPromise.complete();
-
-    assertThat(future.isComplete()).isTrue();
-    assertThat(future.result()).isEmpty();
+    assertThat(future.failed()).isTrue();
+    assertThat(future.cause()).isInstanceOf(EntitlementsNotLoadedException.class);
   }
 
   @Test
