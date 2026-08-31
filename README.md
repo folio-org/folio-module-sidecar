@@ -101,7 +101,7 @@ from `folio-platform-minimal`):
 mvn clean quarkus:dev \
   -Dquarkus.http.port=19002 \
   -DSIDECAR_URL="http://localhost:19002" \
-  -DMODULE_ID="mod-users-18.2.0" \
+  -DMODULE_VERSION="18.2.0" \
   -DMODULE_NAME="mod-users" \
   -DMODULE_URL="http://localhost:9002" \
   -DAM_CLIENT_URL="http://mgr-applications:8081" \
@@ -215,13 +215,14 @@ for more details please visit https://quarkus.io/guides/building-native-image
 
 | Name                                         | Default value           | Required | Description                                                                                                                                                                                                                                                    |
 |:---------------------------------------------|:------------------------|:--------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| MODULE_NAME                                  |                         |   true   | Underlying module name. If `MODULE_ID` is not specified, required                                                                                                                                                                                              |
-| MODULE_VERSION                               |                         |   true   | Underlying module version. If `MODULE_ID` is not specified, required                                                                                                                                                                                           |
+| MODULE_NAME                                  |                         |   true   | Underlying module name.                                                                                                                                                                                                                                        |
+| MODULE_VERSION                               |                         |   true   | Underlying module version.                                                                                                                                                                                                                                     |
 | MODULE_URL                                   |                         |   true   | Underlying module URL.                                                                                                                                                                                                                                         |
 | MODULE_HEALTH_PATH                           | /admin/health           |  false   | Underlying module health check path.                                                                                                                                                                                                                           |
 | SIDECAR_URL                                  |                         |   true   | Self URL for module-to-module communication.                                                                                                                                                                                                                   |
 | SIDECAR_MODULE_PATH_PREFIX_ENABLED           | false                   |  false   | Defines if module path prefix is enabled for routing or not. It enables the ability to route properly requests starting with `/$moduleName/...`                                                                                                                |
 | SIDECAR_MODULE_PATH_PREFIX_STRATEGY          | NONE                    |  false   | Defines if module path prefix strategy, if `SIDECAR_MODULE_PATH_PREFIX_ENABLED=true` then `PROXY` is used                                                                                                                                                      |
+| QUARKUS_THREAD_POOL_MAX_THREADS              | 8                       |  false   | Maximum number of threads in the Quarkus worker thread pool. Increase this value under heavy concurrent load (e.g. large bulk exports) to avoid thread exhaustion.                                                                                            |
 | REQUEST_TIMEOUT                              | 60000                   |  false   | Configures the amount of time in milliseconds after which if the request does not return any data within the timeout period fails the request.                                                                                                                 |
 | RETRY_ATTEMPTS                               | 10                      |  false   | Sets the maximum number of retries, must be >= -1 (-1 = unlimited).                                                                                                                                                                                            |
 | RETRY_BACKOFF_FACTOR                         | 2                       |  false   | Sets the multiplicative factor used to determine delay between retries, must be >= 1.                                                                                                                                                                          |
@@ -247,6 +248,7 @@ for more details please visit https://quarkus.io/guides/building-native-image
 | SC_CLIENT_TLS_TRUSTSTORE_PROVIDER            |                         |  false   | Truststore provider for egress web client                                                                                                                                                                                                                      |
 | WEB_CLIENT_TLS_VERIFY_HOSTNAME               | false                   |  false   | Defines whether verify hostname for web client or not.                                                                                                                                                                                                         |
 | ROUTING_DYNAMIC_ENABLED                      | false                   |  false   | Enables/disables dynamic route feature. If `ROUTING_DYNAMIC_ENABLED` is enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` should be disabled.                                                                                                                        |
+| SIDECAR_TENANT_SCOPED_ROUTING_ENABLED        | false                   |  false   | Enables tenant-scoped EGRESS routing: egress routes are resolved per tenant (`X-Okapi-Tenant`) from each tenant's entitled applications, so multi-version environments route to the correct provider version. When enabled, `SIDECAR_FORWARD_UNKNOWN_REQUESTS` defaults to `true` so unresolved egress falls through to the gateway. Disabled by default; behavior is unchanged when off. |
 | ROUTING_MODULE_ENTITLEMENT_ENABLED           | true                    |  false   | Enables/disables the `GET /entitlements/modules/{moduleId}` endpoint for querying enabled tenant names. See [Module Entitlement Endpoint](#module-entitlement-endpoint).                                                                                       |
 | TENANT_SERVICE_RESET_TASK_CRON_DEFINITION    | 0 */5 * * * ?           |  false   | Property defines a cron expression that schedules a periodic task for resetting tenant services to load tenants and entitlements                                                                                                                               |
 
@@ -465,6 +467,11 @@ Required when `SECRET_STORE_TYPE=FSSP`
   --data-urlencode 'client_id=sidecar-module-access-client' \
   --data-urlencode 'client_secret=supersecret'
   ```
+* For a token-less egress request the sidecar tries to obtain a system user token. If it cannot, the behaviour is
+  controlled by `handler.egress.ignore-system-user-token-error` (default `false`): when `false` the request fails;
+  when `true` it is forwarded without `x-okapi-token`. Set it to `true` for sidecars of modules that do not have a
+  system user (e.g. `mod-users-keycloak`), so their egress calls — including their own `POST /_/tenant` — are
+  forwarded token-less.
 
 ### Access logging
 * For access logging Common Log Format(`host ident authuser date request status bytes user-agent`) is used,

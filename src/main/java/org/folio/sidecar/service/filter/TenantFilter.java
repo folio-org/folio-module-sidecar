@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.TenantService;
@@ -33,8 +34,8 @@ public class TenantFilter implements IngressRequestFilter {
         () -> new TenantNotEnabledException(tenant))
       )
       .onFailure(exc -> {
-        // load tenants and entitlements if tenant is not enabled
-        if  (exc instanceof TenantNotEnabledException) {
+        // load tenants and entitlements if tenant is not enabled, or if a previous load attempt failed
+        if (exc instanceof TenantNotEnabledException || exc instanceof EntitlementsNotLoadedException) {
           tenantService.executeTenantsAndEntitlementsTask();
         }
       });

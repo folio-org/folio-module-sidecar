@@ -8,6 +8,7 @@ This directory contains detailed technical documentation for major features of t
 |---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|-----------|
 | [JWT Token Verification](features/jwt-token-verification.md)  | Asynchronous JWT token verification and parsing with RSA signature verification, JWKS caching, and claim extraction   | Active    |
 | [Module Entitlement Query](features/module-entitlement-query.md) | Endpoint for querying which tenants are currently entitled for this module (`GET /entitlements/modules/{moduleId}`) | Active    |
+| [Tenant-Scoped Egress Routing](features/tenant-scoped-egress-routing.md) | Resolves egress routes per tenant from each tenant's entitled applications so multi-version environments reach the correct provider version (flag-gated) | Active    |
 
 ---
 
@@ -54,6 +55,29 @@ This directory contains detailed technical documentation for major features of t
 **Configuration:**
 - `ROUTING_MODULE_ENTITLEMENT_ENABLED` - Enable/disable the endpoint (default: `true`)
 - `MODULE_ID` - The module ID this sidecar serves; used to validate the path parameter
+
+---
+
+### Tenant-Scoped Egress Routing
+
+**What it does:** Resolves egress (module → required-module) routes per tenant, keyed by `X-Okapi-Tenant`, so a tenant reaches the provider version from its own entitled applications in multi-version environments. Off by default; egress routing is global when disabled.
+
+**Key capabilities:**
+- Per-tenant egress route tables built from each tenant's entitled applications (`GET /entitlements` → `POST /modules/{id}/bootstrap {applicationIds}`)
+- Ingress loaded once at startup from `GET /modules/{id}/bootstrap`
+- Tables reconciled on entitlement changes; revoked tenants dropped; `UPGRADE` and required-module discovery trigger rebuilds
+- Unresolved egress falls through to the gateway (fallback defaults on when the feature is enabled)
+- Build failures retain the previously built table and retry on the next event
+
+**Entry points:**
+- `EgressRoutingLookup` - Resolves the egress route table by `X-Okapi-Tenant`
+- `EgressBootstrapService` - Builds/refreshes per-tenant tables; reconciles on `EntitlementsEvent`
+- `RoutingService` - Ingress-only init; refreshes all tenants on required-module discovery
+- `TenantEntitlementConsumer` - Refreshes a tenant's egress on `UPGRADE`
+
+**Configuration:**
+- `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` - Enable tenant-scoped egress routing (default: `false`)
+- `SIDECAR_FORWARD_UNKNOWN_REQUESTS` - Gateway fallback for unresolved egress (defaults to the tenant-scoped flag's value)
 
 ---
 

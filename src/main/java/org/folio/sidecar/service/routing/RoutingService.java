@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.folio.sidecar.configuration.properties.ModuleProperties;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
@@ -30,15 +32,20 @@ import org.folio.sidecar.service.routing.configuration.RequestHandler;
 @ApplicationScoped
 public class RoutingService implements DiscoveryListener {
 
+  @ConfigProperty(name = "routing.tenant-scoped.enabled") boolean tenantScoped;
+
   private final ApplicationManagerService appManagerService;
   private final List<Handler<RoutingContext>> requestHandlers;
   private final List<ModuleBootstrapListener> moduleBootstrapListeners;
   private final Map<String, ModuleType> knownModules = new HashMap<>();
   private final ModulePermissionsService modulePermissionsService;
+  private final EgressBootstrapService egressBootstrapService;
+  private final ModuleProperties moduleProperties;
 
   public RoutingService(ApplicationManagerService appManagerService,
     @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
-    ModulePermissionsService modulePermissionsService) {
+    ModulePermissionsService modulePermissionsService, EgressBootstrapService egressBootstrapService,
+    ModuleProperties moduleProperties) {
     this.appManagerService = appManagerService;
 
     if (isEmpty(requestHandlers)) {
@@ -48,14 +55,23 @@ public class RoutingService implements DiscoveryListener {
 
     this.moduleBootstrapListeners = mbListeners;
     this.modulePermissionsService = modulePermissionsService;
+    this.egressBootstrapService = egressBootstrapService;
+    this.moduleProperties = moduleProperties;
   }
 
   public Future<Void> init(Router router) {
-    return loadBootstrapAndProcess(moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+    var bootstrap = tenantScoped ? appManagerService.getIngressBootstrap() : appManagerService.getModuleBootstrap();
+    return process(bootstrap, moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
   }
 
   @Override
   public void onDiscovery(String moduleId) {
+    if (tenantScoped) {
+      if (!moduleProperties.getId().equals(moduleId)) {
+        egressBootstrapService.refreshAllTenants();
+      }
+      return;
+    }
     updateModuleRoutes(moduleId);
   }
 
@@ -63,12 +79,12 @@ public class RoutingService implements DiscoveryListener {
     var type = knownModules.get(moduleId);
 
     if (type != null) {
-      loadBootstrapAndProcess(updateModuleRoutesByType(type, moduleId));
+      process(appManagerService.getModuleBootstrap(), updateModuleRoutesByType(type, moduleId));
     }
   }
 
-  private Future<Void> loadBootstrapAndProcess(Consumer<ModuleBootstrap> consumer) {
-    return appManagerService.getModuleBootstrap()
+  private Future<Void> process(Future<ModuleBootstrap> bootstrap, Consumer<ModuleBootstrap> consumer) {
+    return bootstrap
       .map(moduleBootstrap -> {
         consumer.accept(moduleBootstrap);
         return (Void) null;

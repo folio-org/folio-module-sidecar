@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/modules/mod-foo-0.2.1/bootstrap",
+    "headers": {
+      "X-Okapi-Token": { "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4=" },
+      "Content-Type": { "equalTo": "application/json" }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.applicationIds[0]",
+        "contains": "application-0.0.1"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "requiredModules": [
+        {
+          "moduleId": "mod-bar-0.5.1",
+          "applicationId": "application-0.0.1",
+          "location": "http://sc-bar:8081",
+          "interfaces": [
+            {
+              "id": "bar",
+              "version": "0.1",
+              "endpoints": [
+                {
+                  "methods": [ "POST" ],
+                  "pathPattern": "/bar/entities",
+                  "permissionsRequired": [ "item.post" ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

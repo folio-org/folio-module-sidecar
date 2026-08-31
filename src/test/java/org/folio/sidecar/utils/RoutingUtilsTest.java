@@ -55,6 +55,19 @@ class RoutingUtilsTest {
   }
 
   @Test
+  void getRequestElapsedTime_positive() {
+    var routingContext = mock(RoutingContext.class);
+    when(routingContext.get("rt")).thenReturn(System.currentTimeMillis() - 100);
+    assertThat(RoutingUtils.getRequestElapsedTime(routingContext)).isNotNull().isGreaterThanOrEqualTo(100L);
+  }
+
+  @Test
+  void getRequestElapsedTime_negative_startTimeNotRecorded() {
+    var routingContext = mock(RoutingContext.class);
+    assertThat(RoutingUtils.getRequestElapsedTime(routingContext)).isNull();
+  }
+
+  @Test
   void hasHeaderWithValue_positive_nullCheck() {
     var routingContext = routingContext("111111/users", Map.of("X-Okapi-Token", "null"));
     assertThat(RoutingUtils.hasHeaderWithValue(routingContext, "X-Okapi-Token", false)).isTrue();

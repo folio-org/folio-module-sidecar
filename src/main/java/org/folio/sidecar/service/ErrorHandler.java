@@ -6,6 +6,8 @@ import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
+import static org.folio.sidecar.utils.RoutingUtils.getRequestElapsedTime;
+import static org.folio.sidecar.utils.RoutingUtils.getRequestStage;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.BAD_REQUEST;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.FORBIDDEN;
 import static org.jboss.resteasy.reactive.RestResponse.StatusCode.INTERNAL_SERVER_ERROR;
@@ -28,6 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
@@ -40,6 +43,7 @@ import org.folio.sidecar.model.error.Parameter;
 public class ErrorHandler {
 
   private static final String EGRESS_UNAUTH_RETRY_DELAY = "1"; // in seconds
+  private static final String ENTITLEMENTS_NOT_LOADED_RETRY_DELAY = "5"; // in seconds
 
   private final JsonConverter jsonConverter;
   private final SidecarSignatureService sidecarSignatureService;
@@ -93,8 +97,10 @@ public class ErrorHandler {
     Map<String, String> additionalHeaders) {
     sidecarSignatureService.removeSignature(rc);
 
-    log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}",
-      () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage);
+    log.warn("Sending error response for [method: {}, uri: {}]: type = {}, message = {}, cause = {}, "
+        + "stage = {}, elapsed = {}ms",
+      () -> rc.request().method(), dumpUri(rc), () -> error.getClass().getSimpleName(), error::getMessage,
+      () -> rootCauseType(error), () -> getRequestStage(rc), () -> getRequestElapsedTime(rc));
 
     var response = rc.response();
     if (!response.ended()) {
@@ -124,6 +130,11 @@ public class ErrorHandler {
           sendErrorResponse(rc, cause, status, ErrorCode.AUTHORIZATION_ERROR, "Authorization service error");
         })
       .add(
+        EntitlementsNotLoadedException.class, (cause, rc) ->
+          sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.ENTITLEMENTS_NOT_LOADED_ERROR,
+            "Tenant entitlements are not loaded yet. Retry later",
+            Map.of(RETRY_AFTER, ENTITLEMENTS_NOT_LOADED_RETRY_DELAY)))
+      .add(
         cause -> cause.getCause() instanceof TimeoutException, (cause, rc) ->
           sendErrorResponse(rc, cause.getCause(), REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout"))
       .add(
@@ -141,6 +152,17 @@ public class ErrorHandler {
             "Service Unavailable. Retry later", Map.of(RETRY_AFTER, EGRESS_UNAUTH_RETRY_DELAY)))
       .addDefault((cause, rc) ->
         sendErrorResponse(rc, cause, INTERNAL_SERVER_ERROR, ErrorCode.UNKNOWN_ERROR, null));
+  }
+
+  /**
+   * Resolves the root cause type, so that a wrapped error like a request timeout stays visible in the log.
+   *
+   * @param error error to inspect
+   * @return simple class name of the root cause, or {@code null} if it cannot be resolved
+   */
+  private static String rootCauseType(Throwable error) {
+    var rootCause = getRootCause(error);
+    return rootCause != null && rootCause != error ? rootCause.getClass().getSimpleName() : null;
   }
 
   private static ErrorResponse buildResponseEntity(ErrorCode code, Throwable throwable, String messageOverride) {

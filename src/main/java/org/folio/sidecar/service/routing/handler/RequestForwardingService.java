@@ -4,9 +4,11 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static jakarta.ws.rs.core.HttpHeaders.USER_AGENT;
 import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
+import static org.folio.sidecar.utils.RoutingUtils.FORWARDING_STAGE;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.getRequestId;
 import static org.folio.sidecar.utils.RoutingUtils.isEgressRequest;
+import static org.folio.sidecar.utils.RoutingUtils.putRequestStage;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.Future;
@@ -102,6 +104,8 @@ public class RequestForwardingService {
 
   @SuppressWarnings("checkstyle:MethodLength")
   private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
+    putRequestStage(rc, FORWARDING_STAGE);
+
     final var result = Promise.<Void>promise();
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);

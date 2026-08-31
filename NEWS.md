@@ -1,8 +1,14 @@
 ## Version `v4.1.0` (in progress)
 ### Changes:
+* Default `handler.egress.ignore-system-user-token-error` to `false`: fail when a required system-user token cannot be obtained on egress instead of forwarding without `x-okapi-token`. Set it to `true` per sidecar (e.g. `mod-users-keycloak`, which has no system user) to keep forwarding token-less ([MODSIDECAR-197](https://folio-org.atlassian.net/browse/MODSIDECAR-197), [EUREKASUP-169](https://folio-org.atlassian.net/browse/EUREKASUP-169))
 * Invalidate system token cache on egress 401 and return 503 with Retry-After header ([MODSIDECAR-178](https://folio-org.atlassian.net/browse/MODSIDECAR-178))
 * Adjust Keycloak error handling ([MODSIDECAR-192](https://folio-org.atlassian.net/browse/MODSIDECAR-192))
+* Tenant-scoped egress routing for application-scoped sidecars bootstrap, behind `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` (POC) ([EUREKA-899](https://folio-org.atlassian.net/browse/EUREKA-899))
 * Migrate UMA Permission Checks to Response Mode Decision ([MODSIDECAR-182](https://folio-org.atlassian.net/browse/MODSIDECAR-182))
+* Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
+* Add request processing stage and elapsed time to error logs ([MODSIDECAR-199](https://folio-org.atlassian.net/browse/MODSIDECAR-199))
+* Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
+
 
 ## Version `v4.0.0` (16.04.2026)
 ### Changes:

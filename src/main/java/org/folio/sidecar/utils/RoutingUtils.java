@@ -50,6 +50,18 @@ public class RoutingUtils {
    * Wildcard permission convention: a valid token is required but no named permission is.
    */
   public static final String WILDCARD_PERMISSION = "*";
+
+  /**
+   * Key of the request processing stage in the context, used to report where a failed request was.
+   */
+  public static final String REQUEST_STAGE_KEY = "requestStage";
+  public static final String FORWARDING_STAGE = "RequestForwarding";
+
+  /**
+   * Key of the request start time in the context, written by {@code ScRequestHandler} and reported by the transaction
+   * log as {@code rt}.
+   */
+  private static final String REQUEST_TIME_KEY = "rt";
   private static final int URI_MAX_LENGTH = 512;
 
   /**
@@ -89,6 +101,37 @@ public class RoutingUtils {
    */
   public static ScRoutingEntry getScRoutingEntry(RoutingContext rc) {
     return rc.get(SC_ROUTING_ENTRY_KEY);
+  }
+
+  /**
+   * Puts the request processing stage to the context.
+   *
+   * @param rc routing context
+   * @param stage stage the request is entering
+   */
+  public static void putRequestStage(RoutingContext rc, String stage) {
+    rc.put(REQUEST_STAGE_KEY, stage);
+  }
+
+  /**
+   * Gets the request processing stage from the context.
+   *
+   * @param rc routing context
+   * @return stage the request last entered, or {@code null} if none was recorded
+   */
+  public static String getRequestStage(RoutingContext rc) {
+    return rc.get(REQUEST_STAGE_KEY);
+  }
+
+  /**
+   * Calculates how long the request has been processed by the sidecar.
+   *
+   * @param rc routing context
+   * @return elapsed time in milliseconds, or {@code null} if the start time was not recorded
+   */
+  public static Long getRequestElapsedTime(RoutingContext rc) {
+    Long startTime = rc.get(REQUEST_TIME_KEY);
+    return startTime != null ? System.currentTimeMillis() - startTime : null;
   }
 
   /**

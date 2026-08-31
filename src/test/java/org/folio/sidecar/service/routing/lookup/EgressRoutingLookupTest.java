@@ -11,6 +11,7 @@ import static java.util.Optional.ofNullable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.support.TestConstants.MODULE_BOOTSTRAP_EGRESS;
+import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestValues.routingEntryWithPerms;
 import static org.folio.sidecar.utils.CollectionUtils.safeList;
 import static org.folio.sidecar.utils.RoutingUtils.MULTIPLE_INTERFACE_TYPE;
@@ -27,6 +28,7 @@ import java.util.stream.Stream;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -119,6 +121,78 @@ class EgressRoutingLookupTest {
   private static ScRoutingEntry scRoutingEntryMulti(Module module, String interfaceId, String pathPattern,
     List<HttpMethod> httpMethods, List<String> requiredPermissions) {
     return scRoutingEntry(module, interfaceId, MULTIPLE_INTERFACE_TYPE, pathPattern, httpMethods, requiredPermissions);
+  }
+
+  @Test
+  void lookupRoute_positive_tenantScopedResolvesPerTenant() {
+    egressLookup.tenantScoped = true;
+    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEqualTo(ofNullable(
+      scRoutingEntry("bar", "/bar/entities", of(POST), of("item.post"))));
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedUnknownTenant() {
+    egressLookup.tenantScoped = true;
+    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn("other-tenant");
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedAfterRemove() {
+    egressLookup.tenantScoped = true;
+    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+    egressLookup.removeTenantEgressRoutes(TENANT_NAME);
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedNullTenant() {
+    egressLookup.tenantScoped = true;
+    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(null);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_negative_tenantScopedIgnoresGlobalCache() {
+    egressLookup.tenantScoped = true;
+    egressLookup.onRequiredModulesBootstrap(MODULE_BOOTSTRAP_EGRESS.getRequiredModules(), INIT);
+
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+
+    var actual = egressLookup.lookupRoute("/bar/entities", rc);
+
+    assertThat(actual.succeeded()).isTrue();
+    assertThat(actual.result()).isEmpty();
   }
 
   private static RoutingContext routingContext(HttpMethod method) {
