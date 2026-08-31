@@ -92,12 +92,15 @@ public class TenantService {
   }
 
   /**
-   * Returns the current entitlement-loading future, translating a failed load (e.g. mgr-tenant-entitlements
-   * was unreachable) into an {@link EntitlementsNotLoadedException} so that callers can treat it as a
-   * transient, retriable condition rather than propagating the raw connectivity error indefinitely.
+   * Returns a completed entitlement-loading future, or a transient error when loading is in progress or failed.
    */
   private Future<Void> withLoadedEntitlements() {
-    return loadingFuture.recover(cause -> failedFuture(new EntitlementsNotLoadedException(cause)));
+    var future = loadingFuture;
+    if (!future.isComplete()) {
+      return failedFuture(new EntitlementsNotLoadedException());
+    }
+
+    return future.recover(cause -> failedFuture(new EntitlementsNotLoadedException(cause)));
   }
 
   /**
