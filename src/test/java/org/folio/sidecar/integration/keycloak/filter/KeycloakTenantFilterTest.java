@@ -199,6 +199,13 @@ class KeycloakTenantFilterTest extends AbstractFilterTest {
   }
 
   @Test
+  void shouldSkip_negative_mixedWildcardAndNamedPermission() {
+    var routingContext = routingContext(scRoutingEntry("not-system", "*", "foo.item.get"), rc -> {});
+    var actual = keycloakTenantFilter.shouldSkip(routingContext);
+    assertThat(actual).isFalse();
+  }
+
+  @Test
   void filter_positive_wildcardTenantMatches() {
     var accessToken = mock(JsonWebToken.class);
     var routingContext = routingContext(scRoutingEntry("not-system", "*"), rc -> {
