@@ -63,6 +63,16 @@
               },
               {
                 "methods": [ "GET" ],
+                "pathPattern": "/foo/_self",
+                "permissionsRequired": [ "*" ]
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/mixed-perm",
+                "permissionsRequired": [ "*", "foo.mixed.get" ]
+              },
+              {
+                "methods": [ "GET" ],
                 "pathPattern": "/bar/foo",
                 "permissionsDesired": [ "bar.foo.desired.*", "bar.foo.item.get" ]
               },
