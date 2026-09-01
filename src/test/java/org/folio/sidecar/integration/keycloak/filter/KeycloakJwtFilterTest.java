@@ -255,8 +255,6 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       .hasMessage("Failed to find JWT in request");
   }
 
-  // AC1 positive path (truly public): [] + missing token must be ALLOWED.
-  // Pairs with filter_negative_wildcardMissingToken to demonstrate the [] vs ["*"] difference (FR10).
   @Test
   void filter_positive_publicMissingToken() {
     var requestHeaders = headers(Collections.emptyMap());
