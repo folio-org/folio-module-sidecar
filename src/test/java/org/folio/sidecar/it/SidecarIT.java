@@ -599,7 +599,7 @@ class SidecarIT {
   }
 
   @Test
-  void handleIngressRequest_negative_mixedWildcardPermission_rptForbidden() {
+  void handleIngressRequest_negative_namedPermissionStillCheckedWhenWildcardPresent() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
       .header(OkapiHeaders.TOKEN, authToken)
