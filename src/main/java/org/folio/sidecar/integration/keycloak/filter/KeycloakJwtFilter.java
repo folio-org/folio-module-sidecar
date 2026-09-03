@@ -10,11 +10,11 @@ import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_JWT;
 import static org.folio.sidecar.utils.JwtUtils.getUserIdClaim;
 import static org.folio.sidecar.utils.JwtUtils.trimTokenBearer;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
-import static org.folio.sidecar.utils.RoutingUtils.hasNoPermissionsRequired;
 import static org.folio.sidecar.utils.RoutingUtils.hasUserIdHeader;
 import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
+import static org.folio.sidecar.utils.RoutingUtils.isTrulyPublic;
 import static org.folio.sidecar.utils.RoutingUtils.putOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.putParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.setUserIdHeader;
@@ -122,7 +122,7 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
    * @return {@link Future} of {@link RoutingContext} object
    */
   private static Future<RoutingContext> handleFailedTokenParsing(RoutingContext rc, Throwable error) {
-    if (hasNoPermissionsRequired(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())
+    if (isTrulyPublic(rc) && !Objects.equals(FAILED_TO_PARSE_JWT_ERROR_MSG, error.getMessage())
       || isSelfRequest(rc) && !hasToken(rc)
       // If system token is present, then we should not fail the request
       || getParsedSystemToken(rc).isPresent()) {

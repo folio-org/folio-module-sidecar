@@ -30,6 +30,9 @@
           },
           {
             "doesNotContain": "permission=%2Ffoo%2Fxyz%23PATCH"
+          },
+          {
+            "doesNotContain": "permission=%2Ffoo%2Fmixed-perm%23GET"
           }
         ]
       },

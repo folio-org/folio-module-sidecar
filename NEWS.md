@@ -8,6 +8,7 @@
 * Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
 * Add request processing stage and elapsed time to error logs ([MODSIDECAR-199](https://folio-org.atlassian.net/browse/MODSIDECAR-199))
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
+* Implement wildcard permissionsRequired support in folio-module-sidecar ([MODSIDECAR-198](https://folio-org.atlassian.net/browse/MODSIDECAR-198))
 
 
 ## Version `v4.0.0` (16.04.2026)
