@@ -30,7 +30,7 @@
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.1.12</bcpkix-fips.version>
 
-    <lombok.version>1.18.46</lombok.version>
+    <lombok.version>1.18.48</lombok.version>
 
     <!-- Test properties -->
     <jjwt.version>0.13.0</jjwt.version>
@@ -44,7 +44,7 @@
     <argLine />
     <surefire-plugin.version>3.5.6</surefire-plugin.version>
     <compiler-plugin.version>3.15.0</compiler-plugin.version>
-    <maven-checkstyle.version>14.0.0</maven-checkstyle.version>
+    <maven-checkstyle.version>14.1.0</maven-checkstyle.version>
     <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
