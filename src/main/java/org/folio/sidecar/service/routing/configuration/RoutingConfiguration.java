@@ -123,7 +123,13 @@ public class RoutingConfiguration {
     return ResponseTimeHandler.create();
   }
 
-  public static class Dynamic {
+  /**
+   * Module discovery cache shared by dynamic routing and by tenant-aware system calls.
+   *
+   * <p>Nothing here is bound to {@code routing.dynamic.enabled}: the cache and its Kafka-driven updater must work
+   * for tenant-aware system calls even when HTTP dynamic routing is switched off.</p>
+   */
+  public static class Discovery {
 
     @ApplicationScoped
     public DiscoveryCacheFactory discoveryCacheFactory(ApplicationManagerService applicationManagerService) {
@@ -138,11 +144,13 @@ public class RoutingConfiguration {
     }
 
     @ApplicationScoped
-    @LookupIfProperty(name = "routing.dynamic.enabled", stringValue = "true")
     public DiscoveryCacheUpdator discoveryCacheUpdator(
       @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveryCache) {
       return new DiscoveryCacheUpdator(discoveryCache);
     }
+  }
+
+  public static class Dynamic {
 
     @Named("dynamicLookup")
     @ApplicationScoped

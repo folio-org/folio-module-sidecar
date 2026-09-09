@@ -1,5 +1,6 @@
 package org.folio.sidecar.service.filter;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.PERMISSIONS;
 import static org.folio.sidecar.service.filter.IngressFilterOrder.DESIRED_PERMISSIONS;
@@ -21,6 +22,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
 import org.folio.sidecar.integration.users.UserService;
 
 @Log4j2
@@ -48,7 +50,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
       return succeededFuture(userId)
         .flatMap(id -> fetchUserPermissions(rc, id))
         .flatMap(permissions -> mergePermissionsWithContext(permissions, rc, userId))
-        .otherwise(error -> handlePermissionError(rc, userId, error));
+        .recover(error -> handlePermissionError(rc, userId, error));
     }
 
     return succeededFuture(rc);
@@ -78,8 +80,13 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
     return rc;
   }
 
-  private RoutingContext handlePermissionError(RoutingContext rc, String userId, Throwable error) {
+  private Future<RoutingContext> handlePermissionError(RoutingContext rc, String userId, Throwable error) {
+    if (error instanceof ModUsersTargetNotResolvedException) {
+      // target resolution or recovery failures must not silently strip permissions from the request
+      return failedFuture(error);
+    }
+
     log.warn("Error occurred while searching user permissions: userId = {}, tenant = {}", userId, getTenant(rc), error);
-    return rc;
+    return succeededFuture(rc);
   }
 }

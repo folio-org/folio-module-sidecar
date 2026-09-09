@@ -366,10 +366,12 @@ Default transaction/access log format:
 
 | Name                                        | Default value                  | Required | Description                    |
 |:--------------------------------------------|:-------------------------------|:--------:|:-------------------------------|
-| MOD_USERS_KEYCLOAK_URL                      | http://mod-users-keycloak:8081 |   true   | Mod-users-keycloak module url. |
 | MOD_USERS_KEYCLOAK_CACHE_EXPIRATION_SECONDS | 300                            |  false   | Users cache ttl.               |
 | MOD_USERS_KEYCLOAK_CACHE_INITIAL_CAPACITY   | 50                             |  false   | Initial users cache size.      |
 | MOD_USERS_KEYCLOAK_CACHE_MAX_CAPACITY       | 1000                           |  false   | Max user cache size.           |
+| MODULE_BINDING_CACHE_MAX_SIZE               | 200                            |  false   | Max number of cached tenant-to-module-version bindings. |
+| MODULE_BINDING_CACHE_EXPIRATION_MINUTES     | 30                             |  false   | How long a tenant-to-module-version binding may survive without being re-read from `mgr-tenant-entitlements`. Bindings are normally updated by entitlement events; this only bounds a missed event. |
+| DISCOVERY_CACHE_EXPIRATION_MINUTES          | 30                             |  false   | How long a module discovery may survive without being re-read from `mgr-applications`. Discoveries are normally updated by discovery events; this only bounds a missed event. |
 
 ### Secure storage environment variables
 

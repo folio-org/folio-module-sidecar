@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import io.vertx.core.http.HttpServerRequest;
 import java.util.List;
+import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.integration.users.UserService;
 import org.folio.support.types.UnitTest;
@@ -60,6 +61,30 @@ class DesiredPermissionsFilterTest {
     var resultFuture = filter.filter(rc);
 
     assertThat(resultFuture.succeeded()).isTrue();
+    verify(userService).findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME);
+  }
+
+  /** A missing target is a configuration gap: it must fail the request, not silently strip permissions. */
+  @Test
+  void filter_negative_targetNotResolved() {
+    var rc = routingContext(TENANT_NAME);
+    rc.request().headers().add(OkapiHeaders.USER_ID, USER_ID);
+    var permissionsDesired = List.of("perm1", "perm2");
+    var headers = caseInsensitiveMultiMap()
+      .add(OkapiHeaders.USER_ID, USER_ID)
+      .add(OkapiHeaders.TENANT, TENANT_NAME);
+    getScRoutingEntry(rc).getRoutingEntry().setPermissionsDesired(permissionsDesired);
+
+    when(userService.findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME))
+      .thenReturn(failedFuture(new ModUsersTargetNotResolvedException(TENANT_NAME)));
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
+    when(request.headers()).thenReturn(headers);
+
+    var resultFuture = filter.filter(rc);
+
+    assertThat(resultFuture.failed()).isTrue();
+    assertThat(resultFuture.cause()).isInstanceOf(ModUsersTargetNotResolvedException.class);
     verify(userService).findUserPermissions(rc, permissionsDesired, USER_ID, TENANT_NAME);
   }
 

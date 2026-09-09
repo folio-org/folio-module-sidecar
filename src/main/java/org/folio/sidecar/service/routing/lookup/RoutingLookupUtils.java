@@ -1,6 +1,8 @@
 package org.folio.sidecar.service.routing.lookup;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.sidecar.utils.CollectionUtils.takeOne;
+import static org.folio.sidecar.utils.CollectionUtils.toStream;
 import static org.folio.sidecar.utils.RoutingUtils.MULTIPLE_INTERFACE_TYPE;
 
 import io.vertx.core.http.HttpServerRequest;
@@ -17,8 +19,11 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapDiscovery;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
+import org.folio.sidecar.integration.te.model.Entitlement;
+import org.folio.sidecar.model.ResultList;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.utils.CollectionUtils;
+import org.folio.sidecar.utils.SemverUtils;
 
 @Log4j2
 @UtilityClass
@@ -98,6 +103,40 @@ class RoutingLookupUtils {
       .filter(Objects::nonNull)
       .mapToLong(Collection::size)
       .sum();
+  }
+
+  /**
+   * Selects the single module id a tenant is entitled to for the given module name.
+   *
+   * <p>A truncated entitlements page is rejected instead of being searched, because the missing records could
+   * hold the module that is being looked for.</p>
+   *
+   * @param entitlements - tenant entitlements including module ids
+   * @param moduleName - module name without a version
+   * @param tenant - tenant name, used in error messages
+   * @return the entitled module id
+   */
+  static String selectEntitledModuleId(ResultList<Entitlement> entitlements, String moduleName, String tenant) {
+    var records = entitlements.getRecords();
+    if (entitlements.getTotalRecords() > records.size()) {
+      throw new IllegalArgumentException("Incomplete tenant entitlements: tenant = " + tenant
+        + ", totalRecords = " + entitlements.getTotalRecords() + ", loadedRecords = " + records.size());
+    }
+
+    var moduleIds = toStream(records)
+      .flatMap(entitlement -> toStream(entitlement.getModules()))
+      .filter(moduleId -> hasName(moduleId, moduleName))
+      .toList();
+
+    return takeOne(moduleIds,
+      () -> new IllegalArgumentException("No entitled module found for name: "
+        + "moduleName = " + moduleName + ", tenant = " + tenant),
+      () -> new IllegalArgumentException("Multiple entitled modules found for name: "
+        + "moduleName = " + moduleName + ", foundModuleIds = " + moduleIds + ", tenant = " + tenant));
+  }
+
+  private static boolean hasName(String moduleId, String moduleName) {
+    return moduleId != null && SemverUtils.hasVersion(moduleId) && SemverUtils.getName(moduleId).equals(moduleName);
   }
 
   private static String getPatternPrefix(ModuleBootstrapEndpoint endpoint) {

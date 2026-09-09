@@ -1,9 +1,9 @@
 package org.folio.sidecar.service.routing.lookup;
 
-import static org.folio.sidecar.utils.FutureUtils.executeAndGet;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +32,26 @@ public class DiscoveryCacheFactory {
       .buildAsync(discoveryLoader());
   }
 
-  private CacheLoader<String, ModuleDiscovery> discoveryLoader() {
-    return moduleId -> {
-      var discovery = applicationManagerService.getModuleDiscovery(moduleId);
-      return executeAndGet(discovery);
-    };
+  /**
+   * Loads a discovery without blocking a thread, so the cache can be used from request-serving paths.
+   *
+   * <p>A discovery without a location fails the load on purpose: treating it as a successful value would keep an
+   * unusable address cached until it expires.</p>
+   *
+   * @return asynchronous discovery loader
+   */
+  private AsyncCacheLoader<String, ModuleDiscovery> discoveryLoader() {
+    return (moduleId, executor) -> applicationManagerService.lookupModuleDiscovery(moduleId)
+      .map(discovery -> validated(moduleId, discovery))
+      .toCompletionStage()
+      .toCompletableFuture();
+  }
+
+  private static ModuleDiscovery validated(String moduleId, ModuleDiscovery discovery) {
+    if (discovery == null || isBlank(discovery.getLocation())) {
+      throw new IllegalStateException("Discovery location is not set: moduleId = " + moduleId);
+    }
+    return discovery;
   }
 
   private static RemovalListener<Object, Object> logCachedDiscoveryRemoved() {

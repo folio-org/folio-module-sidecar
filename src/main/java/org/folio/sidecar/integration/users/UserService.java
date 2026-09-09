@@ -18,26 +18,30 @@ import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 import java.util.List;
+import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
+import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
 import org.folio.sidecar.integration.users.model.User;
+import org.folio.sidecar.service.routing.lookup.TenantModuleResolver;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 
 @Log4j2
 @ApplicationScoped
 public class UserService {
 
+  private static final String MOD_USERS_KEYCLOAK = "mod-users-keycloak";
+
   private final WebClient webClient;
-  private final ModUsersProperties modUsersProperties;
   private final Cache<String, User> userCache;
   private final ServiceTokenProvider serviceTokenProvider;
+  private final TenantModuleResolver moduleResolver;
 
-  public UserService(@Named("webClientEgress") WebClient webClient, ModUsersProperties modUsersProperties,
-    Cache<String, User> userCache, ServiceTokenProvider serviceTokenProvider) {
+  public UserService(@Named("webClientEgress") WebClient webClient, Cache<String, User> userCache,
+    ServiceTokenProvider serviceTokenProvider, TenantModuleResolver moduleResolver) {
     this.webClient = webClient;
-    this.modUsersProperties = modUsersProperties;
     this.userCache = userCache;
     this.serviceTokenProvider = serviceTokenProvider;
+    this.moduleResolver = moduleResolver;
   }
 
   public Future<User> findUser(String targetTenant, String userId, RoutingContext rc) {
@@ -70,19 +74,26 @@ public class UserService {
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
     String queryParams, String token) {
-    return webClient.getAbs(buildUserPermissionsPath(modUsersProperties.getUrl(), userId) + "?" + queryParams)
+    return sendToTarget(tenant, url -> webClient.getAbs(buildUserPermissionsPath(url, userId) + "?" + queryParams)
       .putHeader(TENANT, tenant)
       .putHeader(TOKEN, token)
-      .send()
+      .send())
       .flatMap(this::processResponsePermissions);
   }
 
   private Future<User> findUserById(String targetTenant, String userId, String serviceToken) {
-    return webClient.getAbs(buildUsersUrl(modUsersProperties.getUrl(), userId))
+    return sendToTarget(targetTenant, url -> webClient.getAbs(buildUsersUrl(url, userId))
       .putHeader(TENANT, targetTenant)
       .putHeader(TOKEN, serviceToken)
-      .send()
+      .send())
       .flatMap(this::processResponse);
+  }
+
+  private Future<HttpResponse<Buffer>> sendToTarget(String tenant,
+    Function<String, Future<HttpResponse<Buffer>>> request) {
+    return moduleResolver.resolve(tenant, MOD_USERS_KEYCLOAK)
+      .recover(error -> failedFuture(new ModUsersTargetNotResolvedException(tenant, error)))
+      .compose(discovery -> request.apply(discovery.getLocation()));
   }
 
   private Future<User> processResponse(HttpResponse<Buffer> response) {
