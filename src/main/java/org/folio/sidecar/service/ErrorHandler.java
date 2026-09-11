@@ -32,6 +32,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.Error;
 import org.folio.sidecar.model.error.ErrorCode;
@@ -44,6 +45,7 @@ public class ErrorHandler {
 
   private static final String EGRESS_UNAUTH_RETRY_DELAY = "1"; // in seconds
   private static final String ENTITLEMENTS_NOT_LOADED_RETRY_DELAY = "5"; // in seconds
+  private static final String MOD_USERS_KEYCLOAK_TARGET_RETRY_DELAY = "5"; // in seconds
 
   private final JsonConverter jsonConverter;
   private final SidecarSignatureService sidecarSignatureService;
@@ -134,6 +136,11 @@ public class ErrorHandler {
           sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.ENTITLEMENTS_NOT_LOADED_ERROR,
             "Tenant entitlements are not loaded yet. Retry later",
             Map.of(RETRY_AFTER, ENTITLEMENTS_NOT_LOADED_RETRY_DELAY)))
+      .add(
+        ModUsersKeycloakTargetNotResolvedException.class, (cause, rc) ->
+          sendErrorResponse(rc, cause, SERVICE_UNAVAILABLE, ErrorCode.MOD_USERS_KEYCLOAK_TARGET_NOT_RESOLVED_ERROR,
+            "mod-users-keycloak address is not resolved for the tenant yet. Retry later",
+            Map.of(RETRY_AFTER, MOD_USERS_KEYCLOAK_TARGET_RETRY_DELAY)))
       .add(
         cause -> cause.getCause() instanceof TimeoutException, (cause, rc) ->
           sendErrorResponse(rc, cause.getCause(), REQUEST_TIMEOUT, ErrorCode.READ_TIMEOUT_ERROR, "Request Timeout"))

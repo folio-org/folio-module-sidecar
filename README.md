@@ -24,6 +24,7 @@ Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
     * [mgr-applications integration environment variables](#mgr-applications-integration-environment-variables)
     * [Kafka configuration properties for `{{env}}.{{tenant}}.mod-login-keycloak.logout` event](#kafka-configuration-properties-for-envtenantmod-login-keycloaklogout-event)
     * [mod-users-keycloak integration environment variables](#mod-users-keycloak-integration-environment-variables)
+    * [tenant module binding cache environment variables](#tenant-module-binding-cache-environment-variables)
     * [Secure storage environment variables](#secure-storage-environment-variables)
 * [Security](#security)
     * [Authorizing user in the sidecar](#authorizing-user-in-the-sidecar)
@@ -364,12 +365,18 @@ Default transaction/access log format:
 
 ### mod-users-keycloak integration environment variables
 
-| Name                                        | Default value                  | Required | Description                    |
-|:--------------------------------------------|:-------------------------------|:--------:|:-------------------------------|
-| MOD_USERS_KEYCLOAK_URL                      | http://mod-users-keycloak:8081 |   true   | Mod-users-keycloak module url. |
-| MOD_USERS_KEYCLOAK_CACHE_EXPIRATION_SECONDS | 300                            |  false   | Users cache ttl.               |
-| MOD_USERS_KEYCLOAK_CACHE_INITIAL_CAPACITY   | 50                             |  false   | Initial users cache size.      |
-| MOD_USERS_KEYCLOAK_CACHE_MAX_CAPACITY       | 1000                           |  false   | Max user cache size.           |
+| Name                                        | Default value | Required | Description                  |
+|:--------------------------------------------|:--------------|:--------:|:-----------------------------|
+| MOD_USERS_KEYCLOAK_CACHE_EXPIRATION_SECONDS | 300           |  false   | Users cache ttl.             |
+| MOD_USERS_KEYCLOAK_CACHE_INITIAL_CAPACITY   | 50            |  false   | Initial users cache size.    |
+| MOD_USERS_KEYCLOAK_CACHE_MAX_CAPACITY       | 1000          |  false   | Max user cache size.         |
+
+### tenant module binding cache environment variables
+
+| Name                                           | Default value | Required | Description                                                                                                                                                                                 |
+|:-----------------------------------------------|:--------------|:--------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| TENANT_MODULE_BINDING_CACHE_MAX_SIZE           | 200           |  false   | Max number of cached tenant-to-module-version bindings.                                                                                                                                     |
+| TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES | 30            |  false   | How long a tenant-to-module-version binding may survive without being re-read from `mgr-tenant-entitlements`. Bindings are normally updated by entitlement events; this bounds a missed event. |
 
 ### Secure storage environment variables
 

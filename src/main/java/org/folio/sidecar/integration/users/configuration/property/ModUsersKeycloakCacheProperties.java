@@ -12,9 +12,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @AllArgsConstructor
 @NoArgsConstructor
 @ApplicationScoped
-public class ModUsersProperties {
+public class ModUsersKeycloakCacheProperties {
 
-  @ConfigProperty(name = "mod-users-keycloak.url") String url;
   @ConfigProperty(name = "mod-users-keycloak.cache-expiration-seconds") int cacheExpirationSeconds;
   @ConfigProperty(name = "mod-users-keycloak.cache-initial-capacity") int cacheInitialCapacity;
   @ConfigProperty(name = "mod-users-keycloak.cache-max-capacity") int cacheMaxCapacity;

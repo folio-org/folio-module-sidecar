@@ -9,6 +9,10 @@
 * Add request processing stage and elapsed time to error logs ([MODSIDECAR-199](https://folio-org.atlassian.net/browse/MODSIDECAR-199))
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
 * Implement wildcard permissionsRequired support in folio-module-sidecar ([MODSIDECAR-198](https://folio-org.atlassian.net/browse/MODSIDECAR-198))
+* Resolve the `mod-users-keycloak` version and address per tenant from entitlements and discovery ([MODSIDECAR-211](https://folio-org.atlassian.net/browse/MODSIDECAR-211))
+  - Remove `MOD_USERS_KEYCLOAK_URL`; it is no longer used
+  - New binding cache settings: `TENANT_MODULE_BINDING_CACHE_MAX_SIZE` (`200`) and `TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES` (`30`)
+  - Resolution failures return `503`, `Retry-After: 5`, and `mod_users_keycloak_target_not_resolved_error`
 
 
 ## Version `v4.0.0` (16.04.2026)

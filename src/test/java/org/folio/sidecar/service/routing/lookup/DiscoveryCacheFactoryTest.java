@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Optional;
@@ -44,7 +45,7 @@ class DiscoveryCacheFactoryTest {
       when(cacheSettings.expireAfterWrite()).thenReturn(Optional.of(new DurationMock(1, TimeUnit.SECONDS)));
       var result = mock(AsyncLoadingCache.class);
       when(caffeine.removalListener(any())).thenReturn(caffeine);
-      when(caffeine.buildAsync(any())).thenReturn(result);
+      when(caffeine.buildAsync(any(AsyncCacheLoader.class))).thenReturn(result);
 
       AsyncLoadingCache<String, ModuleDiscovery> cache = discoveryCacheFactory.createCache(cacheSettings);
 
@@ -69,7 +70,7 @@ class DiscoveryCacheFactoryTest {
       when(cacheSettings.expireAfterWrite()).thenReturn(Optional.empty());
       var result = mock(AsyncLoadingCache.class);
       when(caffeine.removalListener(any())).thenReturn(caffeine);
-      when(caffeine.buildAsync(any())).thenReturn(result);
+      when(caffeine.buildAsync(any(AsyncCacheLoader.class))).thenReturn(result);
 
       AsyncLoadingCache<String, ModuleDiscovery> cache = discoveryCacheFactory.createCache(cacheSettings);
 

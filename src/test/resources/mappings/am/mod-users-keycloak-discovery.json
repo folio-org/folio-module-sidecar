@@ -1,0 +1,56 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/modules/mod-users-keycloak-3.0.13/discovery",
+        "headers": {
+          "X-Okapi-Token": {
+            "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+          },
+          "Content-Type": {
+            "equalTo": "application/json"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "location": "{{request.baseUrl}}",
+          "id": "mod-users-keycloak-3.0.13",
+          "name": "mod-users-keycloak",
+          "version": "3.0.13"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "urlPath": "/modules/mod-users-keycloak-4.0.2/discovery",
+        "headers": {
+          "X-Okapi-Token": {
+            "equalTo": "dGVzdC1hY2Nlc3MtdG9rZW4="
+          },
+          "Content-Type": {
+            "equalTo": "application/json"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonBody": {
+          "location": "http://sc-users-keycloak-4:8081",
+          "id": "mod-users-keycloak-4.0.2",
+          "name": "mod-users-keycloak",
+          "version": "4.0.2"
+        }
+      }
+    }
+  ]
+}
