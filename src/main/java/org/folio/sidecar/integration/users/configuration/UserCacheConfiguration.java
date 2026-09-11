@@ -7,7 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
+import org.folio.sidecar.integration.users.configuration.property.ModUsersKeycloakCacheProperties;
 import org.folio.sidecar.integration.users.model.User;
 
 @Log4j2
@@ -15,7 +15,7 @@ import org.folio.sidecar.integration.users.model.User;
 public class UserCacheConfiguration {
 
   @ApplicationScoped
-  public Cache<String, User> userCache(ModUsersProperties properties) {
+  public Cache<String, User> userCache(ModUsersKeycloakCacheProperties properties) {
     return Caffeine.newBuilder()
       .expireAfterWrite(properties.getCacheExpirationSeconds(), SECONDS)
       .initialCapacity(properties.getCacheInitialCapacity())

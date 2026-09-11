@@ -41,6 +41,19 @@ public class ApplicationManagerService {
     return callWithRetry(token -> client.getModuleDiscovery(moduleId, token));
   }
 
+  /**
+   * Loads a module discovery in a single attempt, for request-path lookups.
+   *
+   * <p>The shared retry policy is deliberately not applied here: it can hold a request for minutes, and a
+   * lookup failure is recovered by the next request instead.</p>
+   *
+   * @param moduleId - full module identifier
+   * @return future with the module discovery
+   */
+  public Future<ModuleDiscovery> lookupModuleDiscovery(String moduleId) {
+    return tokenProvider.getAdminToken().compose(token -> client.getModuleDiscovery(moduleId, token));
+  }
+
   private <T> Future<T> callWithRetry(Function<String, Future<T>> apiCall) {
     return retryTemplate.callAsync(() -> tokenProvider.getAdminToken().compose(apiCall));
   }

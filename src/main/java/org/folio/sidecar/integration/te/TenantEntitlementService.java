@@ -19,8 +19,29 @@ public class TenantEntitlementService {
   private final RetryTemplate retryTemplate;
   private final TenantEntitlementClient tenantEntitlementClient;
 
+  /**
+   * Loads tenant entitlements with the shared retry policy, for startup and bootstrap paths.
+   *
+   * @param tenant - tenant name
+   * @param withModules - whether module ids must be included
+   * @return future with the tenant entitlements
+   */
   public Future<ResultList<Entitlement>> getTenantEntitlements(String tenant, boolean withModules) {
     return callWithRetry(token -> tenantEntitlementClient.getTenantEntitlements(tenant, withModules, token));
+  }
+
+  /**
+   * Loads tenant entitlements with modules in a single attempt, for request-path lookups.
+   *
+   * <p>The shared retry policy is deliberately not applied here: it can hold a request for minutes, and a
+   * lookup failure is recovered by the next request instead.</p>
+   *
+   * @param tenant - tenant name
+   * @return future with the tenant entitlements
+   */
+  public Future<ResultList<Entitlement>> lookupTenantEntitlements(String tenant) {
+    return tokenProvider.getAdminToken()
+      .compose(token -> tenantEntitlementClient.getTenantEntitlements(tenant, true, token));
   }
 
   private <T> Future<T> callWithRetry(Function<String, Future<T>> apiCall) {

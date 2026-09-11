@@ -7,8 +7,7 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.MODULE_HINT;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.model.ScRoutingEntry.dynamicRoutingEntry;
-import static org.folio.sidecar.utils.CollectionUtils.takeOne;
-import static org.folio.sidecar.utils.CollectionUtils.toStream;
+import static org.folio.sidecar.service.routing.lookup.RoutingLookupUtils.selectEntitledModuleId;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 import static org.folio.sidecar.utils.RoutingUtils.getHeader;
 import static org.folio.sidecar.utils.RoutingUtils.hasHeader;
@@ -17,14 +16,11 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Optional;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.te.TenantEntitlementService;
-import org.folio.sidecar.integration.te.model.Entitlement;
-import org.folio.sidecar.model.ResultList;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.sidecar.utils.SemverUtils;
 
@@ -56,10 +52,11 @@ public class DynamicRoutingLookup implements RoutingLookup {
     log.debug("Getting routing entry for dynamic request: method = {}, uri = {}, moduleHint = {}",
       request::method, dumpUri(rc), () -> moduleHint);
 
+    var tenant = getHeader(rc, TENANT);
     var moduleId = SemverUtils.hasVersion(moduleHint)
       ? succeededFuture(moduleHint)
-      : tenantEntitlementService.getTenantEntitlements(getHeader(rc, TENANT), true)
-          .map(findEntitledModuleIdByName(moduleHint, getHeader(rc, TENANT)));
+      : tenantEntitlementService.getTenantEntitlements(tenant, true)
+          .map(entitlements -> selectEntitledModuleId(entitlements, moduleHint, tenant));
 
     return moduleId.compose(id -> fromCompletionStage(discoveryCache.get(id)))
       .map(discovery -> routingEntryFromDiscovery(discovery, rc, path))
@@ -71,22 +68,5 @@ public class DynamicRoutingLookup implements RoutingLookup {
   private static ScRoutingEntry routingEntryFromDiscovery(ModuleDiscovery discovery, RoutingContext rc, String path) {
     return dynamicRoutingEntry(discovery.getLocation(), discovery.getId(),
       new ModuleBootstrapEndpoint(path, rc.request().method().name()));
-  }
-
-  private static Function<ResultList<Entitlement>, String> findEntitledModuleIdByName(String moduleName,
-    String tenant) {
-    return result -> {
-      var moduleIds = toStream(result.getRecords())
-        .flatMap(r -> toStream(r.getModules()))
-        .filter(m -> SemverUtils.getName(m).equals(moduleName))
-        .toList();
-
-      return takeOne(moduleIds,
-        () -> new IllegalArgumentException("No entitled module found for name: "
-          + "moduleName = " + moduleName + ", tenant = " + tenant),
-        () -> new IllegalArgumentException("Multiple entitled modules found for name: "
-          + "moduleName = " + moduleName + ", foundModuleIds = " + moduleIds + ", tenant = " + tenant)
-      );
-    };
   }
 }

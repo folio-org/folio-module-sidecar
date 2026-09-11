@@ -3,10 +3,12 @@ package org.folio.sidecar.service;
 import static io.vertx.core.Future.succeededFuture;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
+import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +28,7 @@ import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -196,6 +199,20 @@ class ErrorHandlerTest {
     assertThat(responseCaptor.getValue()).isEqualTo(
       TestUtils.minify(TestUtils.readString("json/tenant-not-enabled-error.json")));
     assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_BAD_REQUEST);
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_modUsersKeycloakTargetNotResolvedError() {
+    var routingContext = routingContext();
+
+    errorHandler.sendErrorResponse(routingContext, new ModUsersKeycloakTargetNotResolvedException("test-tenant"));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/mod-users-keycloak-target-not-resolved-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
     verify(jsonConverter).toJson(any(ErrorResponse.class));
     verify(sidecarSignatureService).removeSignature(routingContext);
   }

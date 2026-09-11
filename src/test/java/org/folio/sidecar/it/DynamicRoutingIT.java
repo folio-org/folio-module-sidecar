@@ -5,18 +5,23 @@ import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_TOKEN;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import io.quarkus.test.junit.TestProfile;
 import io.restassured.filter.log.LogDetail;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.SneakyThrows;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.sidecar.support.TestJwtGenerator;
@@ -40,6 +45,9 @@ class DynamicRoutingIT {
 
   @ConfigProperty(name = "keycloak.url")
   String keycloakUrl;
+  @Inject
+  @Named("dynamicRoutingDiscoveryCache")
+  AsyncLoadingCache<String, ModuleDiscovery> discoveryCache;
   private String authToken;
 
   @BeforeAll
@@ -51,6 +59,11 @@ class DynamicRoutingIT {
   @BeforeEach
   void init() {
     authToken = TestJwtGenerator.generateJwtString(keycloakUrl, TENANT_NAME);
+  }
+
+  @Test
+  void discoveryCache_positive_hasNoWriteExpiration() {
+    assertThat(discoveryCache.synchronous().policy().expireAfterWrite()).isEmpty();
   }
 
   @Test

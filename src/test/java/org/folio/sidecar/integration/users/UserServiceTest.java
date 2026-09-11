@@ -20,9 +20,11 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import java.util.List;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
+import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.users.UserService.PermissionContainer;
-import org.folio.sidecar.integration.users.configuration.property.ModUsersProperties;
 import org.folio.sidecar.integration.users.model.User;
+import org.folio.sidecar.service.routing.lookup.TenantModuleResolver;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -35,14 +37,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
+  private static final String MOD_USERS_KEYCLOAK = "mod-users-keycloak";
   private static final String TARGET_TENANT = "targetTenant";
   private static final String USER_ID = "00000000-0000-0000-0000-000000000000";
   private static final String MOD_URL = "http://mod-users-keycloak";
+  private static final String TOKEN_VALUE = "service-token";
 
   @InjectMocks private UserService userService;
 
   @Mock private WebClient webClient;
-  @Mock private ModUsersProperties modUsersProperties;
+  @Mock private TenantModuleResolver moduleResolver;
   @Mock private ServiceTokenProvider serviceTokenProvider;
   @Mock private Cache<String, User> cache;
   @Mock private HttpRequest<Buffer> httpRequest;
@@ -50,7 +54,7 @@ class UserServiceTest {
 
   @Test
   void findUser_positive_existsInCache() {
-    var user = new User();
+    final var user = new User();
     var routingContext = routingContext(TARGET_TENANT);
     var key = USER_ID + "#" + TARGET_TENANT;
 
@@ -58,22 +62,21 @@ class UserServiceTest {
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
     assertThat(future.succeeded()).isTrue();
-    verifyNoInteractions(webClient);
+    verifyNoInteractions(webClient, moduleResolver);
     verifyNoMoreInteractions(cache);
   }
 
   @Test
-  void findUser_positive_modUsersInteraction() {
-    var user = new User();
+  void findUser_positive_callsTenantResolvedLocation() {
+    final var user = new User();
     var routingContext = routingContext(TARGET_TENANT);
-    var token = "service-token";
     var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
     when(cache.getIfPresent(key)).thenReturn(null);
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
-    when(webClient.getAbs(anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    mockResolvedTarget(TARGET_TENANT);
+    when(webClient.getAbs(MOD_URL + "/users-keycloak/users/" + USER_ID)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(TOKEN, TOKEN_VALUE)).thenReturn(httpRequest);
     when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
     when(httpRequest.send()).thenReturn(succeededFuture(response));
     when(response.statusCode()).thenReturn(200);
@@ -81,64 +84,68 @@ class UserServiceTest {
 
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
-    assertThat(future.succeeded()).isTrue();
-    verify(cache).getIfPresent(key);
+    assertThat(future.result()).isSameAs(user);
     verify(cache).put(key, user);
-    verifyNoMoreInteractions(cache, webClient);
   }
 
   @Test
-  void findUser_negative_modUsersInteractionError() {
+  void findUser_negative_moduleNotReachable() {
     var routingContext = routingContext(TARGET_TENANT);
-    var token = "service-token";
-    var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
-    when(cache.getIfPresent(key)).thenReturn(null);
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(cache.getIfPresent(USER_ID + "#" + TARGET_TENANT)).thenReturn(null);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    mockResolvedTarget(TARGET_TENANT);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(TOKEN, TOKEN_VALUE)).thenReturn(httpRequest);
     when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
-    when(httpRequest.send()).thenReturn(failedFuture("failed"));
+    when(httpRequest.send()).thenReturn(failedFuture("connection reset"));
 
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
-    assertThat(future.succeeded()).isFalse();
-    verify(cache).getIfPresent(key);
-    verifyNoMoreInteractions(cache, webClient);
+    assertThat(future.failed()).isTrue();
+    verify(httpRequest).send();
   }
 
   @Test
   void findUser_negative_non200StatusCodeResponse() {
     var routingContext = routingContext(TARGET_TENANT);
-    var token = "service-token";
-    var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(token));
-    when(cache.getIfPresent(key)).thenReturn(null);
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(cache.getIfPresent(USER_ID + "#" + TARGET_TENANT)).thenReturn(null);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    mockResolvedTarget(TARGET_TENANT);
     when(webClient.getAbs(anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(TOKEN, token)).thenReturn(httpRequest);
+    when(httpRequest.putHeader(TOKEN, TOKEN_VALUE)).thenReturn(httpRequest);
     when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
     when(httpRequest.send()).thenReturn(succeededFuture(response));
     when(response.statusCode()).thenReturn(400);
 
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
-    assertThat(future.succeeded()).isFalse();
-    verify(cache).getIfPresent(key);
-    verifyNoMoreInteractions(cache, webClient);
+    assertThat(future.failed()).isTrue();
+  }
+
+  @Test
+  void findUser_negative_modUsersKeycloakTargetNotResolved() {
+    var routingContext = routingContext(TARGET_TENANT);
+
+    when(cache.getIfPresent(USER_ID + "#" + TARGET_TENANT)).thenReturn(null);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    when(moduleResolver.resolve(TARGET_TENANT, MOD_USERS_KEYCLOAK)).thenReturn(failedFuture("mte is down"));
+
+    var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
+
+    assertThat(future.cause()).isInstanceOf(ModUsersKeycloakTargetNotResolvedException.class);
+    verifyNoInteractions(webClient);
   }
 
   @Test
   void findUserPermissions_positive() {
-    var permissions = List.of("perm1", "perm2");
+    final var permissions = List.of("perm1", "perm2");
     var routingContext = routingContext(TENANT_NAME);
-    var url =
-      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var url = permissionsUrl();
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    mockResolvedTarget(TENANT);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
@@ -148,20 +155,18 @@ class UserServiceTest {
 
     var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
 
-    assertThat(userPermissions.succeeded()).isTrue();
+    assertThat(userPermissions.result()).isEqualTo(permissions);
     verify(webClient).getAbs(url);
-    verifyNoMoreInteractions(webClient);
   }
 
   @Test
   void findUserPermissions_negative_400WhilePermissionSearch() {
-    var permissions = List.of("perm1", "perm2");
+    final var permissions = List.of("perm1", "perm2");
     var routingContext = routingContext(TENANT_NAME);
-    var url =
-      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
+    var url = permissionsUrl();
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    mockResolvedTarget(TENANT);
     when(webClient.getAbs(url)).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
     when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
@@ -170,29 +175,29 @@ class UserServiceTest {
 
     var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
 
-    assertThat(userPermissions.succeeded()).isFalse();
-    verify(webClient).getAbs(url);
-    verifyNoMoreInteractions(webClient);
+    assertThat(userPermissions.failed()).isTrue();
   }
 
   @Test
-  void findUserPermissions_negative_errorWhileSearchingPermissions() {
-    var permissions = List.of("perm1", "perm2");
+  void findUserPermissions_negative_modUsersKeycloakTargetNotResolved() {
     var routingContext = routingContext(TENANT_NAME);
-    var url =
-      MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions?desiredPermissions=perm1&desiredPermissions=perm2";
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture("service-token"));
-    when(modUsersProperties.getUrl()).thenReturn(MOD_URL);
-    when(webClient.getAbs(url)).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
-    when(httpRequest.send()).thenReturn(failedFuture("failed"));
+    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+    when(moduleResolver.resolve(TENANT, MOD_USERS_KEYCLOAK)).thenReturn(failedFuture("mte is down"));
 
-    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+    var future = userService.findUserPermissions(routingContext, List.of("foo.item.get"), USER_ID, TENANT);
 
-    assertThat(userPermissions.succeeded()).isFalse();
-    verify(webClient).getAbs(url);
-    verifyNoMoreInteractions(webClient);
+    assertThat(future.cause()).isInstanceOf(ModUsersKeycloakTargetNotResolvedException.class);
+    verifyNoInteractions(webClient);
+  }
+
+  private void mockResolvedTarget(String tenant) {
+    var discovery = new ModuleDiscovery().id("mod-users-keycloak-3.0.13").location(MOD_URL);
+    when(moduleResolver.resolve(tenant, MOD_USERS_KEYCLOAK)).thenReturn(succeededFuture(discovery));
+  }
+
+  private static String permissionsUrl() {
+    return MOD_URL + "/users-keycloak/users/" + USER_ID + "/permissions"
+      + "?desiredPermissions=perm1&desiredPermissions=perm2";
   }
 }
