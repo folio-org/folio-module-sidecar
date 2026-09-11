@@ -1,3 +1,10 @@
+## Version `v4.0.4` (11.09.2026)
+### Changes:
+* Tenant-scoped egress routing for application-scoped sidecars bootstrap, behind `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` (POC) ([EUREKA-899](https://folio-org.atlassian.net/browse/EUREKA-899))
+  - New: `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` (`false`); behavior is unchanged when off
+  - `SIDECAR_FORWARD_UNKNOWN_REQUESTS` now defaults to the tenant-scoped flag value; set it explicitly to override
+  - Requires `mgr-applications` with `POST /modules/{moduleId}/bootstrap`; enable only where it is deployed
+
 ## Version `v4.0.3` (14.07.2026)
 ### Changes:
 * Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
