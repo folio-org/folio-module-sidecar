@@ -22,7 +22,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.integration.users.UserService;
 
 @Log4j2
@@ -81,7 +81,7 @@ public class DesiredPermissionsFilter implements IngressRequestFilter {
   }
 
   private Future<RoutingContext> handlePermissionError(RoutingContext rc, String userId, Throwable error) {
-    if (error instanceof ModUsersTargetNotResolvedException) {
+    if (error instanceof ModUsersKeycloakTargetNotResolvedException) {
       // target resolution or recovery failures must not silently strip permissions from the request
       return failedFuture(error);
     }

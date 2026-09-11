@@ -8,14 +8,10 @@
 * Default Quarkus worker thread pool size to 8 via `QUARKUS_THREAD_POOL_MAX_THREADS` to prevent thread exhaustion under heavy concurrent load ([MODSIDECAR-208](https://folio-org.atlassian.net/browse/MODSIDECAR-208))
 * Add request processing stage and elapsed time to error logs ([MODSIDECAR-199](https://folio-org.atlassian.net/browse/MODSIDECAR-199))
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
-* Resolve the `mod-users-keycloak` version and address per request tenant from entitlements and discovery, so one sidecar can serve tenants on different versions ([MODSIDECAR-211](https://folio-org.atlassian.net/browse/MODSIDECAR-211))
-  - Remove `MOD_USERS_KEYCLOAK_URL` before deploying: it is no longer read
-  - Unresolved tenant now returns `503` with `Retry-After: 5` and code `mod_users_target_not_resolved_error` instead of calling the static address
-  - Tenant-to-version bindings are kept current by entitlement events; `MODULE_BINDING_CACHE_EXPIRATION_MINUTES` bounds how long a missed event can survive
-  - The module discovery cache is now shared with these calls and no longer requires `ROUTING_DYNAMIC_ENABLED`; `DISCOVERY_CACHE_EXPIRATION_MINUTES` bounds a missed discovery event
-  - Manager lookups on the request path no longer use the shared retry policy, so an unhealthy `mgr-tenant-entitlements` or `mgr-applications` fails fast instead of holding the request
-  - A failed address reload no longer keeps the previous address: the next request resolves it again
-  - Dynamic routing now rejects a truncated entitlements page and a discovery without a location, and tolerates a module id without a version instead of failing
+* Resolve the `mod-users-keycloak` version and address per tenant from entitlements and discovery ([MODSIDECAR-211](https://folio-org.atlassian.net/browse/MODSIDECAR-211))
+  - Remove `MOD_USERS_KEYCLOAK_URL`; it is no longer used
+  - New binding cache settings: `TENANT_MODULE_BINDING_CACHE_MAX_SIZE` (`200`) and `TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES` (`30`)
+  - Resolution failures return `503`, `Retry-After: 5`, and `mod_users_keycloak_target_not_resolved_error`
 
 
 ## Version `v4.0.0` (16.04.2026)

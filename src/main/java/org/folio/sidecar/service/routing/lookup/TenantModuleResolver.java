@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.configuration.properties.CacheSettings;
-import org.folio.sidecar.configuration.properties.ModuleBindingProperties;
+import org.folio.sidecar.configuration.properties.TenantModuleBindingProperties;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
@@ -33,8 +33,8 @@ import org.folio.sidecar.utils.SemverUtils;
  *
  * <p>Two caches are kept apart on purpose. The tenant binding answers "which module id", and is corrected
  * immediately by entitlement events. The module discovery answers "at which address", is shared by all tenants on
- * that version, and is corrected by discovery events. Both expire, so a binding that no event ever corrects
- * cannot stay wrong indefinitely.</p>
+ * that version, and is corrected by discovery events. Bindings expire so one that no event ever corrects cannot
+ * stay wrong indefinitely; discoveries retain the event-driven lifetime used by dynamic routing.</p>
  */
 @Log4j2
 @ApplicationScoped
@@ -47,7 +47,7 @@ public class TenantModuleResolver {
   @Inject
   public TenantModuleResolver(TenantEntitlementService tenantEntitlementService,
     @Named("dynamicRoutingDiscoveryCache") AsyncLoadingCache<String, ModuleDiscovery> discoveries,
-    ModuleBindingProperties properties) {
+    TenantModuleBindingProperties properties) {
     this(tenantEntitlementService, discoveries, properties.cache(), Ticker.systemTicker());
   }
 

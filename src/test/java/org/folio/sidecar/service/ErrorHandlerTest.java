@@ -28,7 +28,7 @@ import org.apache.http.ParseException;
 import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
-import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -250,13 +250,13 @@ class ErrorHandlerTest {
   }
 
   @Test
-  void sendErrorResponse_positive_modUsersTargetNotResolvedError() {
+  void sendErrorResponse_positive_modUsersKeycloakTargetNotResolvedError() {
     var routingContext = routingContext();
 
-    errorHandler.sendErrorResponse(routingContext, new ModUsersTargetNotResolvedException("test-tenant"));
+    errorHandler.sendErrorResponse(routingContext, new ModUsersKeycloakTargetNotResolvedException("test-tenant"));
 
     assertThat(responseCaptor.getValue())
-      .isEqualTo(TestUtils.minify(TestUtils.readString("json/mod-users-target-not-resolved-error.json")));
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/mod-users-keycloak-target-not-resolved-error.json")));
     assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
     verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
     verify(jsonConverter).toJson(any(ErrorResponse.class));

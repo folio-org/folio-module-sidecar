@@ -20,7 +20,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import java.util.List;
-import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.integration.am.model.ModuleDiscovery;
 import org.folio.sidecar.integration.users.UserService.PermissionContainer;
 import org.folio.sidecar.integration.users.model.User;
@@ -125,7 +125,7 @@ class UserServiceTest {
   }
 
   @Test
-  void findUser_negative_targetNotResolved() {
+  void findUser_negative_modUsersKeycloakTargetNotResolved() {
     var routingContext = routingContext(TARGET_TENANT);
 
     when(cache.getIfPresent(USER_ID + "#" + TARGET_TENANT)).thenReturn(null);
@@ -134,7 +134,7 @@ class UserServiceTest {
 
     var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
-    assertThat(future.cause()).isInstanceOf(ModUsersTargetNotResolvedException.class);
+    assertThat(future.cause()).isInstanceOf(ModUsersKeycloakTargetNotResolvedException.class);
     verifyNoInteractions(webClient);
   }
 
@@ -179,7 +179,7 @@ class UserServiceTest {
   }
 
   @Test
-  void findUserPermissions_negative_targetNotResolved() {
+  void findUserPermissions_negative_modUsersKeycloakTargetNotResolved() {
     var routingContext = routingContext(TENANT_NAME);
 
     when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
@@ -187,7 +187,7 @@ class UserServiceTest {
 
     var future = userService.findUserPermissions(routingContext, List.of("foo.item.get"), USER_ID, TENANT);
 
-    assertThat(future.cause()).isInstanceOf(ModUsersTargetNotResolvedException.class);
+    assertThat(future.cause()).isInstanceOf(ModUsersKeycloakTargetNotResolvedException.class);
     verifyNoInteractions(webClient);
   }
 

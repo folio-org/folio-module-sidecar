@@ -35,8 +35,8 @@ public class DiscoveryCacheFactory {
   /**
    * Loads a discovery without blocking a thread, so the cache can be used from request-serving paths.
    *
-   * <p>A discovery without a location fails the load on purpose: treating it as a successful value would keep an
-   * unusable address cached until it expires.</p>
+   * <p>A discovery without a location fails the load on purpose: treating it as a successful value would cache an
+   * unusable address until the entry is invalidated or evicted.</p>
    *
    * @return asynchronous discovery loader
    */

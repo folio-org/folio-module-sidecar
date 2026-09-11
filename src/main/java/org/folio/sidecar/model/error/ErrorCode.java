@@ -19,7 +19,7 @@ public enum ErrorCode {
   AUTHORIZATION_ERROR("authorization_error"),
   READ_TIMEOUT_ERROR("read_timeout_error"),
   ENTITLEMENTS_NOT_LOADED_ERROR("entitlements_not_loaded_error"),
-  MOD_USERS_TARGET_NOT_RESOLVED_ERROR("mod_users_target_not_resolved_error");
+  MOD_USERS_KEYCLOAK_TARGET_NOT_RESOLVED_ERROR("mod_users_keycloak_target_not_resolved_error");
 
   @JsonValue
   private final String value;

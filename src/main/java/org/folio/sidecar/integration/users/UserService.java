@@ -20,7 +20,7 @@ import jakarta.inject.Named;
 import java.util.List;
 import java.util.function.Function;
 import lombok.extern.log4j.Log4j2;
-import org.folio.sidecar.exception.ModUsersTargetNotResolvedException;
+import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.integration.users.model.User;
 import org.folio.sidecar.service.routing.lookup.TenantModuleResolver;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
@@ -92,7 +92,7 @@ public class UserService {
   private Future<HttpResponse<Buffer>> sendToTarget(String tenant,
     Function<String, Future<HttpResponse<Buffer>>> request) {
     return moduleResolver.resolve(tenant, MOD_USERS_KEYCLOAK)
-      .recover(error -> failedFuture(new ModUsersTargetNotResolvedException(tenant, error)))
+      .recover(error -> failedFuture(new ModUsersKeycloakTargetNotResolvedException(tenant, error)))
       .compose(discovery -> request.apply(discovery.getLocation()));
   }
 
@@ -113,12 +113,12 @@ public class UserService {
     return succeededFuture(response.bodyAsJson(PermissionContainer.class).permissions);
   }
 
-  private static String buildUserPermissionsPath(String modUsersUrl, String userId) {
-    return String.format("%s/users-keycloak/users/%s/permissions", modUsersUrl, userId);
+  private static String buildUserPermissionsPath(String modUsersKeycloakUrl, String userId) {
+    return String.format("%s/users-keycloak/users/%s/permissions", modUsersKeycloakUrl, userId);
   }
 
-  private static String buildUsersUrl(String modUsersUrl, String userId) {
-    return modUsersUrl + "/users-keycloak/users/" + userId;
+  private static String buildUsersUrl(String modUsersKeycloakUrl, String userId) {
+    return modUsersKeycloakUrl + "/users-keycloak/users/" + userId;
   }
 
   private static String buildKey(String userId, String tenant) {
