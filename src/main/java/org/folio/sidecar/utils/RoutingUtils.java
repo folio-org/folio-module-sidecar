@@ -47,6 +47,11 @@ public class RoutingUtils {
   public static final String PARSED_TOKEN = "parsedToken";
 
   /**
+   * Wildcard permission convention: a valid token is required but no named permission is.
+   */
+  public static final String WILDCARD_PERMISSION = "*";
+
+  /**
    * Key of the request processing stage in the context, used to report where a failed request was.
    */
   public static final String REQUEST_STAGE_KEY = "requestStage";
@@ -219,10 +224,29 @@ public class RoutingUtils {
     rc.put(EGRESS_REQUEST_KEY, true);
   }
 
-  public static boolean hasNoPermissionsRequired(RoutingContext rc) {
-    var scRoutingEntry = getScRoutingEntry(rc);
-    var endpoint = scRoutingEntry.getRoutingEntry();
+  /**
+   * Truly public endpoint: no token required (e.g. forgotten-password). {@code permissionsRequired} is null/empty.
+   */
+  public static boolean isTrulyPublic(RoutingContext rc) {
+    var endpoint = getScRoutingEntry(rc).getRoutingEntry();
     return isEmpty(endpoint.getPermissionsRequired());
+  }
+
+  /**
+   * Wildcard-authenticated endpoint: a valid token is required but no named permission. The convention is the exact
+   * singleton {@code ["*"]}; a mixed list such as {@code ["*", "perm"]} is NOT wildcard.
+   */
+  public static boolean isWildcardPermissionRequired(RoutingContext rc) {
+    var permissionsRequired = getScRoutingEntry(rc).getRoutingEntry().getPermissionsRequired();
+    return permissionsRequired != null && permissionsRequired.size() == 1
+      && WILDCARD_PERMISSION.equals(permissionsRequired.get(0));
+  }
+
+  /**
+   * No specific named permission to evaluate: either truly public or wildcard-authenticated.
+   */
+  public static boolean requiresNoNamedPermission(RoutingContext rc) {
+    return isTrulyPublic(rc) || isWildcardPermissionRequired(rc);
   }
 
   public static boolean isTenantInstallRequest(RoutingContext rc) {

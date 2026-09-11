@@ -542,6 +542,77 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_positive_wildcardPermission_validToken() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .get("/foo/_self")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_OK))
+      .header(OkapiHeaders.TENANT, Matchers.is(TestConstants.TENANT_NAME))
+      .contentType(is(APPLICATION_JSON));
+  }
+
+  @Test
+  void handleIngressRequest_negative_wildcardPermission_noToken() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .get("/foo/_self")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/unauthorized-error.json")));
+  }
+
+  @Test
+  void handleIngressRequest_negative_wildcardPermission_expiredToken() {
+    var expiredToken = TestJwtGenerator.generateExpiredJwtToken(keycloakUrl, TestConstants.TENANT_NAME);
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, expiredToken)
+      .get("/foo/_self")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/unauthorized-error.json")));
+  }
+
+  @Test
+  void handleIngressRequest_negative_wildcardPermission_wrongTenantToken() {
+    var wrongTenantToken = TestJwtGenerator.generateJwtString(keycloakUrl, "unknown");
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, wrongTenantToken)
+      .get("/foo/_self")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/unauthorized-error.json")));
+  }
+
+  @Test
+  void handleIngressRequest_negative_namedPermissionStillCheckedWhenWildcardPresent() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.TOKEN, authToken)
+      .get("/foo/mixed-perm")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_FORBIDDEN))
+      .contentType(is(APPLICATION_JSON))
+      .body(is(asJson("json/forbidden-error.json")));
+  }
+
+  @Test
   void handleIngressRequest_negative_selfRequestWithInvalidToken() {
     authToken = RandomStringUtils.secure().next(20);
     var signature = TestUtils.getSignature();

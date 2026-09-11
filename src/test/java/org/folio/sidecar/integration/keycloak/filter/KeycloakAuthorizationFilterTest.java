@@ -352,6 +352,26 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   @Test
+  void shouldSkip_positive_wildcardPermission() {
+    var routingContext = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
+    when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(scRoutingEntry("not-system", "*"));
+
+    var result = keycloakAuthorizationFilter.shouldSkip(routingContext);
+
+    assertThat(result).isTrue();
+  }
+
+  @Test
+  void shouldSkip_negative_wildcardWithNamedPermission() {
+    var routingContext = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
+    when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(scRoutingEntry("not-system", "*", "foo.item.get"));
+
+    var result = keycloakAuthorizationFilter.shouldSkip(routingContext);
+
+    assertThat(result).isFalse();
+  }
+
+  @Test
   void shouldSkip_selfRequest() {
     var routingContext = mock(RoutingContext.class, RETURNS_DEEP_STUBS);
     when(routingContext.get(SC_ROUTING_ENTRY_KEY)).thenReturn(scRoutingEntry("not-system", REQUIRED_PERMISSION));
