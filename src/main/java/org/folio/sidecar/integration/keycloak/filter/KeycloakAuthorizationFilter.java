@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.keycloak.filter;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
@@ -19,6 +20,8 @@ import static org.folio.sidecar.utils.RoutingUtils.isSelfRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isSystemRequest;
 import static org.folio.sidecar.utils.RoutingUtils.isTimerRequest;
 
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
@@ -29,6 +32,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -46,9 +50,11 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
   private static final String CACHE_KEY_DELIMITER = "#";
   private static final String KC_PERMISSION_NAME = "kcPermissionName";
   private static final String AUTHORIZATION_FAILURE_MSG = "Failed to authorize request";
+  private static final Set<String> INVALID_TOKEN_ERRORS = Set.of("invalid_grant", "invalid_token");
 
   private final KeycloakClient keycloakClient;
   private final Cache<String, JsonWebToken> authTokenCache;
+  private final ObjectMapper objectMapper;
 
   /**
    * Evaluates if a user has access to a module endpoint by obtaining RPT token from Keycloak.
@@ -161,7 +167,7 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
       return failedFuture(new ForbiddenException("Access Denied"));
     }
 
-    if (statusCode == UNAUTHORIZED.code()) {
+    if (statusCode == UNAUTHORIZED.code() || isInvalidTokenResponse(httpResponse)) {
       return failedFuture(new UnauthorizedException("Unauthorized"));
     }
 
@@ -176,6 +182,29 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     log.debug("Caching access token: key = {}", cacheKey);
     authTokenCache.put(cacheKey, accessToken);
     return succeededFuture(routingContext);
+  }
+
+  /**
+   * Checks if Keycloak rejected the bearer token itself. Since Keycloak 26.6.2 such a rejection is returned as
+   * {@code 400 invalid_grant} instead of {@code 401}.
+   */
+  private boolean isInvalidTokenResponse(HttpResponse<Buffer> httpResponse) {
+    if (httpResponse.statusCode() != BAD_REQUEST.code()) {
+      return false;
+    }
+
+    var body = httpResponse.bodyAsString();
+    if (body == null || body.isBlank()) {
+      return false;
+    }
+
+    try {
+      var error = objectMapper.readTree(body).path("error").asText("");
+      return INVALID_TOKEN_ERRORS.contains(error);
+    } catch (JacksonException e) {
+      log.debug("Failed to parse Keycloak authorization error response", e);
+      return false;
+    }
   }
 
   private static String getKeycloakPermissionName(RoutingContext rc) {

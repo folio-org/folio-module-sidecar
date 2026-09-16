@@ -53,6 +53,11 @@
               },
               {
                 "methods": [ "GET" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.get" ]
+              },
+              {
+                "methods": [ "GET" ],
                 "pathPattern": "/foo/bar",
                 "permissionsRequired": [ ]
               },
