@@ -2,6 +2,7 @@ package org.folio.sidecar.integration.keycloak.filter;
 
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.UUID.randomUUID;
+import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
@@ -14,6 +15,7 @@ import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.SYS_TOKEN;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.USER_ID;
+import static org.folio.sidecar.support.TestUtils.OBJECT_MAPPER;
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
 import static org.folio.sidecar.utils.RoutingUtils.PARSED_TOKEN;
@@ -54,6 +56,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -80,7 +85,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
   @BeforeEach
   void setUp() {
-    keycloakAuthorizationFilter = new KeycloakAuthorizationFilter(keycloakClient, authTokenCache);
+    keycloakAuthorizationFilter = new KeycloakAuthorizationFilter(keycloakClient, authTokenCache, OBJECT_MAPPER);
   }
 
   @AfterEach
@@ -221,6 +226,92 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.cause())
       .isInstanceOf(UnauthorizedException.class)
       .hasMessage("Unauthorized");
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+    "{\"error\":\"invalid_grant\",\"error_description\":\"Invalid bearer token\"}",
+    "{\"error\":\"invalid_token\"}"
+  })
+  void authorize_negative_badRequestInvalidTokenForUserToken(String body) {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(SC_BAD_REQUEST, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn(body);
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Unauthorized");
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_negative_badRequestInvalidGrantForSystemToken() {
+    prepareSystemTokenMocks(false);
+    prepareSystemRptMocks(SC_BAD_REQUEST, succeededFuture(systemTokenRptResponse));
+    when(systemTokenRptResponse.bodyAsString()).thenReturn("{\"error\":\"invalid_grant\"}");
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, systemToken));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(UnauthorizedException.class)
+      .hasMessage("Unauthorized");
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @ParameterizedTest
+  @NullAndEmptySource
+  @ValueSource(strings = {
+    "{\"error\":\"invalid_request\",\"error_description\":\"Missing parameter\"}",
+    "{\"error_description\":\"invalid_grant\"}",
+    "{\"error\":{\"code\":\"invalid_grant\"}}",
+    "[\"invalid_grant\"]",
+    "invalid_grant",
+    "<html>Bad Request</html>",
+    "{\"error\":\"invalid_grant\""
+  })
+  void authorize_negative_badRequestNotInvalidTokenForUserToken(String body) {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(SC_BAD_REQUEST, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn(body);
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause())
+      .isInstanceOf(KeycloakUnhandledAuthorizationException.class)
+      .hasMessage("Authorization service error");
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(SC_BAD_REQUEST);
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_negative_unexpectedStatusCodeWithInvalidGrantBody() {
+    prepareUserTokenMocks(false);
+    prepareUserRptMocks(500, succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.bodyAsString()).thenReturn("{\"error\":\"invalid_grant\"}");
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isInstanceOf(KeycloakUnhandledAuthorizationException.class);
+    assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
 
     verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
     verify(authTokenCache, never()).put(anyString(), any());

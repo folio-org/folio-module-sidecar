@@ -438,6 +438,26 @@ class SidecarIT {
   }
 
   @Test
+  void handleIngressRequest_negative_rptKcBadRequestInvalidGrant() {
+    TestUtils.givenJson()
+      .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
+      .header(OkapiHeaders.AUTHORIZATION, "Bearer " + authToken)
+      .get("/foo/xyz")
+      .then()
+      .log().ifValidationFails(LogDetail.ALL)
+      .assertThat()
+      .statusCode(is(SC_UNAUTHORIZED))
+      .header(TestConstants.SIDECAR_SIGNATURE_HEADER, nullValue())
+      .contentType(is(APPLICATION_JSON))
+      .body(
+        "total_records", is(1),
+        "errors[0].type", is("UnauthorizedException"),
+        "errors[0].code", is("authorization_error"),
+        "errors[0].message", is("Unauthorized")
+      );
+  }
+
+  @Test
   void handleIngressRequest_negative_rptKcError() {
     TestUtils.givenJson()
       .header(OkapiHeaders.TENANT, TestConstants.TENANT_NAME)
