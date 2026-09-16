@@ -13,6 +13,7 @@
   - Remove `MOD_USERS_KEYCLOAK_URL`; it is no longer used
   - New binding cache settings: `TENANT_MODULE_BINDING_CACHE_MAX_SIZE` (`200`) and `TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES` (`30`)
   - Resolution failures return `503`, `Retry-After: 5`, and `mod_users_keycloak_target_not_resolved_error`
+* Return `401` instead of `400` for expired or invalid tokens that Keycloak 26.6.2+ rejects with `invalid_grant` or `invalid_token` during authorization ([MODSIDECAR-225](https://folio-org.atlassian.net/browse/MODSIDECAR-225))
 
 
 ## Version `v4.0.0` (16.04.2026)

@@ -17,35 +17,18 @@
             "contains": "response_mode=decision"
           },
           {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23DELETE"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23DELETE"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23PUT"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23POST"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23PATCH"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fxyz%23GET"
-          },
-          {
-            "doesNotContain": "permission=%2Ffoo%2Fmixed-perm%23GET"
+            "contains": "permission=%2Ffoo%2Fxyz%23GET"
           }
         ]
       },
       "response": {
-        "status": 200,
+        "status": 400,
         "headers": {
           "Content-Type": "application/json"
         },
         "jsonBody": {
-          "result": true
+          "error": "invalid_grant",
+          "error_description": "Invalid bearer token"
         }
       }
     }
