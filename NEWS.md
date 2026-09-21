@@ -14,6 +14,7 @@
   - New binding cache settings: `TENANT_MODULE_BINDING_CACHE_MAX_SIZE` (`200`) and `TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES` (`30`)
   - Resolution failures return `503`, `Retry-After: 5`, and `mod_users_keycloak_target_not_resolved_error`
 * Return `401` instead of `400` for expired or invalid tokens that Keycloak 26.6.2+ rejects with `invalid_grant` or `invalid_token` during authorization ([MODSIDECAR-225](https://folio-org.atlassian.net/browse/MODSIDECAR-225))
+* Key authorization cache by token principal (issuing realm and `azp`) instead of token expiration, and raise the default `TOKEN_CACHE_MAX_CAPACITY` to `500` to stop cache thrashing in clusters with many tenants ([MODSIDECAR-185](https://folio-org.atlassian.net/browse/MODSIDECAR-185))
 
 
 ## Version `v4.0.0` (16.04.2026)

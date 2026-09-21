@@ -33,8 +33,10 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
+import io.smallrye.jwt.auth.principal.DefaultJWTCallerPrincipal;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -45,6 +47,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import org.eclipse.microprofile.jwt.Claims;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.integration.am.model.ModuleBootstrapEndpoint;
@@ -52,6 +55,8 @@ import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
 import org.folio.sidecar.model.ScRoutingEntry;
 import org.folio.support.types.UnitTest;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.NumericDate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,12 +76,18 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   private static final String SESSION_STATE = randomUUID().toString();
   private static final String KC_PERMISSION_NAME_KEY = "kcPermissionName";
 
+  private static final String USER_CLIENT_ID = "testtenant-login-application";
+  private static final String SYSTEM_CLIENT_ID = "sidecar-module-access-client";
+  private static final String OTHER_CLIENT_TOKEN = "other-client-token";
+  private static final String OTHER_REALM_TOKEN = "other-realm-token";
+  private static final String ISSUER_URI_PREFIX = "http://keycloak:8080/realms/";
   private static final long VALID_TOKEN_EXPIRATION_TIME = Instant.now().plusSeconds(60).getEpochSecond();
   private static final long SYSTEM_TOKEN_EXPIRATION_TIME = Instant.now().plusSeconds(30).getEpochSecond();
 
   @Mock private KeycloakClient keycloakClient;
   @Mock private HttpResponse<Buffer> userTokenRptResponse;
   @Mock private HttpResponse<Buffer> systemTokenRptResponse;
+  @Mock private HttpResponse<Buffer> otherTokenRptResponse;
   @Mock private JsonWebToken userToken;
   @Mock private JsonWebToken systemToken;
   @Mock private Cache<String, JsonWebToken> authTokenCache;
@@ -160,6 +171,97 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.result()).isEqualTo(routingContext);
     verifyNoInteractions(keycloakClient);
     verify(authTokenCache, never()).put(anyString(), any());
+  }
+
+  @Test
+  void authorize_positive_refreshedUserTokenCached() {
+    var initialToken = userJwt(AUTH_TOKEN, VALID_TOKEN_EXPIRATION_TIME);
+    var refreshedToken = userJwt("refreshed-token", VALID_TOKEN_EXPIRATION_TIME + 600);
+    prepareRptResponse(AUTH_TOKEN, userTokenRptResponse, SC_OK);
+
+    var initialRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, initialToken, null));
+    var cachedRc = routingContext(scRoutingEntry(), rc -> prepareCachedRoutingContextMocks(rc, refreshedToken, null));
+    var filter = new KeycloakAuthorizationFilter(keycloakClient, Caffeine.newBuilder().build(), OBJECT_MAPPER);
+
+    assertThat(filter.applyFilter(initialRc).succeeded()).isTrue();
+    assertThat(filter.applyFilter(cachedRc).succeeded()).isTrue();
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+  }
+
+  @Test
+  void authorize_positive_systemTokenFromOtherSidecarCached() {
+    var initialToken = serviceJwt(SYS_TOKEN, SYSTEM_CLIENT_ID, VALID_TOKEN_EXPIRATION_TIME);
+    var sidecar2Token = serviceJwt("sidecar-2-token", SYSTEM_CLIENT_ID, VALID_TOKEN_EXPIRATION_TIME + 180);
+    prepareRptResponse(SYS_TOKEN, systemTokenRptResponse, SC_OK);
+
+    var initialRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, initialToken));
+    var cachedRc = routingContext(scRoutingEntry(), rc -> prepareCachedRoutingContextMocks(rc, null, sidecar2Token));
+    var filter = new KeycloakAuthorizationFilter(keycloakClient, Caffeine.newBuilder().build(), OBJECT_MAPPER);
+
+    assertThat(filter.applyFilter(initialRc).succeeded()).isTrue();
+    assertThat(filter.applyFilter(cachedRc).succeeded()).isTrue();
+
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+  }
+
+  @Test
+  void authorize_negative_systemTokenFromOtherClientNotCached() {
+    var sidecarToken = serviceJwt(SYS_TOKEN, SYSTEM_CLIENT_ID, VALID_TOKEN_EXPIRATION_TIME);
+    var otherClientToken = serviceJwt(OTHER_CLIENT_TOKEN, "other-client", VALID_TOKEN_EXPIRATION_TIME);
+    prepareRptResponse(SYS_TOKEN, systemTokenRptResponse, SC_OK);
+    prepareRptResponse(OTHER_CLIENT_TOKEN, otherTokenRptResponse, SC_FORBIDDEN);
+
+    var sidecarRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, sidecarToken));
+    var otherClientRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, otherClientToken));
+    var filter = new KeycloakAuthorizationFilter(keycloakClient, Caffeine.newBuilder().build(), OBJECT_MAPPER);
+
+    assertThat(filter.applyFilter(sidecarRc).succeeded()).isTrue();
+    var result = filter.applyFilter(otherClientRc);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isInstanceOf(ForbiddenException.class);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_CLIENT_TOKEN);
+  }
+
+  @Test
+  void authorize_negative_systemTokenFromOtherRealmNotCached() {
+    var sidecarToken = serviceJwt(SYS_TOKEN, SYSTEM_CLIENT_ID, VALID_TOKEN_EXPIRATION_TIME);
+    var otherRealmToken = serviceJwt(OTHER_REALM_TOKEN, "other-tenant", SYSTEM_CLIENT_ID, VALID_TOKEN_EXPIRATION_TIME);
+    prepareRptResponse(SYS_TOKEN, systemTokenRptResponse, SC_OK);
+    prepareRptResponse(OTHER_REALM_TOKEN, otherTokenRptResponse, SC_UNAUTHORIZED);
+
+    var sidecarRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, sidecarToken));
+    var otherRealmRc = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, otherRealmToken));
+    var filter = new KeycloakAuthorizationFilter(keycloakClient, Caffeine.newBuilder().build(), OBJECT_MAPPER);
+
+    assertThat(filter.applyFilter(sidecarRc).succeeded()).isTrue();
+    var result = filter.applyFilter(otherRealmRc);
+
+    assertThat(result.succeeded()).isFalse();
+    assertThat(result.cause()).isInstanceOf(UnauthorizedException.class);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_REALM_TOKEN);
+  }
+
+  @Test
+  void authorize_positive_tokenWithoutClientIdKeyedByExpiration() {
+    var expirationKey = String.format("%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, TENANT_NAME,
+      SYSTEM_TOKEN_EXPIRATION_TIME);
+    when(systemToken.getIssuer()).thenReturn(ISSUER_URI_PREFIX + TENANT_NAME);
+    when(systemToken.containsClaim(USER_ID_CLAIM)).thenReturn(false);
+    when(systemToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(false);
+    when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
+    when(authTokenCache.getIfPresent(expirationKey)).thenReturn(null);
+    prepareSystemRptMocks(SC_OK, succeededFuture(systemTokenRptResponse));
+
+    var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, systemToken));
+    var result = keycloakAuthorizationFilter.applyFilter(routingContext);
+
+    assertThat(result.succeeded()).isTrue();
+    verify(authTokenCache).put(expirationKey, systemToken);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
   }
 
   @Test
@@ -522,7 +624,8 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private void prepareUserTokenMocks(boolean cached) {
-    when(userToken.getExpirationTime()).thenReturn(VALID_TOKEN_EXPIRATION_TIME);
+    when(userToken.getClaim(Claims.azp)).thenReturn(USER_CLIENT_ID);
+    when(userToken.getIssuer()).thenReturn(ISSUER_URI_PREFIX + TENANT_NAME);
     when(userToken.containsClaim(USER_ID_CLAIM)).thenReturn(true);
     when(userToken.getClaim(USER_ID_CLAIM)).thenReturn(USER_ID);
     when(userToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(true);
@@ -531,7 +634,8 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private void prepareSystemTokenMocks(boolean cached) {
-    when(systemToken.getExpirationTime()).thenReturn(SYSTEM_TOKEN_EXPIRATION_TIME);
+    when(systemToken.getClaim(Claims.azp)).thenReturn(SYSTEM_CLIENT_ID);
+    when(systemToken.getIssuer()).thenReturn(ISSUER_URI_PREFIX + TENANT_NAME);
     when(systemToken.containsClaim(USER_ID_CLAIM)).thenReturn(false);
     when(systemToken.containsClaim(SESSION_ID_CLAIM)).thenReturn(false);
     when(authTokenCache.getIfPresent(systemTokenCacheKey())).thenReturn(cached ? systemToken : null);
@@ -546,6 +650,14 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     when(rc.request().getHeader(TENANT)).thenReturn(TENANT_NAME);
   }
 
+  private static void prepareCachedRoutingContextMocks(RoutingContext rc, JsonWebToken userToken,
+    JsonWebToken systemToken) {
+    when(rc.get(PARSED_TOKEN)).thenReturn(userToken);
+    when(rc.get(SYSTEM_TOKEN)).thenReturn(systemToken);
+    when(rc.put(KC_PERMISSION_NAME_KEY, KC_PERMISSION)).thenReturn(rc);
+    when(rc.remove(KC_PERMISSION_NAME_KEY)).thenReturn(KC_PERMISSION);
+  }
+
   private void prepareUserRptMocks(int rptResponseStatus, Future<HttpResponse<Buffer>> rptFuture) {
     when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN)).thenReturn(rptFuture);
     when(userTokenRptResponse.statusCode()).thenReturn(rptResponseStatus);
@@ -556,6 +668,35 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN)).thenReturn(rptFuture);
     when(systemTokenRptResponse.statusCode()).thenReturn(rptResponseStatus);
     when(systemToken.getRawToken()).thenReturn(SYS_TOKEN);
+  }
+
+  private void prepareRptResponse(String rawToken, HttpResponse<Buffer> rptResponse, int rptResponseStatus) {
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, rawToken))
+      .thenReturn(succeededFuture(rptResponse));
+    when(rptResponse.statusCode()).thenReturn(rptResponseStatus);
+  }
+
+  private static JsonWebToken userJwt(String rawToken, long expirationTime) {
+    var claims = jwtClaims(TENANT_NAME, USER_CLIENT_ID, expirationTime);
+    claims.setClaim(USER_ID_CLAIM, USER_ID);
+    claims.setClaim(SESSION_ID_CLAIM, SESSION_STATE);
+    return new DefaultJWTCallerPrincipal(rawToken, "JWT", claims);
+  }
+
+  private static JsonWebToken serviceJwt(String rawToken, String clientId, long expirationTime) {
+    return serviceJwt(rawToken, TENANT_NAME, clientId, expirationTime);
+  }
+
+  private static JsonWebToken serviceJwt(String rawToken, String realm, String clientId, long expirationTime) {
+    return new DefaultJWTCallerPrincipal(rawToken, "JWT", jwtClaims(realm, clientId, expirationTime));
+  }
+
+  private static JwtClaims jwtClaims(String realm, String clientId, long expirationTime) {
+    var claims = new JwtClaims();
+    claims.setIssuer(ISSUER_URI_PREFIX + realm);
+    claims.setClaim(Claims.azp.name(), clientId);
+    claims.setExpirationTime(NumericDate.fromSeconds(expirationTime));
+    return claims;
   }
 
   private static RoutingContext routingContext(ScRoutingEntry re, Consumer<RoutingContext> modifier) {
@@ -569,17 +710,15 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private static String userTokenCacheKey() {
-    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, USER_ID, SESSION_STATE,
-      VALID_TOKEN_EXPIRATION_TIME);
+    return userTokenCacheKey(USER_ID, SESSION_STATE);
   }
 
   private static String userTokenCacheKey(String userId, String sid) {
-    return String.format("%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, userId, sid,
-      VALID_TOKEN_EXPIRATION_TIME);
+    return String.format("%s#%s#%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, userId, sid, TENANT_NAME, USER_CLIENT_ID);
   }
 
   private static String systemTokenCacheKey() {
-    return String.format("%s#%s#%s", KC_PERMISSION, TENANT_NAME, SYSTEM_TOKEN_EXPIRATION_TIME);
+    return String.format("%s#%s#%s#%s", KC_PERMISSION, TENANT_NAME, TENANT_NAME, SYSTEM_CLIENT_ID);
   }
 
   protected ModuleBootstrapEndpoint moduleBootstrapEndpoint() {

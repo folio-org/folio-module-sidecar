@@ -11,6 +11,7 @@ import static org.folio.sidecar.service.filter.IngressFilterOrder.KEYCLOAK_AUTHO
 import static org.folio.sidecar.utils.JwtUtils.SESSION_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.USER_ID_CLAIM;
 import static org.folio.sidecar.utils.JwtUtils.dumpTokenClaims;
+import static org.folio.sidecar.utils.JwtUtils.getOriginTenant;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedSystemToken;
 import static org.folio.sidecar.utils.RoutingUtils.getParsedToken;
 import static org.folio.sidecar.utils.RoutingUtils.getScRoutingEntry;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.eclipse.microprofile.jwt.Claims;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.integration.kafka.LogoutEvent;
@@ -247,7 +249,10 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
     if (authToken.containsClaim(SESSION_ID_CLAIM)) { // a client token does not have session_state claim
       keyJoiner.add(authToken.getClaim(SESSION_ID_CLAIM));
     }
-    keyJoiner.add(Long.toString(authToken.getExpirationTime()));
+    // keyed by principal (issuing realm + client), not token instance, so refreshed or per-instance tokens share it
+    String clientId = authToken.getClaim(Claims.azp);
+    keyJoiner.add(getOriginTenant(authToken));
+    keyJoiner.add(clientId != null ? clientId : Long.toString(authToken.getExpirationTime()));
     return keyJoiner.toString();
   }
 
