@@ -1,3 +1,8 @@
+## Version `v4.0.5` (24.09.2026)
+### Changes:
+* Preserve 401 Unauthorized for expired/invalid tokens during Keycloak UMA authorization after Keycloak 26.6 upgrade ([MODSIDECAR-225](https://folio-org.atlassian.net/browse/MODSIDECAR-225))
+* Resolve possible issues with singular ENVs pointing to other module urls in sidecars ([MODSIDECAR-211](https://folio-org.atlassian.net/browse/MODSIDECAR-211))
+
 ## Version `v4.0.4` (11.09.2026)
 ### Changes:
 * Tenant-scoped egress routing for application-scoped sidecars bootstrap, behind `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` (POC) ([EUREKA-899](https://folio-org.atlassian.net/browse/EUREKA-899))
