@@ -24,6 +24,11 @@
                 "methods": [ "GET" ],
                 "pathPattern": "/foo/entities",
                 "permissionsRequired": [ "foo.entities.collection.get" ]
+              },
+              {
+                "methods": [ "GET" ],
+                "pathPattern": "/foo/xyz",
+                "permissionsRequired": [ "foo.xyz.collection.get" ]
               }
             ]
           }
