@@ -1,8 +1,6 @@
 package org.folio.sidecar.service;
 
 import static io.vertx.core.Future.succeededFuture;
-import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
@@ -238,7 +236,7 @@ class ErrorHandlerTest {
     when(routingContext.response()).thenReturn(response);
     when(routingContext.request()).thenReturn(request);
     when(response.setStatusCode(responseStatusCaptor.capture())).thenReturn(response);
-    when(response.putHeader(CONTENT_TYPE, APPLICATION_JSON)).thenReturn(response);
+    when(response.putHeader(anyString(), anyString())).thenReturn(response);
     when(response.end(responseCaptor.capture())).thenReturn(succeededFuture());
     return routingContext;
   }
