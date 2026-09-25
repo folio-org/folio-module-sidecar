@@ -1,3 +1,7 @@
+## Version `v3.0.21` (25.09.2026)
+### Changes:
+* Preserve 401 Unauthorized for expired/invalid tokens during Keycloak UMA authorization after Keycloak 26.6 upgrade (MODSIDECAR-225)
+
 ## Version `v3.0.20` (18.08.2026)
 ### Changes:
 * Migrate CI from Jenkins to GitHub Actions Maven central workflow (MODSIDECAR-179)
