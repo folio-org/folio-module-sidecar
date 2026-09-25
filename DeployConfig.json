@@ -77,6 +77,13 @@
         "essential": false
       },
       {
+        "name": "MODULE_HEALTH_PATH",
+        "value": "/admin/health",
+        "description": "Path appended to MODULE_URL for the module health-check probe used by the sidecar startup readiness check.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
         "name": "SIDECAR_URL",
         "value": null,
         "description": "Externally reachable URL of this sidecar instance. Used by other sidecars for module-to-module egress routing; must be resolvable from within the cluster.",
@@ -107,7 +114,7 @@
       {
         "name": "ENV",
         "value": null,
-        "description": "Logical FOLIO deployment name (e.g. folio, wbeisf). Used as the Kafka topic prefix for the discovery and entitlement consumers.",
+        "description": "Logical FOLIO deployment name (e.g. folio). Used as the Kafka topic prefix for the discovery and entitlement consumers.",
         "type": "CONFIG",
         "essential": true
       },
@@ -140,6 +147,13 @@
         "essential": true
       },
       {
+        "name": "TM_BATCH_SIZE",
+        "value": "50",
+        "description": "Page size for paginated tenant queries against mgr-tenants.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
         "name": "SECRET_STORE_TYPE",
         "value": null,
         "description": "Secret store backend used to retrieve Keycloak client credentials. One of: EPHEMERAL (in-memory, dev only), AWS_SSM, VAULT, FSSP. Must be set explicitly in all non-development deployments.",
@@ -163,7 +177,42 @@
       {
         "name": "SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_ENDPOINT",
         "value": null,
-        "description": "ECS credential provider endpoint override for AWS SSM authentication when SECRET_STORE_AWS_SSM_USE_IAM is false.",
+        "description": "ECS container metadata endpoint used as the credentials provider when SECRET_STORE_AWS_SSM_USE_IAM is false.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_PATH",
+        "value": null,
+        "description": "Path appended to SECRET_STORE_AWS_SSM_ECS_CREDENTIALS_ENDPOINT to form the full credentials URL.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_AWS_SSM_FIPS_ENABLED",
+        "value": false,
+        "description": "Enables FIPS-compliant endpoints for the AWS SSM client.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_AWS_SSM_TRUSTSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the trust store used by the AWS SSM TLS client. Required when SECRET_STORE_AWS_SSM_FIPS_ENABLED is true.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_AWS_SSM_TRUSTSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the AWS SSM trust store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_AWS_SSM_TRUSTSTORE_FILE_TYPE",
+        "value": null,
+        "description": "Trust store file type for the AWS SSM client (e.g. JKS, BCFKS).",
         "type": "CONFIG",
         "essential": false
       },
@@ -189,9 +238,86 @@
         "essential": false
       },
       {
+        "name": "SECRET_STORE_VAULT_PEM_FILE_PATH",
+        "value": null,
+        "description": "Filesystem path to the PEM certificate file for Vault SSL verification.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_VAULT_KEYSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the Vault SSL key store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_VAULT_KEYSTORE_FILE_PATH",
+        "value": null,
+        "description": "Filesystem path to the Vault SSL key store for mutual TLS authentication.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_VAULT_TRUSTSTORE_FILE_PATH",
+        "value": null,
+        "description": "Filesystem path to the Vault SSL trust store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
         "name": "SECRET_STORE_FSSP_ADDRESS",
         "value": null,
         "description": "Base URL of the Folio Secure Store Proxy (FSSP). Required when SECRET_STORE_TYPE=FSSP.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_SECRET_PATH",
+        "value": "secure-store/entries",
+        "description": "Path within FSSP used to look up module credentials.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_KEYSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the FSSP mutual TLS key store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_KEYSTORE_FILE_TYPE",
+        "value": null,
+        "description": "Key store file type for the FSSP client (e.g. JKS, BCFKS).",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_KEYSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the FSSP key store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_TRUSTSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the FSSP trust store.",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_TRUSTSTORE_FILE_TYPE",
+        "value": null,
+        "description": "Trust store file type for the FSSP client (e.g. JKS, BCFKS).",
+        "type": "CONFIG",
+        "essential": false
+      },
+      {
+        "name": "SECRET_STORE_FSSP_TRUSTSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the FSSP trust store.",
         "type": "CONFIG",
         "essential": false
       },
@@ -206,6 +332,27 @@
         "name": "KC_URI_VALIDATION_ENABLED",
         "value": true,
         "description": "Enables Keycloak-side URI validation during token introspection. Set to false only in environments where Keycloak is not configured with per-resource URI policies.",
+        "type": "KC",
+        "essential": false
+      },
+      {
+        "name": "KC_JWKS_BASE_URL",
+        "value": null,
+        "description": "Override base URL for JWKS retrieval. When empty the sidecar derives the JWKS URL from KC_URL. Set explicitly only when the Keycloak JWKS endpoint is hosted at a different address than the main KC_URL.",
+        "type": "KC",
+        "essential": false
+      },
+      {
+        "name": "KC_JWKS_REFRESH_INTERVAL",
+        "value": "60",
+        "description": "Interval in seconds between scheduled JWKS cache refreshes.",
+        "type": "KC",
+        "essential": false
+      },
+      {
+        "name": "KC_FORCED_JWKS_REFRESH_INTERVAL",
+        "value": "60",
+        "description": "Minimum interval in seconds between forced JWKS refreshes triggered by a failed JWT validation.",
         "type": "KC",
         "essential": false
       },
@@ -234,20 +381,6 @@
         "name": "SIDECAR_IMPERSONATION_CLIENT_NAME",
         "value": "impersonation-client",
         "description": "Keycloak client ID used for impersonation token exchange in the impersonation filter.",
-        "type": "KC",
-        "essential": false
-      },
-      {
-        "name": "KC_JWKS_REFRESH_INTERVAL",
-        "value": "60",
-        "description": "Interval in seconds between scheduled JWKS cache refreshes.",
-        "type": "KC",
-        "essential": false
-      },
-      {
-        "name": "KC_FORCED_JWKS_REFRESH_INTERVAL",
-        "value": "60",
-        "description": "Minimum interval in seconds between forced JWKS refreshes triggered by a failed JWT validation.",
         "type": "KC",
         "essential": false
       },
@@ -308,16 +441,23 @@
         "essential": false
       },
       {
-        "name": "ENTITLEMENT_SECURITY_PROTOCOL",
-        "value": "PLAINTEXT",
-        "description": "Kafka security protocol for the entitlement topic consumer. Set to SSL or SASL_SSL in TLS-secured clusters.",
+        "name": "DISCOVERY_TLS_KEY_PASSWORD",
+        "value": null,
+        "description": "Password for the private key inside the discovery consumer key store when SSL client authentication is configured.",
         "type": "KAFKA",
         "essential": false
       },
       {
-        "name": "LOGOUT_SECURITY_PROTOCOL",
-        "value": "PLAINTEXT",
-        "description": "Kafka security protocol for the logout topic consumer. Set to SSL or SASL_SSL in TLS-secured clusters.",
+        "name": "DISCOVERY_TLS_KEYSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the key store for the discovery consumer SSL client authentication.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "DISCOVERY_TLS_KEYSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the discovery consumer key store.",
         "type": "KAFKA",
         "essential": false
       },
@@ -336,9 +476,44 @@
         "essential": false
       },
       {
+        "name": "DISCOVERY_TLS_TRUSTSTORE_CERTIFICATES",
+        "value": null,
+        "description": "PEM-encoded CA certificates inlined as an alternative to DISCOVERY_TLS_TRUSTSTORE_PATH for the discovery consumer.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
         "name": "DISCOVERY_TLS_TRUSTSTORE_TYPE",
         "value": null,
         "description": "Trust store file type for the discovery consumer (e.g. JKS, BCFKS).",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "ENTITLEMENT_SECURITY_PROTOCOL",
+        "value": "PLAINTEXT",
+        "description": "Kafka security protocol for the entitlement topic consumer. Set to SSL or SASL_SSL in TLS-secured clusters.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "ENTITLEMENT_TLS_KEY_PASSWORD",
+        "value": null,
+        "description": "Password for the private key inside the entitlement consumer key store when SSL client authentication is configured.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "ENTITLEMENT_TLS_KEYSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the key store for the entitlement consumer SSL client authentication.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "ENTITLEMENT_TLS_KEYSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the entitlement consumer key store.",
         "type": "KAFKA",
         "essential": false
       },
@@ -357,9 +532,44 @@
         "essential": false
       },
       {
+        "name": "ENTITLEMENT_TLS_TRUSTSTORE_CERTIFICATES",
+        "value": null,
+        "description": "PEM-encoded CA certificates inlined as an alternative to ENTITLEMENT_TLS_TRUSTSTORE_PATH for the entitlement consumer.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
         "name": "ENTITLEMENT_TLS_TRUSTSTORE_TYPE",
         "value": null,
         "description": "Trust store file type for the entitlement consumer (e.g. JKS, BCFKS).",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "LOGOUT_SECURITY_PROTOCOL",
+        "value": "PLAINTEXT",
+        "description": "Kafka security protocol for the logout topic consumer. Set to SSL or SASL_SSL in TLS-secured clusters.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "LOGOUT_TLS_KEY_PASSWORD",
+        "value": null,
+        "description": "Password for the private key inside the logout consumer key store when SSL client authentication is configured.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "LOGOUT_TLS_KEYSTORE_PATH",
+        "value": null,
+        "description": "Filesystem path to the key store for the logout consumer SSL client authentication.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "LOGOUT_TLS_KEYSTORE_PASSWORD",
+        "value": null,
+        "description": "Password for the logout consumer key store.",
         "type": "KAFKA",
         "essential": false
       },
@@ -374,6 +584,13 @@
         "name": "LOGOUT_TLS_TRUSTSTORE_PASSWORD",
         "value": null,
         "description": "Password for the logout consumer trust store.",
+        "type": "KAFKA",
+        "essential": false
+      },
+      {
+        "name": "LOGOUT_TLS_TRUSTSTORE_CERTIFICATES",
+        "value": null,
+        "description": "PEM-encoded CA certificates inlined as an alternative to LOGOUT_TLS_TRUSTSTORE_PATH for the logout consumer.",
         "type": "KAFKA",
         "essential": false
       },
@@ -434,6 +651,13 @@
         "essential": false
       },
       {
+        "name": "RETRY_BACKOFF_FACTOR",
+        "value": "2",
+        "description": "Exponential backoff multiplier applied to the retry delay between startup-time attempts.",
+        "type": "FUNCTIONAL",
+        "essential": false
+      },
+      {
         "name": "TOKEN_CACHE_MAX_CAPACITY",
         "value": "50",
         "description": "Maximum number of cached service/system-user tokens in the Caffeine token cache. Raise for deployments with many active tenants.",
@@ -472,6 +696,13 @@
         "name": "TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES",
         "value": "30",
         "description": "TTL in minutes for tenant-module binding cache entries. Entries are also evicted eagerly via entitlement Kafka events; this expiry is the safety net for missed events.",
+        "type": "CACHE",
+        "essential": false
+      },
+      {
+        "name": "MOD_USERS_KEYCLOAK_CACHE_INITIAL_CAPACITY",
+        "value": "50",
+        "description": "Initial capacity of the user-keycloak mapping cache used by the impersonation filter.",
         "type": "CACHE",
         "essential": false
       },
@@ -521,6 +752,20 @@
         "name": "SC_LOG_LEVEL",
         "value": "INFO",
         "description": "Log level for the org.folio.sidecar package. Set to DEBUG or TRACE to diagnose routing and filter decisions.",
+        "type": "QUARKUS",
+        "essential": false
+      },
+      {
+        "name": "SC_ACCESS_LOG_FORMAT",
+        "value": null,
+        "description": "Access log format pattern for the transaction logger. When unset, the sidecar uses the built-in default pattern that includes remote IP, tenant, user ID, request ID, method, path, status, and timing fields.",
+        "type": "QUARKUS",
+        "essential": false
+      },
+      {
+        "name": "WEB_CLIENT_TLS_VERIFY_HOSTNAME",
+        "value": false,
+        "description": "Enables hostname verification on the egress, Keycloak, and gateway TLS web clients (fips profile only). Disable with caution — only in environments using self-signed certificates.",
         "type": "QUARKUS",
         "essential": false
       },
@@ -640,6 +885,13 @@
         "name": "SC_TLS_KEYSTORE_PASSWORD",
         "value": null,
         "description": "Password for the sidecar HTTPS key store.",
+        "type": "QUARKUS",
+        "essential": false
+      },
+      {
+        "name": "SC_TLS_KEYSTORE_KEY_PASSWORD",
+        "value": null,
+        "description": "Password for the private key entry inside the sidecar HTTPS key store, when different from SC_TLS_KEYSTORE_PASSWORD.",
         "type": "QUARKUS",
         "essential": false
       },
