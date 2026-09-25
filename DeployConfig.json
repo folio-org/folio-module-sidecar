@@ -106,7 +106,7 @@
       },
       {
         "name": "SIDECAR_MODULE_PATH_PREFIX_STRATEGY",
-        "value": "NONE",
+        "value": "STRIP",
         "description": "Path-prefix handling strategy when SIDECAR_MODULE_PATH_PREFIX_ENABLED is true. NONE leaves the path unchanged; STRIP removes the module prefix before forwarding to MODULE_URL.",
         "type": "FUNCTIONAL",
         "essential": false
@@ -330,7 +330,7 @@
       },
       {
         "name": "KC_URI_VALIDATION_ENABLED",
-        "value": true,
+        "value": false,
         "description": "Enables Keycloak-side URI validation during token introspection. Set to false only in environments where Keycloak is not configured with per-resource URI policies.",
         "type": "KC",
         "essential": false
@@ -358,7 +358,7 @@
       },
       {
         "name": "KC_LOGIN_CLIENT_SUFFIX",
-        "value": "-login-application",
+        "value": "-application",
         "description": "Suffix appended to the tenant name to derive the Keycloak login client ID (e.g. diku-login-application).",
         "type": "KC",
         "essential": false
@@ -386,7 +386,7 @@
       },
       {
         "name": "KC_AUTHORIZATION_CACHE_MAX_SIZE",
-        "value": "250",
+        "value": "5000",
         "description": "Maximum number of RPT authorization results held in the Caffeine cache. Raise for deployments with many active users or high-cardinality permission sets.",
         "type": "KC",
         "essential": false
@@ -603,7 +603,7 @@
       },
       {
         "name": "ALLOW_CROSS_TENANT_REQUESTS",
-        "value": false,
+        "value": true,
         "description": "Allows ingress requests that carry a tenant header different from the token's tenant claim. Enable in consortia deployments where cross-tenant API access is intentional.",
         "type": "FUNCTIONAL",
         "essential": false
@@ -617,7 +617,7 @@
       },
       {
         "name": "SIDECAR_FORWARD_UNKNOWN_REQUESTS",
-        "value": false,
+        "value": true,
         "description": "Forwards requests that do not match any known route to the gateway specified by SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION instead of returning 404.",
         "type": "FUNCTIONAL",
         "essential": false
@@ -659,7 +659,7 @@
       },
       {
         "name": "TOKEN_CACHE_MAX_CAPACITY",
-        "value": "50",
+        "value": "5000",
         "description": "Maximum number of cached service/system-user tokens in the Caffeine token cache. Raise for deployments with many active tenants.",
         "type": "CACHE",
         "essential": false
@@ -722,7 +722,7 @@
       },
       {
         "name": "REQUEST_TIMEOUT",
-        "value": "60000",
+        "value": "604800000",
         "description": "HTTP client read timeout in milliseconds applied to all proxied requests. Raise for accompanied modules with legitimately long-running endpoints.",
         "type": "QUARKUS",
         "essential": false
