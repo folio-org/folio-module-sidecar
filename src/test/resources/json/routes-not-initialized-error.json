@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "type": "RoutesNotInitializedException",
+      "code": "routes_not_initialized_error",
+      "message": "Module routes are not initialized yet. Retry later"
+    }
+  ],
+  "total_records": 1
+}

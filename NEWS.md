@@ -14,6 +14,10 @@
   - New binding cache settings: `TENANT_MODULE_BINDING_CACHE_MAX_SIZE` (`200`) and `TENANT_MODULE_BINDING_CACHE_EXPIRATION_MINUTES` (`30`)
   - Resolution failures return `503`, `Retry-After: 5`, and `mod_users_keycloak_target_not_resolved_error`
 * Return `401` instead of `400` for expired or invalid tokens that Keycloak 26.6.2+ rejects with `invalid_grant` or `invalid_token` during authorization ([MODSIDECAR-225](https://folio-org.atlassian.net/browse/MODSIDECAR-225))
+* Report module bootstrap failures instead of serving no routes while reporting healthy ([MODSIDECAR-205](https://folio-org.atlassian.net/browse/MODSIDECAR-205))
+  - Requests received before routes are loaded return `503`, `Retry-After: 5`, and `routes_not_initialized_error` (previously an HTML `404`)
+  - New readiness check `Routing health check` is `DOWN` until routes are loaded; `/admin/health` and `/admin/health/ready` return `503` meanwhile, so liveness checks must use `/admin/health/live`
+  - When the bootstrap cannot be loaded after `RETRY_*` attempts, including a failed discovery-triggered route refresh, the sidecar exits with code `1` instead of `0`
 
 
 ## Version `v4.0.0` (16.04.2026)

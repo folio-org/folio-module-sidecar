@@ -1,6 +1,8 @@
 package org.folio.sidecar.it;
 
+import static java.time.Duration.ofSeconds;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -21,16 +23,17 @@ class NoChecksSectionHealthCheckIT {
 
   @Test
   void healthCheck_positive() {
-    TestUtils.givenJson()
-      .get("/admin/health")
-      .then()
-      .log().ifValidationFails(LogDetail.ALL)
-      .assertThat()
-      .statusCode(is(SC_OK))
-      .body(
-        "status", is("UP"),
-        "checks", is(nullValue())
-      );
+    await().atMost(ofSeconds(10)).untilAsserted(() ->
+      TestUtils.givenJson()
+        .get("/admin/health")
+        .then()
+        .log().ifValidationFails(LogDetail.ALL)
+        .assertThat()
+        .statusCode(is(SC_OK))
+        .body(
+          "status", is("UP"),
+          "checks", is(nullValue())
+        ));
   }
 
   public static final class NoChecksSectionHealthCheckTestProfile extends CommonIntegrationTestProfile {

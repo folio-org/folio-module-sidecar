@@ -22,9 +22,11 @@ import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.RoutesNotInitializedException;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
 import org.folio.sidecar.integration.kafka.DiscoveryListener;
+import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
 
@@ -41,11 +43,13 @@ public class RoutingService implements DiscoveryListener {
   private final ModulePermissionsService modulePermissionsService;
   private final EgressBootstrapService egressBootstrapService;
   private final ModuleProperties moduleProperties;
+  private final ErrorHandler errorHandler;
+  private volatile boolean initialized;
 
   public RoutingService(ApplicationManagerService appManagerService,
     @RequestHandler @All List<Handler<RoutingContext>> requestHandlers, @All List<ModuleBootstrapListener> mbListeners,
     ModulePermissionsService modulePermissionsService, EgressBootstrapService egressBootstrapService,
-    ModuleProperties moduleProperties) {
+    ModuleProperties moduleProperties, ErrorHandler errorHandler) {
     this.appManagerService = appManagerService;
 
     if (isEmpty(requestHandlers)) {
@@ -57,11 +61,20 @@ public class RoutingService implements DiscoveryListener {
     this.modulePermissionsService = modulePermissionsService;
     this.egressBootstrapService = egressBootstrapService;
     this.moduleProperties = moduleProperties;
+    this.errorHandler = errorHandler;
   }
 
   public Future<Void> init(Router router) {
+    var route = router.route("/*");
+    route.handler(this::handleIfInitialized);
+    requestHandlers.forEach(route::handler);
+
     var bootstrap = tenantScoped ? appManagerService.getIngressBootstrap() : appManagerService.getModuleBootstrap();
-    return process(bootstrap, moduleBootstrap -> initFromBootstrap(router, moduleBootstrap));
+    return process(bootstrap, this::initFromBootstrap);
+  }
+
+  public boolean isInitialized() {
+    return initialized;
   }
 
   @Override
@@ -91,11 +104,19 @@ public class RoutingService implements DiscoveryListener {
       })
       .onFailure(error -> {
         log.error("Failed to initialize routes", error);
-        Quarkus.asyncExit(0);
+        Quarkus.asyncExit(1);
       });
   }
 
-  private void initFromBootstrap(Router router, ModuleBootstrap moduleBootstrap) {
+  private void handleIfInitialized(RoutingContext rc) {
+    if (initialized) {
+      rc.next();
+      return;
+    }
+    errorHandler.sendErrorResponse(rc, new RoutesNotInitializedException());
+  }
+
+  private void initFromBootstrap(ModuleBootstrap moduleBootstrap) {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
     moduleBootstrapListeners.forEach(listener -> {
@@ -104,11 +125,8 @@ public class RoutingService implements DiscoveryListener {
     });
 
     modulePermissionsService.putPermissions(findAllModulePermissions(moduleBootstrap));
-
-    var route = router.route("/*");
-    requestHandlers.forEach(route::handler);
-
     registerKnownModules(moduleBootstrap);
+    initialized = true;
 
     log.info("Sidecar initialized from module bootstrap: moduleId = {}, applicationId = {}",
       moduleBootstrap.getModule().getModuleId(), moduleBootstrap.getModule().getApplicationId());

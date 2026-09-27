@@ -49,7 +49,9 @@ class ComprehensiveHealthCheckIT {
 
         "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
         "checks.find {check -> check.name == 'Module health check'}.data.host",
-        Matchers.matchesPattern("GET http://localhost:\\d+" + TestConstants.MODULE_HEALTH_PATH)
+        Matchers.matchesPattern("GET http://localhost:\\d+" + TestConstants.MODULE_HEALTH_PATH),
+
+        "checks.find {check -> check.name == 'Routing health check'}.status", is("UP")
       );
   }
 
