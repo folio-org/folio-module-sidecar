@@ -1,3 +1,7 @@
+## Version `v4.0.6` (15.10.2026)
+### Changes:
+* Add DeployConfig.json to folio-module-sidecar (ADR-0013 Configuration Management) ([MODSIDECAR-216](https://folio-org.atlassian.net/browse/MODSIDECAR-216))
+
 ## Version `v4.0.5` (24.09.2026)
 ### Changes:
 * Preserve 401 Unauthorized for expired/invalid tokens during Keycloak UMA authorization after Keycloak 26.6 upgrade ([MODSIDECAR-225](https://folio-org.atlassian.net/browse/MODSIDECAR-225))
