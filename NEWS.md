@@ -1,3 +1,7 @@
+## Version `v4.0.8` (in progress)
+### Changes:
+* Key authorization cache by token principal (issuing realm and `azp`) instead of token expiration, and raise the default `TOKEN_CACHE_MAX_CAPACITY` to `500` to stop cache thrashing in clusters with many tenants ([MODSIDECAR-185](https://folio-org.atlassian.net/browse/MODSIDECAR-185)) / MODSIDECAR-232
+
 ## Version `v4.0.7` (28.10.2026)
 ### Changes:
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218)) / MODSIDECAR-233
