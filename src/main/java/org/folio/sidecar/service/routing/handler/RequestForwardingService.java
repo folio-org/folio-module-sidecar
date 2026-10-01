@@ -173,6 +173,10 @@ public class RequestForwardingService {
       requestOptions.setSsl(true);
     }
 
+    log.debug("httpUri = {}; requestOptions: host={}, port={}, uri={}, method={}, setSsl={}",
+        httpUri, requestOptions.getHost(), requestOptions.getPort(), requestOptions.getURI(),
+        requestOptions.getMethod(), requestOptions.isSsl());
+
     return httpClient.request(requestOptions);
   }
 
