@@ -46,7 +46,7 @@ The feature is driven by tenant-entitlement signals that (re)build per-tenant eg
 ## Business rules and constraints
 
 - Disabled by default (`routing.tenant-scoped.enabled=false`); egress routing behavior is identical to before when off.
-- When enabled, ingress routes are loaded once at startup from `GET /modules/{moduleId}/bootstrap`; egress is resolved from the per-tenant tables instead of a single global table.
+- When enabled, ingress routes are loaded once at startup from `GET /modules/{moduleId}/bootstrap`, retried with the shared `RETRY_*` policy; egress is resolved from the per-tenant tables instead of a single global table.
 - An egress request is matched against the table for its `X-Okapi-Tenant`. A missing or unknown tenant, or a tenant whose table has not been built yet, produces no match.
 - Unmatched egress falls through the routing chain; with gateway fallback enabled it is forwarded to the gateway (see below) rather than returning 404.
 - When tenant-scoped routing is enabled, `routing.forward-to-gateway.enabled` defaults to `true` so unresolved egress is forwarded to the gateway. An operator can still override it explicitly via `SIDECAR_FORWARD_UNKNOWN_REQUESTS`.
@@ -56,6 +56,7 @@ The feature is driven by tenant-entitlement signals that (re)build per-tenant eg
 
 - **Unresolved egress** (unknown/missing tenant, or table not yet built): no per-tenant match. With gateway fallback on (the default when tenant-scoped routing is enabled) the request is forwarded to the gateway; otherwise the chain returns `404 Route is not found`.
 - **Bootstrap or entitlement fetch failure during a table build:** logged at warn level; the tenant's previously built table is retained and the build is retried on the next entitlement/discovery/upgrade event. No request-time error is introduced by a failed rebuild.
+- **Ingress bootstrap failure at startup** (module not registered in `mgr-applications`, or `mgr-applications` < 4.0.2, which has no `GET /modules/{moduleId}/bootstrap` and answers `500 unknown_error` / `NoResourceFoundException`): until routes are loaded, every request gets `503`, `Retry-After: 5` and `routes_not_initialized_error`, and the `Routing health check` readiness check is `DOWN`. Once the retries run out, the sidecar logs `Failed to initialize routes` at error level and exits with code `1`. Liveness checks must use `/admin/health/live`: `/admin/health` and `/admin/health/ready` return `503` until routes are loaded.
 
 ## Caching
 
@@ -78,7 +79,7 @@ Operational notes for clustered deployments:
 
 ## Dependencies and interactions
 
-- **`mgr-applications`** — `GET /modules/{moduleId}/bootstrap` (ingress routes) and `POST /modules/{moduleId}/bootstrap` with body `{"applicationIds":[…]}` (per-tenant egress routes scoped to the tenant's entitled applications).
+- **`mgr-applications`** (4.0.2 or later) — `GET /modules/{moduleId}/bootstrap` (ingress routes) and `POST /modules/{moduleId}/bootstrap` with body `{"applicationIds":[…]}` (per-tenant egress routes scoped to the tenant's entitled applications).
 - **`mgr-tenant-entitlements`** — `GET /entitlements?tenant={tenant}` to resolve each tenant's entitled application ids.
 - **Kafka** — consumes `${ENV}.entitlement`; an `UPGRADE` for this module triggers a per-tenant egress refresh.
 - **`TenantService`** — its enabled-tenant cache is the source of truth for which tenants this module serves; changes are published as `EntitlementsEvent` and drive per-tenant egress reconcile.

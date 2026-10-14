@@ -1,7 +1,9 @@
 package org.folio.sidecar.configuration;
 
+import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -46,5 +48,15 @@ class SidecarInitializerTest {
 
     initOrder.verify(routingService).init(router);
     initOrder.verify(tenantService).init();
+  }
+
+  @Test
+  void onStart_negative_routingInitFailed() {
+    when(sidecarProperties.getName()).thenReturn("sc-mod-foo");
+    when(routingService.init(router)).thenReturn(failedFuture(new IllegalStateException("error")));
+
+    routerConfiguration.onStart(router);
+
+    verifyNoInteractions(tenantService);
   }
 }

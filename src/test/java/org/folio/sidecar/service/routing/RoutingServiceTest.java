@@ -2,10 +2,16 @@ package org.folio.sidecar.service.routing;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.INIT;
 import static org.folio.sidecar.service.routing.ModuleBootstrapListener.ChangeType.UPDATE;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -13,16 +19,21 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.WebApplicationException;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
+import org.folio.sidecar.exception.RoutesNotInitializedException;
 import org.folio.sidecar.integration.am.ApplicationManagerService;
 import org.folio.sidecar.integration.am.model.ModuleBootstrap;
+import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
@@ -30,8 +41,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
@@ -49,18 +63,21 @@ class RoutingServiceTest {
   @Mock private ModulePermissionsService modulePermissionsService;
   @Mock private EgressBootstrapService egressBootstrapService;
   @Mock private ModuleProperties moduleProperties;
+  @Mock private ErrorHandler errorHandler;
+  @Mock private RoutingContext routingContext;
+  @Captor private ArgumentCaptor<Handler<RoutingContext>> handlerCaptor;
 
   @BeforeEach
   void setUp() {
     routingService = new RoutingService(appManagerService,
       List.of(requestHandler1, requestHandler2), List.of(listener1, listener2),
-      modulePermissionsService, egressBootstrapService, moduleProperties);
+      modulePermissionsService, egressBootstrapService, moduleProperties, errorHandler);
   }
 
   @AfterEach
   void tearDown() {
     verifyNoMoreInteractions(appManagerService, requestHandler1, requestHandler2, listener1, listener2,
-      modulePermissionsService, egressBootstrapService, moduleProperties);
+      modulePermissionsService, egressBootstrapService, moduleProperties, errorHandler);
   }
 
   @Test
@@ -69,7 +86,7 @@ class RoutingServiceTest {
     var handlers = List.<Handler<RoutingContext>>of();
 
     Assertions.assertThatThrownBy(() -> new RoutingService(appManagerService, handlers,
-        listeners, modulePermissionsService, egressBootstrapService, moduleProperties))
+        listeners, modulePermissionsService, egressBootstrapService, moduleProperties, errorHandler))
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessage("Request handlers are not configured");
   }
@@ -82,23 +99,88 @@ class RoutingServiceTest {
     when(router.route("/*")).thenReturn(route);
 
     var listenersOrder = inOrder(listener1, listener2);
-    var routeOrder = inOrder(route);
 
-    routingService.init(router);
+    var result = routingService.init(router);
 
+    assertThat(result.succeeded()).isTrue();
+    assertThat(routingService.isInitialized()).isTrue();
     verifyListeners(listenersOrder, bootstrap);
-    verifyHandlers(routeOrder);
-
+    verifyHandlers();
     verify(modulePermissionsService).putPermissions(anySet());
   }
 
   @Test
-  void init_negative() {
+  void init_negative_bootstrapFailureExitsWithErrorCode() {
     when(appManagerService.getModuleBootstrap()).thenReturn(failedFuture(new NotFoundException("not found")));
+    when(router.route("/*")).thenReturn(route);
+
+    try (MockedStatic<Quarkus> quarkus = mockStatic(Quarkus.class)) {
+      var result = routingService.init(router);
+
+      assertThat(result.failed()).isTrue();
+      quarkus.verify(() -> Quarkus.asyncExit(1));
+    }
+
+    assertThat(routingService.isInitialized()).isFalse();
+    verifyHandlers();
+  }
+
+  @Test
+  void init_negative_tenantScopedIngressBootstrapFailure() {
+    routingService.tenantScoped = true;
+    var error = new WebApplicationException("Failed to perform request: NoResourceFoundException", 500);
+    when(appManagerService.getIngressBootstrap()).thenReturn(failedFuture(error));
+    when(router.route("/*")).thenReturn(route);
+
+    try (MockedStatic<Quarkus> quarkus = mockStatic(Quarkus.class)) {
+      routingService.init(router);
+
+      quarkus.verify(() -> Quarkus.asyncExit(1));
+    }
+
+    assertThat(routingService.isInitialized()).isFalse();
+  }
+
+  @Test
+  void init_negative_listenerFailureExitsWithErrorCode() {
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(router.route("/*")).thenReturn(route);
+    doThrow(new IllegalStateException("error")).when(listener1).onModuleBootstrap(bootstrap.getModule(), INIT);
+
+    try (MockedStatic<Quarkus> quarkus = mockStatic(Quarkus.class)) {
+      routingService.init(router);
+
+      quarkus.verify(() -> Quarkus.asyncExit(1));
+    }
+
+    assertThat(routingService.isInitialized()).isFalse();
+  }
+
+  @Test
+  void handleRequest_negative_routesNotInitialized() {
+    when(appManagerService.getModuleBootstrap()).thenReturn(Promise.<ModuleBootstrap>promise().future());
+    when(router.route("/*")).thenReturn(route);
 
     routingService.init(router);
+    verifyHandlers().handle(routingContext);
 
-    verifyNoInteractions(router);
+    verify(errorHandler).sendErrorResponse(eq(routingContext), isA(RoutesNotInitializedException.class));
+    verify(routingContext, never()).next();
+  }
+
+  @Test
+  void handleRequest_positive_routesInitialized() {
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+    when(appManagerService.getModuleBootstrap()).thenReturn(succeededFuture(bootstrap));
+    when(router.route("/*")).thenReturn(route);
+
+    routingService.init(router);
+    verifyHandlers().handle(routingContext);
+
+    verify(routingContext).next();
+    verifyListeners(inOrder(listener1, listener2), bootstrap);
+    verify(modulePermissionsService).putPermissions(anySet());
   }
 
   @Test
@@ -146,6 +228,26 @@ class RoutingServiceTest {
   }
 
   @Test
+  void updateModuleRoutes_negative_bootstrapFailureExitsWithErrorCode() {
+    var bootstrap = TestConstants.MODULE_BOOTSTRAP;
+    when(appManagerService.getModuleBootstrap())
+      .thenReturn(succeededFuture(bootstrap), failedFuture(new WebApplicationException("error", 500)));
+    when(router.route("/*")).thenReturn(route);
+
+    routingService.init(router);
+
+    try (MockedStatic<Quarkus> quarkus = mockStatic(Quarkus.class)) {
+      routingService.updateModuleRoutes(TestConstants.MODULE_ID);
+
+      quarkus.verify(() -> Quarkus.asyncExit(1));
+    }
+
+    assertThat(routingService.isInitialized()).isTrue();
+    verifyListeners(inOrder(listener1, listener2), bootstrap);
+    verify(modulePermissionsService).putPermissions(anySet());
+  }
+
+  @Test
   void init_positive_tenantScopedLoadsIngressOnly() {
     routingService.tenantScoped = true;
     var bootstrap = TestConstants.MODULE_BOOTSTRAP;
@@ -160,9 +262,9 @@ class RoutingServiceTest {
     listenersOrder.verify(listener1).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
     listenersOrder.verify(listener2).onModuleBootstrap(bootstrap.getModule(), INIT);
     listenersOrder.verify(listener2).onRequiredModulesBootstrap(bootstrap.getRequiredModules(), INIT);
-    verify(route).handler(requestHandler1);
-    verify(route).handler(requestHandler2);
+    verifyHandlers();
     verify(modulePermissionsService).putPermissions(anySet());
+    assertThat(routingService.isInitialized()).isTrue();
   }
 
   @Test
@@ -188,9 +290,11 @@ class RoutingServiceTest {
     verifyNoInteractions(appManagerService);
   }
 
-  private void verifyHandlers(InOrder routeOrder) {
-    routeOrder.verify(route).handler(requestHandler1);
-    routeOrder.verify(route).handler(requestHandler2);
+  private Handler<RoutingContext> verifyHandlers() {
+    verify(route, times(3)).handler(handlerCaptor.capture());
+    var handlers = handlerCaptor.getAllValues();
+    assertThat(handlers.subList(1, 3)).containsExactly(requestHandler1, requestHandler2);
+    return handlers.getFirst();
   }
 
   private void verifyListeners(InOrder listenersOrder, ModuleBootstrap bootstrap) {

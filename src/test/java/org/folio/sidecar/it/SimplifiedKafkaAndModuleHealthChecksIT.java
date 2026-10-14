@@ -1,6 +1,8 @@
 package org.folio.sidecar.it;
 
+import static java.time.Duration.ofSeconds;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -21,25 +23,26 @@ class SimplifiedKafkaAndModuleHealthChecksIT {
 
   @Test
   void healthCheck_positive() {
-    TestUtils.givenJson()
-      .get("/admin/health")
-      .then()
-      .log().ifValidationFails(LogDetail.ALL)
-      .assertThat()
-      .statusCode(is(SC_OK))
-      .body(
-        "status", is("UP"),
+    await().atMost(ofSeconds(10)).untilAsserted(() ->
+      TestUtils.givenJson()
+        .get("/admin/health")
+        .then()
+        .log().ifValidationFails(LogDetail.ALL)
+        .assertThat()
+        .statusCode(is(SC_OK))
+        .body(
+          "status", is("UP"),
 
-        "checks.find {check -> check.name == 'SmallRye Reactive Messaging - liveness check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'SmallRye Reactive Messaging - readiness check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'SmallRye Reactive Messaging - startup check'}.status", is("UP"),
+          "checks.find {check -> check.name == 'SmallRye Reactive Messaging - liveness check'}.status", is("UP"),
+          "checks.find {check -> check.name == 'SmallRye Reactive Messaging - readiness check'}.status", is("UP"),
+          "checks.find {check -> check.name == 'SmallRye Reactive Messaging - startup check'}.status", is("UP"),
 
-        "checks.find {check -> check.name == 'Kafka connection health check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'Kafka connection health check'}.data", is(nullValue()),
+          "checks.find {check -> check.name == 'Kafka connection health check'}.status", is("UP"),
+          "checks.find {check -> check.name == 'Kafka connection health check'}.data", is(nullValue()),
 
-        "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
-        "checks.find {check -> check.name == 'Module health check'}.data", is(nullValue())
-      );
+          "checks.find {check -> check.name == 'Module health check'}.status", is("UP"),
+          "checks.find {check -> check.name == 'Module health check'}.data", is(nullValue())
+        ));
   }
 
   public static final class SimplifiedKafkaAndModuleHealthCheckTestProfile extends CommonIntegrationTestProfile {
