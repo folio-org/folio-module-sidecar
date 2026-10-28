@@ -45,7 +45,6 @@ public class ErrorHandler {
   private static final String EGRESS_UNAUTH_RETRY_DELAY = "1"; // in seconds
   private static final String ENTITLEMENTS_NOT_LOADED_RETRY_DELAY = "5"; // in seconds
   private static final String MOD_USERS_KEYCLOAK_TARGET_RETRY_DELAY = "5"; // in seconds
-  private static final String ENTITLEMENTS_NOT_LOADED_RETRY_DELAY = "5"; // in seconds
 
   private final JsonConverter jsonConverter;
   private final SidecarSignatureService sidecarSignatureService;

@@ -25,7 +25,6 @@ import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
-import org.folio.sidecar.exception.EgressUnauthorizedException;
 import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.KeycloakUnhandledAuthorizationException;
 import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
