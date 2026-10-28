@@ -1,3 +1,7 @@
+## Version `v4.0.7` (In Progress)
+### Changes:
+* Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218)) / MODSIDECAR-233
+
 ## Version `v4.0.6` (15.10.2026)
 ### Changes:
 * Add DeployConfig.json to folio-module-sidecar (ADR-0013 Configuration Management) ([MODSIDECAR-216](https://folio-org.atlassian.net/browse/MODSIDECAR-216))
