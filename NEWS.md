@@ -1,4 +1,4 @@
-## Version `v4.0.7` (In Progress)
+## Version `v4.0.7` (28.10.2026)
 ### Changes:
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218)) / MODSIDECAR-233
 
