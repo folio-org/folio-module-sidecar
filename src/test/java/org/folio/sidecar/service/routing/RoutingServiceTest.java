@@ -286,7 +286,7 @@ class RoutingServiceTest {
     routingService.onDiscovery("mod-bar-0.5.1");
 
     verify(moduleProperties).getId();
-    verify(egressBootstrapService).refreshAllTenants();
+    verify(egressBootstrapService).onDiscovery("mod-bar-0.5.1");
     verifyNoInteractions(appManagerService);
   }
 

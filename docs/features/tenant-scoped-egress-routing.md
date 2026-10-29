@@ -2,7 +2,7 @@
 feature_id: tenant-scoped-egress-routing
 title: Tenant-Scoped Egress Routing
 status: active
-updated: 2026-06-18
+updated: 2026-10-29
 ---
 
 # Tenant-Scoped Egress Routing
@@ -29,19 +29,23 @@ The feature is driven by tenant-entitlement signals that (re)build per-tenant eg
 
 | Type | Topic | Description |
 |------|-------|-------------|
-| Kafka Consumer | `${ENV}.entitlement` (channel `entitlement`) | On an `UPGRADE` event for this module, rebuilds the affected tenant's egress table (a version change that does not alter tenant membership). |
+| Kafka Consumer | `${ENV}.entitlement` (channel `entitlement`) | On an `UPGRADE` event for this module, re-resolves the affected tenant's application set and binds its table (a version change that does not alter tenant membership). |
 
 | Class | Location | Role |
 |:------|:---------|:-----|
-| `EgressRoutingLookup` | `service/routing/lookup/` | On the egress request path, resolves the route table by `X-Okapi-Tenant`; falls through (no match) when the tenant is missing/unknown or its table is not yet built. |
-| `EgressBootstrapService` | `service/routing/` | Builds and refreshes each tenant's egress table from its entitled applications; reconciles on `EntitlementsEvent`. |
-| `RoutingService` | `service/routing/` | Loads ingress-only at startup; on required-module discovery, refreshes all enabled tenants' egress tables. |
+| `EgressRoutingLookup` | `service/routing/lookup/` | On the egress request path, resolves the route table by `X-Okapi-Tenant`; falls through (no match) when the tenant is missing/unknown or its table is not yet built. Holds the shared tables. |
+| `EgressRouteTable` | `service/routing/lookup/` | Immutable egress routes of one set of applications, shared by all tenants entitled to that set. |
+| `EgressBootstrapService` | `service/routing/` | Builds and refreshes egress tables from the tenants' entitled applications; reconciles on `EntitlementsEvent`; applies discovery changes in place. |
+| `RoutingService` | `service/routing/` | Loads ingress-only at startup; on required-module discovery, passes the module id to `EgressBootstrapService`. |
 | `TenantEntitlementConsumer` | `integration/kafka/` | Triggers a tenant egress refresh on `UPGRADE`. |
 
 ### Event processing
 
-- **When processed:** on each `EntitlementsEvent` (set reconcile) and on each `UPGRADE` Kafka entitlement message; required-module discovery refreshes all enabled tenants.
-- **Processing behavior:** a tenant's table is built from `GET /entitlements?tenant={tenant}` → distinct application ids → `POST /modules/{moduleId}/bootstrap {applicationIds}`. A tenant with no entitled applications stores an empty table (no bootstrap call). A build failure leaves the previously built table intact and is retried on the next event.
+- **When processed:** on each `EntitlementsEvent` (set reconcile), on each `UPGRADE` Kafka entitlement message, and on each discovery event of another module:
+  - a module that is in a table: its location is updated in place from `GET /modules/{id}/discovery`; a `404` (discovery deleted) removes the module's routes;
+  - a module whose routes were removed after a deleted discovery: only the affected tables are rebuilt when its discovery is created again;
+  - any other module is ignored, because a tenant's providers are all in its entitled applications and entitlement requires discovery for every module.
+- **Processing behavior:** a tenant's table is built from `GET /entitlements?tenant={tenant}` (all pages are loaded) → distinct, sorted application ids → `POST /modules/{moduleId}/bootstrap {applicationIds}`. Tenants entitled to the same applications share one table and one bootstrap call. A tenant with no entitled applications is bound to an empty table (no bootstrap call). Builds run with a concurrency limit, and event-driven rebuilds get a random stagger. A build failure leaves the previously built table intact and is retried on the next event.
 
 ## Business rules and constraints
 
@@ -51,16 +55,18 @@ The feature is driven by tenant-entitlement signals that (re)build per-tenant eg
 - Unmatched egress falls through the routing chain; with gateway fallback enabled it is forwarded to the gateway (see below) rather than returning 404.
 - When tenant-scoped routing is enabled, `routing.forward-to-gateway.enabled` defaults to `true` so unresolved egress is forwarded to the gateway. An operator can still override it explicitly via `SIDECAR_FORWARD_UNKNOWN_REQUESTS`.
 - Per-tenant tables are reconciled against the enabled-tenant set: newly enabled tenants are built, revoked tenants are dropped.
+- Tables are per set of entitled applications. A table is dropped when no tenant uses its set.
 
 ## Error behavior
 
 - **Unresolved egress** (unknown/missing tenant, or table not yet built): no per-tenant match. With gateway fallback on (the default when tenant-scoped routing is enabled) the request is forwarded to the gateway; otherwise the chain returns `404 Route is not found`.
 - **Bootstrap or entitlement fetch failure during a table build:** logged at warn level; the tenant's previously built table is retained and the build is retried on the next entitlement/discovery/upgrade event. No request-time error is introduced by a failed rebuild.
+- **Discovery lookup failure** (anything but `404`) when a module's location is updated: the tables that contain the module are rebuilt from a fresh bootstrap.
 - **Ingress bootstrap failure at startup** (module not registered in `mgr-applications`, or `mgr-applications` < 4.0.2, which has no `GET /modules/{moduleId}/bootstrap` and answers `500 unknown_error` / `NoResourceFoundException`): until routes are loaded, every request gets `503`, `Retry-After: 5` and `routes_not_initialized_error`, and the `Routing health check` readiness check is `DOWN`. Once the retries run out, the sidecar logs `Failed to initialize routes` at error level and exits with code `1`. Liveness checks must use `/admin/health/live`: `/admin/health` and `/admin/health/ready` return `503` until routes are loaded.
 
 ## Caching
 
-The per-tenant egress routing table is held in memory as a `ConcurrentHashMap` keyed by tenant name, maintained by `EgressRoutingLookup`. Entries are added/replaced on a successful tenant build and removed when a tenant is revoked.
+Egress tables are held in memory by `EgressRoutingLookup.egressTables`, keyed by the sorted, comma-joined application ids; `tenantTableKeys` maps each tenant to its key. A table is created on the first build for an application set, updated in place on discovery changes, and removed when no tenant uses it.
 
 Operational notes for clustered deployments:
 - Each sidecar instance maintains its own per-tenant tables, populated independently from the same upstream sources (`mgr-applications`, `mgr-tenant-entitlements`) and from the per-instance entitlement event stream.
@@ -71,6 +77,8 @@ Operational notes for clustered deployments:
 | Variable | Config property | Default | Purpose |
 |----------|-----------------|---------|---------|
 | `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` | `routing.tenant-scoped.enabled` | `false` | Enables tenant-scoped egress routing. |
+| `SIDECAR_TENANT_SCOPED_BOOTSTRAP_CONCURRENCY` | `routing.tenant-scoped.bootstrap-concurrency` | `10` | Maximum number of concurrent egress table builds. |
+| `SIDECAR_TENANT_SCOPED_REFRESH_MAX_STAGGER` | `routing.tenant-scoped.refresh-max-stagger` | `5s` | Upper bound of a random delay before event-driven table rebuilds. |
 | `SIDECAR_FORWARD_UNKNOWN_REQUESTS` | `routing.forward-to-gateway.enabled` | `false`, but defaults to the value of `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` when not set | Forwards unresolved egress to the gateway instead of returning 404. |
 | `SIDECAR_FORWARD_UNKNOWN_REQUESTS_DESTINATION` | `routing.forward-to-gateway.destination` | `http://api-gateway:8000` | Gateway URL used for forwarded unresolved egress. |
 | `AM_CLIENT_URL` | `am.url` | `http://mgr-applications:8081` | `mgr-applications` base URL — source of ingress and per-tenant egress bootstrap. |
@@ -79,7 +87,7 @@ Operational notes for clustered deployments:
 
 ## Dependencies and interactions
 
-- **`mgr-applications`** (4.0.2 or later) — `GET /modules/{moduleId}/bootstrap` (ingress routes) and `POST /modules/{moduleId}/bootstrap` with body `{"applicationIds":[…]}` (per-tenant egress routes scoped to the tenant's entitled applications).
+- **`mgr-applications`** (4.0.2 or later) — `GET /modules/{moduleId}/bootstrap` (ingress routes), `POST /modules/{moduleId}/bootstrap` with body `{"applicationIds":[…]}` (egress routes scoped to the entitled applications), and `GET /modules/{moduleId}/discovery` (location of a provider module, used on discovery events).
 - **`mgr-tenant-entitlements`** — `GET /entitlements?tenant={tenant}` to resolve each tenant's entitled application ids.
 - **Kafka** — consumes `${ENV}.entitlement`; an `UPGRADE` for this module triggers a per-tenant egress refresh.
 - **`TenantService`** — its enabled-tenant cache is the source of truth for which tenants this module serves; changes are published as `EntitlementsEvent` and drive per-tenant egress reconcile.

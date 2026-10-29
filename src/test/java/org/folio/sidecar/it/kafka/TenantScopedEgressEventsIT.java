@@ -4,7 +4,8 @@ import static org.awaitility.Durations.ONE_HUNDRED_MILLISECONDS;
 import static org.folio.sidecar.support.TestConstants.MODULE_ID;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
 import static org.folio.sidecar.support.TestConstants.TENANT_UUID;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
@@ -24,6 +25,7 @@ import org.awaitility.Awaitility;
 import org.awaitility.core.ThrowingRunnable;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent;
 import org.folio.sidecar.integration.kafka.TenantEntitlementEvent.Type;
+import org.folio.sidecar.service.routing.lookup.EgressRouteTable;
 import org.folio.sidecar.service.routing.lookup.EgressRoutingLookup;
 import org.folio.sidecar.support.extensions.EnableWireMock;
 import org.folio.sidecar.support.extensions.InMemoryMessagingExtension;
@@ -54,24 +56,24 @@ class TenantScopedEgressEventsIT {
     sendEvent(TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.UPGRADE));
 
     awaitUntilAsserted(() ->
-      verify(egressRoutingLookup, atLeastOnce()).updateTenantEgressRoutes(eq(TENANT_NAME), anyList()));
+      verify(egressRoutingLookup, atLeastOnce()).bindTenant(eq(TENANT_NAME), anyString(), any(EgressRouteTable.class)));
   }
 
   @Test
   void revokeEvent_positive_dropsTenantEgress() {
     // The EgressBootstrapService.tenants set is populated at startup (singleton, survives between tests).
-    // Sending REVOKE triggers disableTenant -> EntitlementsEvent({}) -> dropTenant -> removeTenantEgressRoutes.
+    // Sending REVOKE triggers disableTenant -> EntitlementsEvent({}) -> dropTenant -> removeTenant.
     // If revokeEvent runs first (before startup builds the set), the tenant won't be in the set;
     // so we send an UPGRADE first to ensure it's there, then REVOKE.
     sendEvent(TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.UPGRADE));
     awaitUntilAsserted(() ->
-      verify(egressRoutingLookup, atLeastOnce()).updateTenantEgressRoutes(eq(TENANT_NAME), anyList()));
+      verify(egressRoutingLookup, atLeastOnce()).bindTenant(eq(TENANT_NAME), anyString(), any(EgressRouteTable.class)));
 
     clearInvocations(egressRoutingLookup);
     sendEvent(TenantEntitlementEvent.of(MODULE_ID, TENANT_NAME, TENANT_UUID, Type.REVOKE));
 
     awaitUntilAsserted(() ->
-      verify(egressRoutingLookup, atLeastOnce()).removeTenantEgressRoutes(TENANT_NAME));
+      verify(egressRoutingLookup, atLeastOnce()).removeTenant(TENANT_NAME));
   }
 
   private void sendEvent(TenantEntitlementEvent event) {
