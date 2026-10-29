@@ -15,6 +15,7 @@ import static org.folio.sidecar.support.TestUtils.readString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -125,7 +126,7 @@ class TenantEntitlementClientTest {
     teClient.getTenantEntitlements("test-tenant", true, "test-token");
 
     // Verify addQueryParam called four times: tenant, limit, offset, includeModules
-    verify(request, org.mockito.Mockito.times(4)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
+    verify(request, times(4)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
     assertThat(keyCaptor.getAllValues()).contains("offset");
 
     // Assert that one of the calls was for "limit" with value "500"

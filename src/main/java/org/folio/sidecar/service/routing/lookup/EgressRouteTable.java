@@ -50,7 +50,7 @@ public record EgressRouteTable(Map<String, List<ScRoutingEntry>> routes, Set<Str
    * Returns a copy of this table where the routes of the given module point to the new location.
    */
   public EgressRouteTable withLocation(String moduleId, String location) {
-    var updated = new HashMap<String, List<ScRoutingEntry>>(routes.size());
+    var updated = HashMap.<String, List<ScRoutingEntry>>newHashMap(routes.size());
     routes.forEach((prefix, entries) -> updated.put(prefix, entries.stream()
       .map(entry -> moduleId.equals(entry.getModuleId()) ? relocate(entry, location) : entry)
       .toList()));
@@ -71,7 +71,7 @@ public record EgressRouteTable(Map<String, List<ScRoutingEntry>> routes, Set<Str
    * table.</p>
    */
   public EgressRouteTable withoutModule(String moduleId) {
-    var updated = new HashMap<String, List<ScRoutingEntry>>(routes.size());
+    var updated = HashMap.<String, List<ScRoutingEntry>>newHashMap(routes.size());
     routes.forEach((prefix, entries) -> {
       var kept = entries.stream().filter(entry -> !moduleId.equals(entry.getModuleId())).toList();
       if (!kept.isEmpty()) {

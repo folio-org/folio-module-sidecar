@@ -50,7 +50,7 @@ class EgressRouteTableTest {
 
     original.withLocation(MOD_BAR, NEW_LOCATION);
 
-    assertThat(locations(original, MOD_BAR)).doesNotContain(NEW_LOCATION);
+    assertThat(locations(original, MOD_BAR)).isNotEmpty().doesNotContain(NEW_LOCATION);
   }
 
   @Test
@@ -75,7 +75,7 @@ class EgressRouteTableTest {
     var updated = original.withoutModule(MOD_BAR);
 
     assertThat(barOnlyPrefixes).isNotEmpty();
-    assertThat(updated.routes().keySet()).doesNotContainAnyElementsOf(barOnlyPrefixes);
+    assertThat(updated.routes().keySet()).isNotEmpty().doesNotContainAnyElementsOf(barOnlyPrefixes);
   }
 
   @Test
