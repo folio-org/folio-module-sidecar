@@ -2,11 +2,13 @@ package org.folio.sidecar.service;
 
 import static io.vertx.core.Future.succeededFuture;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static jakarta.ws.rs.core.HttpHeaders.RETRY_AFTER;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.http.HttpStatus.SC_BAD_REQUEST;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
+import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +27,7 @@ import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import java.util.UUID;
 import org.apache.http.ParseException;
+import org.folio.sidecar.exception.EntitlementsNotLoadedException;
 import org.folio.sidecar.exception.TenantNotEnabledException;
 import org.folio.sidecar.model.error.ErrorResponse;
 import org.folio.sidecar.support.TestUtils;
@@ -183,6 +186,38 @@ class ErrorHandlerTest {
 
     errorHandler.sendErrorResponse(routingContext, new TenantNotEnabledException("test-tenant"));
     verify(routingContext.response(), never()).end(anyString());
+  }
+
+  @Test
+  void sendErrorResponse_positive_entitlementsNotLoadedError() {
+    var routingContext = routingContext();
+
+    var cause = new RuntimeException("Connection refused: mgr-tenant-entitlements/10.152.183.253:80");
+    errorHandler.sendErrorResponse(routingContext, new EntitlementsNotLoadedException(cause));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/entitlements-not-loaded-error.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
+  }
+
+  @Test
+  void sendErrorResponse_positive_entitlementsNotLoadedError_withTimeoutCause() {
+    // guards against the generic "cause.getCause() instanceof TimeoutException" branch pre-empting
+    // EntitlementsNotLoadedException dispatch when the wrapped load failure happens to be a timeout
+    var routingContext = routingContext();
+
+    var cause = new java.util.concurrent.TimeoutException("Timed out waiting for mgr-tenant-entitlements");
+    errorHandler.sendErrorResponse(routingContext, new EntitlementsNotLoadedException(cause));
+
+    assertThat(responseCaptor.getValue())
+      .isEqualTo(TestUtils.minify(TestUtils.readString("json/entitlements-not-loaded-error-timeout-cause.json")));
+    assertThat(responseStatusCaptor.getValue()).isEqualTo(SC_SERVICE_UNAVAILABLE);
+    verify(routingContext.response()).putHeader(RETRY_AFTER, "5");
+    verify(jsonConverter).toJson(any(ErrorResponse.class));
+    verify(sidecarSignatureService).removeSignature(routingContext);
   }
 
   private RoutingContext routingContext() {
