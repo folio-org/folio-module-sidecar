@@ -1,4 +1,4 @@
-## Version `v3.0.22` (In Progress)
+## Version `v3.0.22` (29.10.2026)
 ### Changes:
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
 
