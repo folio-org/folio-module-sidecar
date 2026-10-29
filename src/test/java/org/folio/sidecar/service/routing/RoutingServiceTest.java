@@ -279,7 +279,7 @@ class RoutingServiceTest {
   }
 
   @Test
-  void onDiscovery_positive_tenantScopedOtherRefreshesTenants() {
+  void onDiscovery_positive_tenantScopedOtherDelegatesToEgressBootstrap() {
     routingService.tenantScoped = true;
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
 

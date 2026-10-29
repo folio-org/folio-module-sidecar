@@ -138,7 +138,7 @@ class TenantEntitlementClientTest {
   void getTenantEntitlements_positive_multiplePages() {
     var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
       new TenantEntitlementClientProperties("http://te:8081", 2));
-    stubPagedRequest();
+    stubPagedRequest(HttpStatus.SC_OK);
     when(response.bodyAsString()).thenReturn(page(3, "app-a", "app-b"), page(3, "app-c"));
 
     var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
@@ -154,7 +154,7 @@ class TenantEntitlementClientTest {
   void getTenantEntitlements_positive_emptyPageStopsLoading() {
     var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
       new TenantEntitlementClientProperties("http://te:8081", 2));
-    stubPagedRequest();
+    stubPagedRequest(HttpStatus.SC_OK);
     when(response.bodyAsString()).thenReturn(page(5, "app-a"), page(5));
 
     var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
@@ -164,12 +164,37 @@ class TenantEntitlementClientTest {
     verify(request).addQueryParam("offset", "1");
   }
 
-  private void stubPagedRequest() {
+  @Test
+  void getTenantEntitlements_positive_missingTotalRecordsMeansSinglePage() {
+    stubPagedRequest(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(
+      "{\"entitlements\": [{\"applicationId\": \"app-a\", \"tenantId\": \"" + TENANT_ID + "\"}]}");
+
+    var actual = client.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.result().getRecords()).extracting(Entitlement::getApplicationId).containsExactly("app-a");
+    verify(request).addQueryParam("offset", "0");
+  }
+
+  @Test
+  void getTenantEntitlements_negative_laterPageFails() {
+    var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
+      new TenantEntitlementClientProperties("http://te:8081", 2));
+    stubPagedRequest(HttpStatus.SC_OK, HttpStatus.SC_INTERNAL_SERVER_ERROR);
+    when(response.bodyAsString()).thenReturn(page(3, "app-a", "app-b"), "unavailable");
+
+    var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.failed()).isTrue();
+    verify(request).addQueryParam("offset", "2");
+  }
+
+  private void stubPagedRequest(Integer first, Integer... next) {
     when(webClient.getAbs(anyString())).thenReturn(request);
     when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
     when(request.putHeader(anyString(), anyString())).thenReturn(request);
     when(request.send()).thenReturn(succeededFuture(response));
-    when(response.statusCode()).thenReturn(HttpStatus.SC_OK);
+    when(response.statusCode()).thenReturn(first, next);
   }
 
   private static String page(int totalRecords, String... applicationIds) {

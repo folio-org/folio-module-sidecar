@@ -175,6 +175,7 @@ class EgressBootstrapServiceTest {
     service.onEntitlementsChanged(event(TENANT_NAME));
 
     verify(tenantEntitlementService, times(2)).getTenantEntitlements(TENANT_NAME, false);
+    verify(appManagerService, times(2)).getEgressBootstrap(List.of(APPLICATION_ID));
   }
 
   @Test
@@ -351,6 +352,70 @@ class EgressBootstrapServiceTest {
 
     verify(vertx).setTimer(longThat(delay -> delay >= 1 && delay <= 5000), any());
     verify(appManagerService, never()).getEgressBootstrap(any());
+  }
+
+  @Test
+  void onEntitlementsChanged_positive_nullTenantsDropsAllTenants() {
+    mockEntitlements(TENANT_NAME, APPLICATION_ID);
+    mockBootstrap(APPLICATION_ID);
+    service.onEntitlementsChanged(event(TENANT_NAME));
+
+    service.onEntitlementsChanged(EntitlementsEvent.of(null));
+
+    verify(egressRoutingLookup).removeTenant(TENANT_NAME);
+  }
+
+  @Test
+  void onEntitlementsChanged_positive_entitlementWithoutApplicationIdIgnored() {
+    mockEntitlements(TENANT_NAME, null, APP_A);
+    mockBootstrap(APP_A);
+
+    service.onEntitlementsChanged(event(TENANT_NAME));
+
+    verify(egressRoutingLookup).bindTenant(eq(TENANT_NAME), eq(APP_A), any(EgressRouteTable.class));
+  }
+
+  @Test
+  void refreshTenant_positive_rebuildsEvenWhileBuildRunning() {
+    var runningBuild = Promise.<ResultList<Entitlement>>promise();
+    when(tenantEntitlementService.getTenantEntitlements(TENANT_NAME, false)).thenReturn(runningBuild.future());
+
+    service.onEntitlementsChanged(event(TENANT_NAME));
+    service.refreshTenant(TENANT_NAME);
+
+    verify(tenantEntitlementService, times(2)).getTenantEntitlements(TENANT_NAME, false);
+  }
+
+  @Test
+  void onDiscovery_positive_rebuildDoesNotJoinLoadInFlight() {
+    var loadInFlight = Promise.<ModuleBootstrap>promise();
+    mockEntitlements(TENANT_NAME, APP_A);
+    when(appManagerService.getEgressBootstrap(List.of(APP_A)))
+      .thenReturn(loadInFlight.future(), succeededFuture(MODULE_BOOTSTRAP_EGRESS));
+    service.onEntitlementsChanged(event(TENANT_NAME));
+    when(egressRoutingLookup.findTableKeys(any())).thenReturn(List.of(APP_A));
+    when(egressRoutingLookup.routesToModule(MODULE_ID)).thenReturn(false);
+
+    service.onDiscovery(MODULE_ID);
+
+    verify(appManagerService, times(2)).getEgressBootstrap(List.of(APP_A));
+    verify(egressRoutingLookup).replaceTable(eq(APP_A), any(EgressRouteTable.class));
+    loadInFlight.complete(MODULE_BOOTSTRAP_EGRESS);
+    verify(egressRoutingLookup).bindTenant(eq(TENANT_NAME), eq(APP_A), any(EgressRouteTable.class));
+  }
+
+  @Test
+  void onDiscovery_positive_removedInOneTableAndPresentInAnother_bothHandled() {
+    when(egressRoutingLookup.findTableKeys(any())).thenReturn(List.of(APP_A));
+    when(egressRoutingLookup.routesToModule(MODULE_ID)).thenReturn(true);
+    mockBootstrap(APP_A);
+    when(appManagerService.lookupModuleDiscovery(MODULE_ID))
+      .thenReturn(succeededFuture(TestValues.moduleDiscovery(MODULE_ID, "mod-foo", "1.0.0", "http://new:8081")));
+
+    service.onDiscovery(MODULE_ID);
+
+    verify(egressRoutingLookup).replaceTable(eq(APP_A), any(EgressRouteTable.class));
+    verify(egressRoutingLookup).updateModuleLocation(MODULE_ID, "http://new:8081");
   }
 
   private void initGuard(int concurrency) {

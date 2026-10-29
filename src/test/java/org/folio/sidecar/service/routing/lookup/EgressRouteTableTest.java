@@ -78,6 +78,24 @@ class EgressRouteTableTest {
     assertThat(updated.routes().keySet()).doesNotContainAnyElementsOf(barOnlyPrefixes);
   }
 
+  @Test
+  void withLocation_positive_keepsRemovedModuleIds() {
+    var updated = table().withoutModule(MOD_BAR).withLocation(MOD_BAZ, NEW_LOCATION);
+
+    assertThat(updated.isRemoved(MOD_BAR)).isTrue();
+    assertThat(locations(updated, MOD_BAZ)).containsOnly(NEW_LOCATION);
+  }
+
+  @Test
+  void withoutModule_positive_originalTableUnchanged() {
+    var original = table();
+
+    original.withoutModule(MOD_BAR);
+
+    assertThat(original.containsModule(MOD_BAR)).isTrue();
+    assertThat(original.removedModuleIds()).isEmpty();
+  }
+
   private static EgressRouteTable table() {
     return EgressRouteTable.of(MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
   }
