@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.folio.sidecar.configuration.properties.ModuleProperties;
@@ -30,6 +31,16 @@ import org.folio.sidecar.service.ErrorHandler;
 import org.folio.sidecar.service.ModulePermissionsService;
 import org.folio.sidecar.service.routing.configuration.RequestHandler;
 
+/**
+ * Loads the module's routes from mgr-applications at startup and keeps them up to date on discovery events.
+ *
+ * <p>With tenant-scoped routing disabled, one bootstrap provides both the ingress and the egress routes, and a
+ * discovery event of a known module re-fetches it. With tenant-scoped routing enabled, startup loads only the
+ * ingress routes; the egress routes are built per tenant by {@link EgressBootstrapService}, and a discovery event
+ * of another module is passed to it.</p>
+ *
+ * <p>Requests are rejected with {@link RoutesNotInitializedException} until the routes are loaded.</p>
+ */
 @Log4j2
 @ApplicationScoped
 public class RoutingService implements DiscoveryListener {
@@ -44,6 +55,11 @@ public class RoutingService implements DiscoveryListener {
   private final EgressBootstrapService egressBootstrapService;
   private final ModuleProperties moduleProperties;
   private final ErrorHandler errorHandler;
+  /**
+   * -- GETTER --
+   *  Tells whether the routes are loaded and requests are accepted.
+   */
+  @Getter
   private volatile boolean initialized;
 
   public RoutingService(ApplicationManagerService appManagerService,
@@ -64,6 +80,13 @@ public class RoutingService implements DiscoveryListener {
     this.errorHandler = errorHandler;
   }
 
+  /**
+   * Registers the request handlers and loads the routes. The ingress bootstrap is used in tenant-scoped mode, the
+   * full module bootstrap otherwise. If loading fails after the retries, the sidecar exits with code 1.
+   *
+   * @param router - the router to register the request handlers on
+   * @return future completed when the routes are loaded
+   */
   public Future<Void> init(Router router) {
     var route = router.route("/*");
     route.handler(this::handleIfInitialized);
@@ -73,21 +96,30 @@ public class RoutingService implements DiscoveryListener {
     return process(bootstrap, this::initFromBootstrap);
   }
 
-  public boolean isInitialized() {
-    return initialized;
-  }
-
+  /**
+   * Applies a discovery change of a module. In tenant-scoped mode, a change of another module goes to
+   * {@link EgressBootstrapService#onDiscovery(String)}, and a change of the sidecar's own module is ignored.
+   * Otherwise the routes are re-fetched if the module is known (see {@link #updateModuleRoutes(String)}).
+   *
+   * @param moduleId - id of the module whose discovery changed
+   */
   @Override
   public void onDiscovery(String moduleId) {
     if (tenantScoped) {
       if (!moduleProperties.getId().equals(moduleId)) {
-        egressBootstrapService.refreshAllTenants();
+        egressBootstrapService.onDiscovery(moduleId);
       }
       return;
     }
     updateModuleRoutes(moduleId);
   }
 
+  /**
+   * Re-fetches the module bootstrap and updates the routes of a known module: the sidecar's own routes and
+   * permissions, or the egress routes of a required module. An unknown module is ignored.
+   *
+   * @param moduleId - id of the module whose discovery changed
+   */
   public void updateModuleRoutes(String moduleId) {
     var type = knownModules.get(moduleId);
 
@@ -96,6 +128,12 @@ public class RoutingService implements DiscoveryListener {
     }
   }
 
+  /**
+   * Applies the loaded bootstrap. A failure is logged and stops the sidecar with exit code 1.
+   *
+   * @param bootstrap - the bootstrap being loaded
+   * @param consumer - applies the loaded bootstrap
+   */
   private Future<Void> process(Future<ModuleBootstrap> bootstrap, Consumer<ModuleBootstrap> consumer) {
     return bootstrap
       .map(moduleBootstrap -> {
@@ -108,6 +146,9 @@ public class RoutingService implements DiscoveryListener {
       });
   }
 
+  /**
+   * Passes the request on once the routes are loaded, and answers with an error before that.
+   */
   private void handleIfInitialized(RoutingContext rc) {
     if (initialized) {
       rc.next();
@@ -116,6 +157,10 @@ public class RoutingService implements DiscoveryListener {
     errorHandler.sendErrorResponse(rc, new RoutesNotInitializedException());
   }
 
+  /**
+   * Hands the startup bootstrap to the listeners, stores the module permissions, remembers the known modules and
+   * marks the sidecar as initialized.
+   */
   private void initFromBootstrap(ModuleBootstrap moduleBootstrap) {
     log.debug("Loaded module bootstrap: {}", moduleBootstrap);
 
@@ -143,6 +188,13 @@ public class RoutingService implements DiscoveryListener {
     log.info("Known modules registered: {}", this::getKnownModulesAsString);
   }
 
+  /**
+   * Creates the action that applies a re-fetched bootstrap: the own module's routes and permissions for
+   * {@link ModuleType#PRIMARY}, the required modules' egress routes for {@link ModuleType#REQUIRED}.
+   *
+   * @param type - type of the module whose discovery changed
+   * @param updatedModuleId - id of that module
+   */
   private Consumer<ModuleBootstrap> updateModuleRoutesByType(ModuleType type, String updatedModuleId) {
     return moduleBootstrap -> {
       if (type == PRIMARY) {
@@ -165,6 +217,9 @@ public class RoutingService implements DiscoveryListener {
       .collect(joining(", "));
   }
 
+  /**
+   * Role of a module for this sidecar: its own module, or a module it calls.
+   */
   enum ModuleType {
     PRIMARY, REQUIRED
   }

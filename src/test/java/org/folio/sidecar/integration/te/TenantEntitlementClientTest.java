@@ -15,6 +15,7 @@ import static org.folio.sidecar.support.TestUtils.readString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -23,6 +24,8 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.apache.http.HttpStatus;
 import org.folio.sidecar.integration.te.model.Entitlement;
 import org.folio.sidecar.model.ResultList;
@@ -122,12 +125,83 @@ class TenantEntitlementClientTest {
     var teClient = new TenantEntitlementClient(webClient, jsonConverter, mockClientProperties);
     teClient.getTenantEntitlements("test-tenant", true, "test-token");
 
-    // Verify addQueryParam called three times
-    verify(request, org.mockito.Mockito.times(3)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
+    // Verify addQueryParam called four times: tenant, limit, offset, includeModules
+    verify(request, times(4)).addQueryParam(keyCaptor.capture(), valueCaptor.capture());
+    assertThat(keyCaptor.getAllValues()).contains("offset");
 
     // Assert that one of the calls was for "limit" with value "500"
     assertThat(keyCaptor.getAllValues()).contains("limit");
     int limitIndex = keyCaptor.getAllValues().indexOf("limit");
     assertThat(valueCaptor.getAllValues().get(limitIndex)).isEqualTo("500");
+  }
+
+  @Test
+  void getTenantEntitlements_positive_multiplePages() {
+    var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
+      new TenantEntitlementClientProperties("http://te:8081", 2));
+    stubPagedRequest(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(page(3, "app-a", "app-b"), page(3, "app-c"));
+
+    var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.result().getRecords()).extracting(Entitlement::getApplicationId)
+      .containsExactly("app-a", "app-b", "app-c");
+    assertThat(actual.result().getTotalRecords()).isEqualTo(3);
+    verify(request).addQueryParam("offset", "0");
+    verify(request).addQueryParam("offset", "2");
+  }
+
+  @Test
+  void getTenantEntitlements_positive_emptyPageStopsLoading() {
+    var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
+      new TenantEntitlementClientProperties("http://te:8081", 2));
+    stubPagedRequest(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(page(5, "app-a"), page(5));
+
+    var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.result().getRecords()).extracting(Entitlement::getApplicationId).containsExactly("app-a");
+    verify(request).addQueryParam("offset", "0");
+    verify(request).addQueryParam("offset", "1");
+  }
+
+  @Test
+  void getTenantEntitlements_positive_missingTotalRecordsMeansSinglePage() {
+    stubPagedRequest(HttpStatus.SC_OK);
+    when(response.bodyAsString()).thenReturn(
+      "{\"entitlements\": [{\"applicationId\": \"app-a\", \"tenantId\": \"" + TENANT_ID + "\"}]}");
+
+    var actual = client.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.result().getRecords()).extracting(Entitlement::getApplicationId).containsExactly("app-a");
+    verify(request).addQueryParam("offset", "0");
+  }
+
+  @Test
+  void getTenantEntitlements_negative_laterPageFails() {
+    var pagedClient = new TenantEntitlementClient(webClient, jsonConverter,
+      new TenantEntitlementClientProperties("http://te:8081", 2));
+    stubPagedRequest(HttpStatus.SC_OK, HttpStatus.SC_INTERNAL_SERVER_ERROR);
+    when(response.bodyAsString()).thenReturn(page(3, "app-a", "app-b"), "unavailable");
+
+    var actual = pagedClient.getTenantEntitlements("test-tenant", false, AUTH_TOKEN);
+
+    assertThat(actual.failed()).isTrue();
+    verify(request).addQueryParam("offset", "2");
+  }
+
+  private void stubPagedRequest(Integer first, Integer... next) {
+    when(webClient.getAbs(anyString())).thenReturn(request);
+    when(request.addQueryParam(anyString(), anyString())).thenReturn(request);
+    when(request.putHeader(anyString(), anyString())).thenReturn(request);
+    when(request.send()).thenReturn(succeededFuture(response));
+    when(response.statusCode()).thenReturn(first, next);
+  }
+
+  private static String page(int totalRecords, String... applicationIds) {
+    var entitlements = Arrays.stream(applicationIds)
+      .map(applicationId -> "{\"applicationId\": \"" + applicationId + "\", \"tenantId\": \"" + TENANT_ID + "\"}")
+      .collect(Collectors.joining(","));
+    return "{\"totalRecords\": " + totalRecords + ", \"entitlements\": [" + entitlements + "]}";
   }
 }

@@ -279,14 +279,14 @@ class RoutingServiceTest {
   }
 
   @Test
-  void onDiscovery_positive_tenantScopedOtherRefreshesTenants() {
+  void onDiscovery_positive_tenantScopedOtherDelegatesToEgressBootstrap() {
     routingService.tenantScoped = true;
     when(moduleProperties.getId()).thenReturn(TestConstants.MODULE_ID);
 
     routingService.onDiscovery("mod-bar-0.5.1");
 
     verify(moduleProperties).getId();
-    verify(egressBootstrapService).refreshAllTenants();
+    verify(egressBootstrapService).onDiscovery("mod-bar-0.5.1");
     verifyNoInteractions(appManagerService);
   }
 

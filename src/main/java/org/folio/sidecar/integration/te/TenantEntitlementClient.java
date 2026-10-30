@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.te;
 
+import static io.vertx.core.Future.succeededFuture;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -12,6 +13,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.extern.log4j.Log4j2;
 import org.folio.sidecar.integration.te.model.Entitlement;
@@ -46,16 +49,55 @@ public class TenantEntitlementClient {
     return requestData(moduleId, token, 0, clientProperties.getBatchSize());
   }
 
+  /**
+   * Provides all entitlements of a tenant, loading every page until {@code totalRecords} records are read. A single
+   * request is capped by the batch size, so without paging a tenant with more entitlements would be cut off.
+   *
+   * @param tenant - tenant name
+   * @param withModules - whether the module ids must be included
+   * @param token - admin token
+   * @return {@link Future} of the {@link Entitlement} result list with the records of all pages
+   */
   public Future<ResultList<Entitlement>> getTenantEntitlements(String tenant, boolean withModules, String token) {
     log.info("Loading tenant entitlements: tenant = {}, withModules = {}", tenant, withModules);
 
+    return loadTenantEntitlements(tenant, withModules, token, 0, new ArrayList<>());
+  }
+
+  /**
+   * Loads the page that starts at the offset, then continues with {@code nextPageOrResult}.
+   *
+   * @param offset - number of records loaded so far
+   * @param loaded - the records of the pages loaded so far
+   */
+  private Future<ResultList<Entitlement>> loadTenantEntitlements(String tenant, boolean withModules, String token,
+    int offset, List<Entitlement> loaded) {
     return doGet(entitlementUrl(), token,
       request -> request
         .addQueryParam("tenant", tenant)
         .addQueryParam("limit", Integer.toString(clientProperties.getBatchSize()))
+        .addQueryParam("offset", Integer.toString(offset))
         .addQueryParam("includeModules", Boolean.toString(withModules)))
       .map(response -> jsonConverter.parseResponse(response, EntitlementList.class))
-      .map(entitlements -> ResultList.of(entitlements.getTotalRecords(), entitlements.getEntitlements()));
+      .compose(page -> nextPageOrResult(tenant, withModules, token, page, loaded));
+  }
+
+  /**
+   * Adds the page to the loaded records and decides whether to continue. Loading stops when the total is read or
+   * a page is empty, so a total that the server over-reports cannot cause an endless loop.
+   *
+   * @param page - the page just read
+   * @param loaded - the records of the pages loaded so far, extended with this page
+   */
+  private Future<ResultList<Entitlement>> nextPageOrResult(String tenant, boolean withModules, String token,
+    EntitlementList page, List<Entitlement> loaded) {
+    var records = page.getEntitlements() == null ? List.<Entitlement>of() : page.getEntitlements();
+    loaded.addAll(records);
+    var total = page.getTotalRecords() == null ? loaded.size() : page.getTotalRecords();
+    if (records.isEmpty() || loaded.size() >= total) {
+      return succeededFuture(ResultList.of(total, loaded));
+    }
+    return loadTenantEntitlements(tenant, withModules, token, loaded.size(), loaded);
   }
 
   private Future<ResultList<Entitlement>> requestData(String moduleId, String token, int offset, int batchSize) {

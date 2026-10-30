@@ -24,6 +24,7 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.ScRoutingEntry;
@@ -41,6 +42,8 @@ class EgressRoutingLookupTest {
 
   private static final Module MOD_BAR = new Module("mod-bar-0.5.1", "http://mod-bar:8081");
   private static final Module MOD_BAZ = new Module("mod-baz-0.5.1", "http://mod-baz:8081");
+  private static final String APP_KEY = "app-a-1.0.0";
+  private static final String OTHER_APP_KEY = "app-b-1.0.0";
 
   private final EgressRoutingLookup egressLookup = new EgressRoutingLookup();
 
@@ -126,7 +129,7 @@ class EgressRoutingLookupTest {
   @Test
   void lookupRoute_positive_tenantScopedResolvesPerTenant() {
     egressLookup.tenantScoped = true;
-    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
 
     var rc = routingContext(POST);
     when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
@@ -141,7 +144,7 @@ class EgressRoutingLookupTest {
   @Test
   void lookupRoute_negative_tenantScopedUnknownTenant() {
     egressLookup.tenantScoped = true;
-    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
 
     var rc = routingContext(POST);
     when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn("other-tenant");
@@ -155,8 +158,8 @@ class EgressRoutingLookupTest {
   @Test
   void lookupRoute_negative_tenantScopedAfterRemove() {
     egressLookup.tenantScoped = true;
-    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
-    egressLookup.removeTenantEgressRoutes(TENANT_NAME);
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+    egressLookup.removeTenant(TENANT_NAME);
 
     var rc = routingContext(POST);
     when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(TENANT_NAME);
@@ -170,7 +173,7 @@ class EgressRoutingLookupTest {
   @Test
   void lookupRoute_negative_tenantScopedNullTenant() {
     egressLookup.tenantScoped = true;
-    egressLookup.updateTenantEgressRoutes(TENANT_NAME, MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
 
     var rc = routingContext(POST);
     when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(null);
@@ -193,6 +196,127 @@ class EgressRoutingLookupTest {
 
     assertThat(actual.succeeded()).isTrue();
     assertThat(actual.result()).isEmpty();
+  }
+
+  @Test
+  void lookupRoute_positive_tenantBoundToSharedTable() {
+    egressLookup.tenantScoped = true;
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+    egressLookup.bindTenant("other-tenant", APP_KEY, egressTable());
+
+    var actual = lookupBarEntities("other-tenant");
+
+    assertThat(actual).isEqualTo(ofNullable(scRoutingEntry("bar", "/bar/entities", of(POST), of("item.post"))));
+    assertThat(egressLookup.getTable(APP_KEY)).isNotNull();
+  }
+
+  @Test
+  void bindTenant_positive_existingTableNotOverwritten() {
+    var first = egressTable();
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, first);
+
+    egressLookup.bindTenant("other-tenant", APP_KEY, egressTable());
+
+    assertThat(egressLookup.getTable(APP_KEY)).isSameAs(first);
+  }
+
+  @Test
+  void bindTenant_positive_putsTableWhenSetHasNone() {
+    var table = egressTable();
+
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, table);
+
+    assertThat(egressLookup.getTable(APP_KEY)).isSameAs(table);
+  }
+
+  @Test
+  void bindTenant_positive_tenantMovedToNewSetDropsUnusedTable() {
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+
+    egressLookup.bindTenant(TENANT_NAME, OTHER_APP_KEY, egressTable());
+
+    assertThat(egressLookup.getTable(APP_KEY)).isNull();
+    assertThat(egressLookup.getTable(OTHER_APP_KEY)).isNotNull();
+  }
+
+  @Test
+  void removeTenant_positive_unusedTableRemoved() {
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+
+    egressLookup.removeTenant(TENANT_NAME);
+
+    assertThat(egressLookup.getTable(APP_KEY)).isNull();
+  }
+
+  @Test
+  void removeTenant_positive_sharedTableKeptForOtherTenant() {
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+    egressLookup.bindTenant("other-tenant", APP_KEY, egressTable());
+
+    egressLookup.removeTenant(TENANT_NAME);
+
+    assertThat(egressLookup.getTable(APP_KEY)).isNotNull();
+  }
+
+  @Test
+  void replaceTable_positive_usedTableReplaced() {
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+    var rebuilt = egressTable();
+
+    egressLookup.replaceTable(APP_KEY, rebuilt);
+
+    assertThat(egressLookup.getTable(APP_KEY)).isSameAs(rebuilt);
+  }
+
+  @Test
+  void replaceTable_positive_ignoredWhenTableUnused() {
+    egressLookup.replaceTable(APP_KEY, egressTable());
+
+    assertThat(egressLookup.getTable(APP_KEY)).isNull();
+  }
+
+  @Test
+  void updateModuleLocation_positive_allTablesWithModuleUpdated() {
+    egressLookup.tenantScoped = true;
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+    egressLookup.bindTenant("other-tenant", OTHER_APP_KEY, egressTable());
+
+    egressLookup.updateModuleLocation(MOD_BAR.id(), "http://new-bar:8081");
+
+    assertThat(lookupBarEntities(TENANT_NAME)).hasValueSatisfying(
+      entry -> assertThat(entry.getLocation()).isEqualTo("http://new-bar:8081"));
+    assertThat(lookupBarEntities("other-tenant")).hasValueSatisfying(
+      entry -> assertThat(entry.getLocation()).isEqualTo("http://new-bar:8081"));
+  }
+
+  @Test
+  void removeModule_positive_modulesRoutesRemoved() {
+    egressLookup.tenantScoped = true;
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+
+    egressLookup.removeModule(MOD_BAR.id());
+
+    assertThat(lookupBarEntities(TENANT_NAME)).isEmpty();
+    assertThat(egressLookup.routesToModule(MOD_BAR.id())).isFalse();
+    assertThat(egressLookup.findTableKeys(table -> table.isRemoved(MOD_BAR.id()))).containsExactly(APP_KEY);
+  }
+
+  @Test
+  void routesToModule_positive_moduleInTable() {
+    egressLookup.bindTenant(TENANT_NAME, APP_KEY, egressTable());
+
+    assertThat(egressLookup.routesToModule(MOD_BAR.id())).isTrue();
+    assertThat(egressLookup.routesToModule("mod-unknown-1.0.0")).isFalse();
+  }
+
+  private Optional<ScRoutingEntry> lookupBarEntities(String tenant) {
+    var rc = routingContext(POST);
+    when(rc.request().getHeader(OkapiHeaders.TENANT)).thenReturn(tenant);
+    return egressLookup.lookupRoute("/bar/entities", rc).result();
+  }
+
+  private static EgressRouteTable egressTable() {
+    return EgressRouteTable.of(MODULE_BOOTSTRAP_EGRESS.getRequiredModules());
   }
 
   private static RoutingContext routingContext(HttpMethod method) {

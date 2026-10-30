@@ -71,12 +71,14 @@ This directory contains detailed technical documentation for major features of t
 
 **Entry points:**
 - `EgressRoutingLookup` - Resolves the egress route table by `X-Okapi-Tenant`
-- `EgressBootstrapService` - Builds/refreshes per-tenant tables; reconciles on `EntitlementsEvent`
-- `RoutingService` - Ingress-only init; refreshes all tenants on required-module discovery
+- `EgressBootstrapService` - Builds/refreshes egress tables shared by application set; reconciles on `EntitlementsEvent`; applies discovery changes in place
+- `RoutingService` - Ingress-only init; passes required-module discovery changes to `EgressBootstrapService`
 - `TenantEntitlementConsumer` - Refreshes a tenant's egress on `UPGRADE`
 
 **Configuration:**
 - `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED` - Enable tenant-scoped egress routing (default: `false`)
+- `SIDECAR_TENANT_SCOPED_BOOTSTRAP_CONCURRENCY` - Maximum concurrent egress table builds (default: `10`)
+- `SIDECAR_TENANT_SCOPED_REFRESH_MAX_STAGGER` - Random delay before event-driven table rebuilds (default: `5s`)
 - `SIDECAR_FORWARD_UNKNOWN_REQUESTS` - Gateway fallback for unresolved egress (defaults to the tenant-scoped flag's value)
 
 ---
