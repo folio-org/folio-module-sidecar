@@ -1,45 +1,43 @@
 # folio-module-sidecar
 
-Quarkus sidecar (Java 21) deployed alongside every FOLIO module as a transparent HTTP proxy:
-- Ingress: validate Keycloak JWT, enforce tenant authorization, forward to `MODULE_URL`.
-- Egress: inject service/system-user token, do discovery lookup, forward module-to-module to the target sidecar.
-- Self-config: fetch routing from `mgr-applications` via Module Descriptors.
-- Tenant lifecycle: consume Kafka `discovery`, `entitlement`, `logout` topics.
+Quarkus sidecar that runs next to one FOLIO backend module: it authenticates and authorizes ingress requests before forwarding them to `MODULE_URL`, and adds service and system-user tokens to egress module-to-module calls.
 
-## Build & Test
+## Commands
 
 ```bash
-mvn clean install              # full build
-mvn clean install -DskipTests  # skip tests
-mvn clean -Pfips install       # FIPS-compliant build
-mvn test -Dgroups=unit         # unit tests (@UnitTest)
-mvn verify -Dtest=SkipSurefire -Dsurefire.failIfNoSpecifiedTests=false  # integration tests only (@IntegrationTest)
-mvn test -Dgroups=unit -Dtest="TenantFilterTest#filter_positive"  # single unit test
-mvn verify -Dit.test=SidecarIT -Dtest=SkipSurefire -Dsurefire.failIfNoSpecifiedTests=false  # single IT, skips unit tests
-mvn verify -Pcoverage          # coverage report (JaCoCo 80% instruction threshold; reported only, the build does not fail)
-mvn checkstyle:check           # process-classes phase; fails on warnings
+mvn install -DskipTests        # build
+mvn test                       # unit tests (@UnitTest, *Test.java)
+mvn verify                     # unit and integration tests (@IntegrationTest, *IT.java); needs Docker
+mvn test -Dtest=TenantFilterTest#filter_positive  # one unit test
+mvn verify -Dit.test=SidecarIT -Dtest=SkipSurefire -Dsurefire.failIfNoSpecifiedTests=false  # one IT, unit tests skipped
+mvn checkstyle:check           # style only
+mvn install -Pfips             # FIPS build (BouncyCastle FIPS dependencies)
+mvn package -Pnative           # native executable; needs GraalVM/Mandrel or the container-build flags in README.md
+mvn verify -Pcoverage          # JaCoCo report; the 80% instruction rule only reports, it does not fail the build
 ```
 
-Dev mode needs env: `SIDECAR_URL`, `MODULE_NAME`, `MODULE_VERSION`, `MODULE_URL`, `AM_CLIENT_URL`, `TE_CLIENT_URL`, `TM_CLIENT_URL` (see `README.md`). Checkstyle enforces max method length 23 lines in production code (suppressed in tests).
+Every lifecycle build cleans `target/` first, because `maven-clean-plugin` is bound to `initialize`. Integration tests need Docker because most test profiles start Kafka through Quarkus Dev Services; only `InMemoryMessagingTestProfile` and its subclasses turn it off. Surefire and failsafe fix `groups` to `unit` and `integration` in `pom.xml`, so `-Dgroups` on the command line has no effect.
 
-## Style
+Checkstyle runs at `process-classes` and fails the build on warnings, test sources included. The base rules come from the `folio-java-checkstyle` artifact. This repository sets method length to 23 lines (`checkstyle/checkstyle-checker.properties`) and suppresses only `MethodLength` for tests.
 
-Match the repository's existing style: use maintained implementations and tests as templates for new code, and keep the structure, naming, and conventions of neighboring files. Mockito is never lenient; verify only unmocked interactions; name tests `methodName_positive/negative_description`. Full unit-testing guide: https://github.com/folio-org/folio-eureka-ai-dev/blob/master/docs/testing/unit-testing.md
+Dev mode (`mvn quarkus:dev`) does not start without `MODULE_NAME`, `MODULE_VERSION`, and `SIDECAR_URL`, because they have no defaults. `README.md` has a full example.
 
-## Architecture notes
+## Conventions
 
-- Startup: `SidecarInitializer` observes the Vert.x `Router`, then initializes routing (module bootstrap from `mgr-applications`) and tenant service (tenants + entitlements via Kafka/REST). With `routing.tenant-scoped.enabled` (off by default), startup loads only the ingress routes and `EgressBootstrapService` builds the egress routes per tenant.
-- Routing (`service/routing/`): `RoutingConfiguration` builds a `ChainedHandler` pipeline: optional ModuleEntitlement (`routing.module-entitlement.enabled`, on by default; answers `GET /entitlements/modules/{moduleId}` without the ingress filter chain) → Ingress → Egress → optional Dynamic (`routing.dynamic.enabled`) → optional Gateway (`routing.forward-to-gateway.enabled`) → NotFound. Each `RoutingHandlerWithLookup` delegates to `.next()` on no match.
-- Ingress filter chain (`IngressFilterOrder`): 90 RequestValidation · 100 SelfRequest · 110 KeycloakSystemJwt · 120 KeycloakJwt (parse Bearer) · 130 KeycloakTenant (token tenant == `x-okapi-tenant`) · 140 Tenant (enabled?) · 150 KeycloakImpersonation · 160 KeycloakAuthorization (RPT) · 170 SidecarSignature · 171 DesiredPermissions.
-- The proxy is reactive end to end (Vert.x WebClient + Mutiny); blocking code does not belong on the request path.
+- Request filters and handlers run on the Vert.x event loop and return `io.vertx.core.Future`. Wrap blocking work in `vertx.executeBlocking`, as `AsyncSecureStoreProxy` and `AsyncJsonWebTokenParser` do, because a blocking call stalls every request on that loop.
+- Classes that Jackson creates (the `model` packages) need `@RegisterForReflection`; third-party classes go in `src/main/resources/reflection-config.json`. A missing entry works in JVM tests and breaks only the native image, and CI does not build native.
+- A test class runs only when its tag and name match: `@UnitTest` with a `*Test` name, or `@IntegrationTest` with a `*IT` name. `WebClientConfigurationTest` has `@QuarkusTest` without a tag, so no build runs it.
 
-## Pitfalls
+## Gotchas
 
-- SelfRequest is not a sidecar-to-sidecar bypass. It flags a request that carries this sidecar's own signature, typically a module calling back through its own sidecar, and later filters use the flag to skip auth checks. Calls between different sidecars never match it: the signature is unique per sidecar process and is removed on egress.
-- Config: `src/main/resources/application.properties` with env-var substitution; test overrides in `src/test/resources/application.properties`. `README.md` documents most env vars; `application.properties` shows any that are missing there.
-
-## Testing conventions
-
-- Unit: JUnit 5 + Mockito, no Quarkus context; `@UnitTest`, `@ExtendWith(MockitoExtension.class)`.
-- Integration: `@IntegrationTest` (includes `@QuarkusTest`); WireMock via `@EnableWireMock`, in-memory Kafka via `InMemoryMessagingExtension`.
-- Support classes in `src/test/java/org/folio/sidecar/support/`; WireMock mappings in `src/test/resources/mappings/` (by service); JSON fixtures in `src/test/resources/json/`.
+- Routing picks the handler by path and method, not by caller. Ingress lookup runs before egress, so a module that calls one of its own endpoints through its sidecar goes through the ingress filter chain.
+- Such a call carries this sidecar's signature (`x-okapi-sidecar-signature`). `SidecarSignatureFilter` adds it to every request forwarded to the module, and it is removed on egress and from responses. The value is a hash created once per process, so only this process matches it. When `SelfRequestFilter` sees it, `KeycloakTenantFilter`, `TenantFilter`, `KeycloakImpersonationFilter`, and `KeycloakAuthorizationFilter` are skipped. `KeycloakJwtFilter` still runs: it accepts a missing token but rejects an invalid one.
+- Filter skip rules are in each filter's `shouldSkip`. System-interface requests (for example `_tenant`) skip JWT parsing, the token-tenant check, and authorization. `_timer` is also a system interface, but it still goes through all three. Empty `permissionsRequired` means no token is needed, but a token that fails to parse is still rejected. Exactly `["*"]` means a valid token is needed but Keycloak authorization is skipped.
+- `RoutingUtils.hasSystemAccessToken` only checks that an `X-System-Token` header exists. `KeycloakSystemJwtFilter` does not validate it on system-interface requests, and `DesiredPermissionsFilter` keeps the caller's `X-Okapi-Permissions` whenever the header exists.
+- `DesiredPermissionsFilter` logs and ignores errors from the permission lookup, so the request continues without the desired permissions. Only `ModUsersKeycloakTargetNotResolvedException` fails the request.
+- `ModuleEntitlementHandler` (`routing.module-entitlement.enabled`, on by default) answers `GET /entitlements/modules/{moduleId}` with the enabled tenants before ingress routing, so no ingress filter runs for it.
+- If loading the module bootstrap from mgr-applications fails after retries, `RoutingService` stops the process with exit code 1. This also applies to the re-fetch after a discovery event, not only to startup. Until routes are loaded, requests get 503.
+- A request for a tenant that is not enabled triggers a reload of tenants and entitlements, at most once per `tenant-service.reset-task.cron-definition` period (5 minutes by default). While the reload runs, requests for all tenants get 503 (`EntitlementsNotLoadedException`).
+- An exception thrown from an `@Incoming` Kafka method stops that channel for the process, because no failure strategy is configured. Each instance uses its own consumer group (`kafka.group.id` includes `quarkus.uuid`), so every instance receives every event.
+- Egress always sets `X-System-Token`. It fetches a system-user token only when `X-Okapi-Token` is missing, blank, or `"null"`; a failure fails the request unless `handler.egress.ignore-system-user-token-error=true`. A 401 from the target evicts the cached service token for the tenant, without a retry.
+- `routing.forward-to-gateway.enabled` defaults to the value of `SIDECAR_TENANT_SCOPED_ROUTING_ENABLED`, so enabling tenant-scoped routing also forwards unknown requests to the gateway unless `SIDECAR_FORWARD_UNKNOWN_REQUESTS` is set. In tenant-scoped mode, startup loads only ingress routes and `EgressBootstrapService` builds egress routes per tenant.
