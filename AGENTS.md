@@ -36,8 +36,6 @@ MODULE_URL -> EgressRequestHandler -> [filter chain] -> RequestForwardingService
 
 **Ingress filter order** (`IngressFilterOrder`): 90 RequestValidation · 100 SelfRequest · 110 KeycloakSystemJwt · 120 KeycloakJwt · 130 KeycloakTenant · 140 Tenant · 150 KeycloakImpersonation · 160 KeycloakAuthorization · 170 SidecarSignature · 171 DesiredPermissions. Read each filter's `shouldSkip` before changing the order.
 
-**Key packages**: `startup/` orchestration · `service/filter/` filters · `service/token/` egress token caching (`ServiceTokenProvider`, `SystemUserTokenProvider`) · `integration/am/` `ApplicationManagerClient` · `integration/te/` entitlement client + Kafka consumer · `integration/keycloak/` JWT/auth/impersonation/introspection (+ `filter/`) · `integration/cred/` `CredentialService` + `AsyncSecureStore` (Ephemeral/AWS-SSM/Vault/FSSP) · `integration/kafka/` consumers · `configuration/properties/` typed config · `model/` DTOs.
-
 **Stack**: Quarkus (CDI/Arc, REST, Reactive Messaging, Caffeine cache, Fault Tolerance), Vert.x WebClient (reactive proxying, `io.vertx.core.Future`), SmallRye JWT + `folio-auth-openid`, Kafka (SmallRye Reactive Messaging), Lombok.
 
 **Config**: `src/main/resources/application.properties` with env-var substitution; test overrides in `src/test/resources/application.properties`. All env vars in `README.md`.
