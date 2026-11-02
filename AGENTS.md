@@ -1,6 +1,10 @@
 # folio-module-sidecar
 
 Quarkus sidecar deployed alongside every FOLIO module as a transparent HTTP proxy. Java, Quarkus, Vert.x, Kafka (SmallRye Reactive Messaging), Keycloak JWT (SmallRye JWT).
+- **Ingress**: validate Keycloak JWT, enforce tenant authorization, forward to `MODULE_URL`.
+- **Egress**: inject service/system-user token, do discovery lookup, forward module-to-module to the target sidecar.
+- **Self-config**: fetch routing from `mgr-applications` via Module Descriptors.
+- **Tenant lifecycle**: consume Kafka `discovery`, `entitlement`, `logout` topics.
 
 ## Build & Test
 
@@ -9,13 +13,34 @@ mvn clean install              # full build
 mvn clean install -DskipTests  # skip tests
 mvn clean -Pfips install       # FIPS-compliant build
 mvn test                       # unit tests (@UnitTest)
-mvn verify                     # unit and integration tests (@IntegrationTest)
+mvn verify                     # unit and integration tests (@IntegrationTest); needs Docker
 mvn test -Dtest="TenantFilterTest#filter_positive"  # single test
+mvn verify -Dit.test=CrossTenantIT -Dtest=SkipSurefire -Dsurefire.failIfNoSpecifiedTests=false  # single IT, unit tests skipped
 mvn verify -Pcoverage          # coverage report (JaCoCo 80% instruction rule only reports, does not fail the build)
 mvn checkstyle:check           # process-classes phase; fails on warnings
 ```
 
 Dev mode needs env: `SIDECAR_URL`, `MODULE_VERSION`, `MODULE_NAME`, `MODULE_URL`, `AM_CLIENT_URL`, `TE_CLIENT_URL`, `TM_CLIENT_URL` (see `README.md`). Checkstyle enforces **max method length 23 lines** in production code (suppressed in tests).
+
+## Architecture
+
+**Startup**: `SidecarInitializer` observes the Vert.x `Router`, then initializes routing (module bootstrap from `mgr-applications`) and tenant service (tenants + entitlements via Kafka/REST).
+
+**Request flow**:
+```
+Client  -> IngressRequestHandler -> [filter chain] -> RequestForwardingService -> MODULE_URL
+MODULE_URL -> EgressRequestHandler -> [filter chain] -> RequestForwardingService -> Target Sidecar
+```
+
+**Routing** (`service/routing/`): `RoutingConfiguration` builds a `ChainedHandler` pipeline — Ingress → Egress → optional Dynamic (`routing.dynamic.enabled`) → optional Gateway (`routing.forward-to-gateway.enabled`) → NotFound. Each `RoutingHandlerWithLookup` delegates to `.next()` on no match.
+
+**Ingress filter order** (`IngressFilterOrder`): 90 RequestValidation · 100 SelfRequest · 110 KeycloakSystemJwt · 120 KeycloakJwt · 130 KeycloakTenant · 140 Tenant · 150 KeycloakImpersonation · 160 KeycloakAuthorization · 170 SidecarSignature · 171 DesiredPermissions. Read each filter's `shouldSkip` before changing the order.
+
+**Key packages**: `startup/` orchestration · `service/filter/` filters · `service/token/` egress token caching (`ServiceTokenProvider`, `SystemUserTokenProvider`) · `integration/am/` `ApplicationManagerClient` · `integration/te/` entitlement client + Kafka consumer · `integration/keycloak/` JWT/auth/impersonation/introspection (+ `filter/`) · `integration/cred/` `CredentialService` + `AsyncSecureStore` (Ephemeral/AWS-SSM/Vault/FSSP) · `integration/kafka/` consumers · `configuration/properties/` typed config · `model/` DTOs.
+
+**Stack**: Quarkus (CDI/Arc, REST, Reactive Messaging, Caffeine cache, Fault Tolerance), Vert.x WebClient (reactive proxying, `io.vertx.core.Future`), SmallRye JWT + `folio-auth-openid`, Kafka (SmallRye Reactive Messaging), Lombok.
+
+**Config**: `src/main/resources/application.properties` with env-var substitution; test overrides in `src/test/resources/application.properties`. All env vars in `README.md`.
 
 ## Testing Conventions
 
