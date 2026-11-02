@@ -1,6 +1,6 @@
 # folio-module-sidecar
 
-Quarkus sidecar deployed alongside every FOLIO module as a transparent HTTP proxy.
+Quarkus sidecar deployed alongside every FOLIO module as a transparent HTTP proxy. Java, Quarkus, Vert.x, Kafka (SmallRye Reactive Messaging), Keycloak JWT (SmallRye JWT).
 
 ## Build & Test
 
