@@ -46,4 +46,3 @@ MODULE_URL -> EgressRequestHandler -> [filter chain] -> RequestForwardingService
 - **Integration**: `@IntegrationTest` (includes `@QuarkusTest`); WireMock via `@EnableWireMock`; in-memory Kafka only where the test sets it up (`InMemoryMessagingExtension` or `InMemoryMessagingTestProfile`); other ITs start Kafka through Quarkus Dev Services, so integration tests need Docker.
 - Naming: `methodName_positive/negative_description`.
 - Never use lenient Mockito; verify only unmocked interactions; prefer helper methods over blanket `@BeforeEach` stubbing.
-- Full unit-testing guide: https://github.com/folio-org/folio-eureka-ai-dev/blob/master/docs/testing/unit-testing.md
