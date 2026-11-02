@@ -19,7 +19,7 @@ Dev mode needs env: `SIDECAR_URL`, `MODULE_VERSION`, `MODULE_NAME`, `MODULE_URL`
 
 ## Testing Conventions
 
-- **Unit**: JUnit 5 + Mockito, no Quarkus context; `@UnitTest`, `@ExtendWith(MockitoExtension.class)`.
+- **Unit**: JUnit + Mockito, no Quarkus context; `@UnitTest`, `@ExtendWith(MockitoExtension.class)`.
 - **Integration**: `@IntegrationTest` (includes `@QuarkusTest`); WireMock via `@EnableWireMock`; in-memory Kafka only where the test sets it up (`InMemoryMessagingExtension` or `InMemoryMessagingTestProfile`); other ITs start Kafka through Quarkus Dev Services, so integration tests need Docker.
 - Naming: `methodName_positive/negative_description`.
 - Never use lenient Mockito; verify only unmocked interactions; prefer helper methods over blanket `@BeforeEach` stubbing.
