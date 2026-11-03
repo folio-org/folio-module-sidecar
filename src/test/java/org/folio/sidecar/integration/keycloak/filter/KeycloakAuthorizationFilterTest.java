@@ -9,6 +9,7 @@ import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT;
 import static org.folio.sidecar.integration.kafka.LogoutEvent.Type.LOGOUT_ALL;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.SYSTEM_TOKEN;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TENANT;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
@@ -107,16 +108,20 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   @Test
   void authorize_positive_userToken() {
     prepareUserTokenMocks(false);
-    prepareUserRptMocks(SC_OK, succeededFuture(userTokenRptResponse));
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, "parent/mod-rtac"))
+      .thenReturn(succeededFuture(userTokenRptResponse));
+    when(userTokenRptResponse.statusCode()).thenReturn(SC_OK);
+    when(userToken.getRawToken()).thenReturn(AUTH_TOKEN);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
+    when(routingContext.request().getHeader(REQUEST_ID)).thenReturn("parent/mod-rtac");
     var result = keycloakAuthorizationFilter.applyFilter(routingContext);
 
     assertThat(result.succeeded()).isTrue();
     assertThat(result.result()).isEqualTo(routingContext);
 
     verify(authTokenCache).put(userTokenCacheKey(), userToken);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, "parent/mod-rtac");
   }
 
   @Test
@@ -151,7 +156,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.result()).isEqualTo(routingContext);
 
     verify(authTokenCache).put(systemTokenCacheKey(), systemToken);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
   }
 
   @Test
@@ -186,7 +191,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(filter.applyFilter(initialRc).succeeded()).isTrue();
     assertThat(filter.applyFilter(cachedRc).succeeded()).isTrue();
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
   }
 
   @Test
@@ -202,7 +207,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(filter.applyFilter(initialRc).succeeded()).isTrue();
     assertThat(filter.applyFilter(cachedRc).succeeded()).isTrue();
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
   }
 
   @Test
@@ -221,8 +226,8 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause()).isInstanceOf(ForbiddenException.class);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_CLIENT_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_CLIENT_TOKEN, null);
   }
 
   @Test
@@ -241,8 +246,8 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
     assertThat(result.succeeded()).isFalse();
     assertThat(result.cause()).isInstanceOf(UnauthorizedException.class);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_REALM_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, OTHER_REALM_TOKEN, null);
   }
 
   @Test
@@ -261,7 +266,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
 
     assertThat(result.succeeded()).isTrue();
     verify(authTokenCache).put(expirationKey, systemToken);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
   }
 
   @Test
@@ -277,7 +282,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.result()).isEqualTo(routingContext);
 
     verify(authTokenCache).put(systemTokenCacheKey(), systemToken);
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
   }
 
   @Test
@@ -293,7 +298,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(ForbiddenException.class)
       .hasMessage("Access Denied");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -301,7 +306,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   void authorize_negative_rptRequestFailedForUserToken() {
     prepareUserTokenMocks(false);
     var failedResponse = Future.<HttpResponse<Buffer>>failedFuture(new ServiceUnavailableException("Unavailable"));
-    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN)).thenReturn(failedResponse);
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null)).thenReturn(failedResponse);
     when(userToken.getRawToken()).thenReturn(AUTH_TOKEN);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, userToken, null));
@@ -312,7 +317,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(ForbiddenException.class)
       .hasMessage("Failed to authorize request");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -329,7 +334,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(UnauthorizedException.class)
       .hasMessage("Unauthorized");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -351,7 +356,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(UnauthorizedException.class)
       .hasMessage("Unauthorized");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -369,7 +374,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(UnauthorizedException.class)
       .hasMessage("Unauthorized");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -398,7 +403,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Authorization service error");
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(SC_BAD_REQUEST);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -415,7 +420,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
     assertThat(result.cause()).isInstanceOf(KeycloakUnhandledAuthorizationException.class);
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -434,7 +439,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Authorization service error");
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -453,7 +458,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Authorization service error");
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(400);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -472,7 +477,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Authorization service error");
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -491,7 +496,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .hasMessage("Authorization service error");
     assertThat(((KeycloakUnhandledAuthorizationException) result.cause()).getStatusCode()).isEqualTo(500);
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -499,7 +504,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   void authorize_negative_rptRequestFailedForSystemToken() {
     prepareSystemTokenMocks(false);
     var failedResponse = Future.<HttpResponse<Buffer>>failedFuture(new ServiceUnavailableException("Unavailable"));
-    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN)).thenReturn(failedResponse);
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null)).thenReturn(failedResponse);
     when(systemToken.getRawToken()).thenReturn(SYS_TOKEN);
 
     var routingContext = routingContext(scRoutingEntry(), rc -> prepareRoutingContextMocks(rc, null, systemToken));
@@ -510,7 +515,7 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
       .isInstanceOf(ForbiddenException.class)
       .hasMessage("Failed to authorize request");
 
-    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN);
+    verify(keycloakClient).evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null);
     verify(authTokenCache, never()).put(anyString(), any());
   }
 
@@ -639,19 +644,19 @@ class KeycloakAuthorizationFilterTest extends AbstractFilterTest {
   }
 
   private void prepareUserRptMocks(int rptResponseStatus, Future<HttpResponse<Buffer>> rptFuture) {
-    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN)).thenReturn(rptFuture);
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, AUTH_TOKEN, null)).thenReturn(rptFuture);
     when(userTokenRptResponse.statusCode()).thenReturn(rptResponseStatus);
     when(userToken.getRawToken()).thenReturn(AUTH_TOKEN);
   }
 
   private void prepareSystemRptMocks(int rptResponseStatus, Future<HttpResponse<Buffer>> rptFuture) {
-    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN)).thenReturn(rptFuture);
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, SYS_TOKEN, null)).thenReturn(rptFuture);
     when(systemTokenRptResponse.statusCode()).thenReturn(rptResponseStatus);
     when(systemToken.getRawToken()).thenReturn(SYS_TOKEN);
   }
 
   private void prepareRptResponse(String rawToken, HttpResponse<Buffer> rptResponse, int rptResponseStatus) {
-    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, rawToken))
+    when(keycloakClient.evaluatePermissions(TENANT_NAME, KC_PERMISSION, rawToken, null))
       .thenReturn(succeededFuture(rptResponse));
     when(rptResponse.statusCode()).thenReturn(rptResponseStatus);
   }

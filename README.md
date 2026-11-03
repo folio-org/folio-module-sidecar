@@ -511,3 +511,54 @@ This is intended for use by modules that consume Kafka events and need to filter
 The endpoint sits **before** the ingress filter chain and therefore requires no JWT token or `x-okapi-tenant` header. It can be called freely from within the same pod.
 
 This feature can be disabled via the `ROUTING_MODULE_ENTITLEMENT_ENABLED` environment variable (default: `true`). When disabled, the handler is not added to the routing chain at all.
+
+### Outgoing HTTP diagnostics
+
+Set `SC_OUTBOUND_LOG_LEVEL=DEBUG` to enable the dedicated `org.folio.sidecar.outbound`
+logger without enabling general sidecar debug output. The default is `INFO` (diagnostic
+records are off). This is verbose per-attempt logging; enable it for a diagnostic run.
+
+Each record includes `call_id`, `operation`, `method`, `target`, `tenant`, `parent_id`,
+`phase`, cumulative `elapsed_ms`, `status`, and `error_type`. Durations use a monotonic
+clock. HTTP status `0` means no response headers have been received. Query strings,
+URL user-info, fragments, headers, request/response bodies, and exception messages
+are omitted. Paths and tenant/request identifiers remain visible.
+
+Forwarding emits `start`, `request-acquired`, `forwarded` (with `outbound_id`),
+`response-headers`, and `complete`. The generated ID is the same value sent in
+`x-okapi-request-id`; it links the parent to downstream module logs. When an inbound
+request has no request ID, a stable request-local
+`local-<UUID>` parent links its authorization and forwarding records without changing
+HTTP headers. Each retry gets its own `call_id`. `request-acquired` includes pool acquisition/connection setup, not
+just TCP connect time. Header timing also includes request upload. Completion includes
+streaming the response, including backpressure, through queueing `end()` to the
+caller; it does not prove the caller received the last bytes. `forwarded` records ID
+assignment before bytes are sent. These durations are not pure server execution time. Errors after response headers retain the HTTP status and add an error type.
+
+Keycloak operations identify authorization, token acquisition, refresh, impersonation,
+and introspection separately. Authorization calls include the parent request ID.
+Direct token calls with a routing context also propagate the parent ID. Shared
+service/system-user token cache loads and startup calls have no single request owner:
+their HTTP records use `parent_id=-`. Per-request `token-cache.service-token` and
+`token-cache.system-user-token` records show each parent's wait for the shared cache
+future (not an HTTP call or a cache-hit counter). Join shared loads by operation,
+tenant and time; there is no exact parent-to-load ID join. Context is not propagated
+into other context-free token calls. WebClient completion includes buffering the response body; it does not
+have the proxy's acquisition/header milestones. Cache hits do not make an HTTP call
+and therefore emit no Keycloak outbound record. Absence of a record alone does not
+prove a cache hit.
+
+For CloudWatch Logs Insights:
+
+```text
+fields @timestamp, @message, @logStream
+| filter @message like /outbound / and @message like /parent_id=YOUR_REQUEST_ID/
+| sort @timestamp asc
+```
+
+Follow `call_id` to join start and completion; follow the forwarding ID to the next
+module. This avoids using the access log's historical `uct` field to infer stage time.
+
+A missing forwarding `complete` record can mean the caller disconnected while the
+upstream stream was paused. The existing proxy does not guarantee settling its result
+in that case; these diagnostics do not change disconnect handling.

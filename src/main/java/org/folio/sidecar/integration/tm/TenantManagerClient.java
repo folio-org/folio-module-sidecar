@@ -4,6 +4,7 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.lang.String.format;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
+import static org.folio.sidecar.utils.OutboundRequestLog.trace;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -48,12 +49,13 @@ public class TenantManagerClient {
 
     var result = partition(tenantIds.size(), batchSize)
       .mapToObj(seq ->
-        webClient.getAbs(clientProperties.getUrl() + "/tenants")
+        trace("tenant-manager", "GET", clientProperties.getUrl() + "/tenants", null, null,
+          () -> webClient.getAbs(clientProperties.getUrl() + "/tenants")
           .addQueryParam("query", format("id == %s", getTenantsQuery(tenantIds, batchSize, seq)))
           .addQueryParam("limit", Integer.toString(batchSize))
           .putHeader(CONTENT_TYPE, APPLICATION_JSON)
           .putHeader(TOKEN, token)
-          .send()
+          .send())
           .map(response -> jsonConverter.parseResponse(response, TenantList.class))
           .map(tenants -> ResultList.of(tenants.getTotalRecords(), tenants.getTenants()))
       )

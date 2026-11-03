@@ -3,6 +3,7 @@ package org.folio.sidecar.integration.am;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
+import static org.folio.sidecar.utils.OutboundRequestLog.trace;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -59,10 +60,11 @@ public class ApplicationManagerClient {
     log.info("Loading egress bootstrap: moduleId = {}, applicationIds = {}", moduleId, applicationIds);
 
     var body = new JsonObject().put("applicationIds", new JsonArray(applicationIds));
-    return webClient.postAbs(moduleUrl(moduleId) + "/bootstrap")
+    return trace("application-manager", "POST", moduleUrl(moduleId) + "/bootstrap", null, null,
+      () -> webClient.postAbs(moduleUrl(moduleId) + "/bootstrap")
       .putHeader(CONTENT_TYPE, APPLICATION_JSON)
       .putHeader(TOKEN, token)
-      .sendJsonObject(body)
+      .sendJsonObject(body))
       .map(response -> jsonConverter.parseResponse(response, ModuleBootstrap.class))
       .onFailure(error -> log.warn("Failed to retrieve egress bootstrap: {}", error.getMessage()));
   }
@@ -81,9 +83,9 @@ public class ApplicationManagerClient {
   }
 
   private Future<HttpResponse<Buffer>> doGet(String url, String token) {
-    return webClient.getAbs(url)
+    return trace("application-manager", "GET", url, null, null, () -> webClient.getAbs(url)
       .putHeader(CONTENT_TYPE, APPLICATION_JSON)
       .putHeader(TOKEN, token)
-      .send();
+      .send());
   }
 }

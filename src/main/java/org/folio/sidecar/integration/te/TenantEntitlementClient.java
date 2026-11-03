@@ -4,6 +4,7 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.sidecar.integration.okapi.OkapiHeaders.TOKEN;
+import static org.folio.sidecar.utils.OutboundRequestLog.trace;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -98,6 +99,6 @@ public class TenantEntitlementClient {
       .putHeader(CONTENT_TYPE, APPLICATION_JSON)
       .putHeader(TOKEN, token);
 
-    return customizer.apply(request).send();
+    return trace("tenant-entitlements", "GET", url, null, null, () -> customizer.apply(request).send());
   }
 }

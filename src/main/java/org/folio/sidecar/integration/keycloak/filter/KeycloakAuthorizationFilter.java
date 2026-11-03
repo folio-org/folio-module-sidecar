@@ -42,6 +42,7 @@ import org.folio.sidecar.integration.kafka.LogoutEvent;
 import org.folio.sidecar.integration.keycloak.KeycloakClient;
 import org.folio.sidecar.service.CacheInvalidatable;
 import org.folio.sidecar.service.filter.IngressRequestFilter;
+import org.folio.sidecar.utils.OutboundRequestLog;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -144,7 +145,8 @@ public class KeycloakAuthorizationFilter implements IngressRequestFilter, CacheI
 
     log.debug("\n********** Token Claims **********\n{}", () -> dumpTokenClaims(jwt));
 
-    return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken())
+    return keycloakClient.evaluatePermissions(tenant, permission, jwt.getRawToken(),
+      OutboundRequestLog.parentId(rc))
       .flatMap(httpResponse -> processAuthorizationResponse(jwt, rc, httpResponse))
       .otherwise(KeycloakAuthorizationFilter::handleAuthorizationError);
   }

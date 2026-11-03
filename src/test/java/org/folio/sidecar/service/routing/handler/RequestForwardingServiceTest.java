@@ -39,6 +39,7 @@ import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
+import org.folio.sidecar.support.OutboundLogCapture;
 import org.folio.sidecar.support.TestConstants;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -91,77 +92,83 @@ class RequestForwardingServiceTest {
 
   @Test
   void forward_positive() {
-    var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
-    var encoder = new QueryStringEncoder(PATH);
-    routingContext.request().params().forEach(encoder::addParam);
+    try (var capture = new OutboundLogCapture()) {
+      var routingContext = routingContext(RequestForwardingServiceTest::withHttpResponse);
+      var encoder = new QueryStringEncoder(PATH);
+      routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(argThat(options ->
-      "sc-foo".equals(options.getHost())
-        && 8081 == options.getPort()
-        && encoder.toString().equals(options.getURI())
-        && POST == options.getMethod())))
-      .thenReturn(Future.succeededFuture(httpClientRequest));
-    prepareHttpRequestMocks(routingContext, httpClientRequest);
-    prepareHttpResponseMocks(routingContext, httpClientResponse);
+      when(httpClient.request(argThat(options ->
+        "sc-foo".equals(options.getHost())
+          && 8081 == options.getPort()
+          && encoder.toString().equals(options.getURI())
+          && POST == options.getMethod())))
+        .thenReturn(Future.succeededFuture(httpClientRequest));
+      prepareHttpRequestMocks(routingContext, httpClientRequest);
+      prepareHttpResponseMocks(routingContext, httpClientResponse);
 
-    var response = routingContext.response();
-    when(response.headers()).thenReturn(headersResponse);
-    when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
+      var response = routingContext.response();
+      when(response.headers()).thenReturn(headersResponse);
+      when(headersResponse.addAll(responseHeadersMapCaptor.capture())).thenReturn(headersResponse);
 
-    service.forwardIngress(routingContext, absoluteUrl);
+      service.forwardIngress(routingContext, absoluteUrl);
 
-    var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
-    assertThat(capturedRequestHeaders).hasSize(3);
-    assertThat(capturedRequestHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
-    assertThat(capturedRequestHeaders.get(OkapiHeaders.TENANT)).isEqualTo(TestConstants.TENANT_ID);
-    assertThat(capturedRequestHeaders.get(OkapiHeaders.TOKEN)).isEqualTo(TestConstants.AUTH_TOKEN);
-    assertThat(capturedRequestHeaders.contains(USER_AGENT)).isFalse();
+      var capturedRequestHeaders = requestHeadersMapCaptor.getValue();
+      assertThat(capturedRequestHeaders).hasSize(3);
+      assertThat(capturedRequestHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
+      assertThat(capturedRequestHeaders.get(OkapiHeaders.TENANT)).isEqualTo(TestConstants.TENANT_ID);
+      assertThat(capturedRequestHeaders.get(OkapiHeaders.TOKEN)).isEqualTo(TestConstants.AUTH_TOKEN);
+      assertThat(capturedRequestHeaders.contains(USER_AGENT)).isFalse();
 
-    var responseHeaders = responseHeadersMapCaptor.getValue();
-    assertThat(responseHeaders).hasSize(2);
-    assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
-    assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
-    assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
+      var responseHeaders = responseHeadersMapCaptor.getValue();
+      assertThat(responseHeaders).hasSize(2);
+      assertThat(responseHeaders.get("tst-header")).isEqualTo("tst-value");
+      assertThat(responseHeaders.get(CONTENT_TYPE)).isEqualTo(APPLICATION_JSON);
+      assertThat(responseHeaders.get(TestConstants.SIDECAR_SIGNATURE_HEADER)).isNull();
 
-    assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
+      assertThat(requestIdCaptor.getValue()).isNotEmpty().matches("\\d{6}/foo");
 
-    verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
+      verify(sidecarSignatureService).removeSignature(any(HttpServerResponse.class));
 
-    // Trigger the captured handler manually
-    requestDrainHandlerCaptor.getValue().handle(null);
-    // Verify that resume() was called on httpServerRequest
-    // (called twice: once after handler setup, once in drain handler)
-    verify(routingContext.request(), times(2)).resume();
+      // Trigger the captured handler manually
+      requestDrainHandlerCaptor.getValue().handle(null);
+      // Verify that resume() was called on httpServerRequest
+      // (called twice: once after handler setup, once in drain handler)
+      verify(routingContext.request(), times(2)).resume();
 
-    // Simulate receiving a buffer
-    requestHandlerCaptor.getValue().handle(buffer);
-    // Verify httpServerRequest.pause() is called
-    // (called twice: once at start, once when write queue is full)
-    verify(routingContext.request(), times(2)).pause();
-    // Verify that the buffer is still written to httpClientRequest
-    verify(httpClientRequest).write(buffer);
+      // Simulate receiving a buffer
+      requestHandlerCaptor.getValue().handle(buffer);
+      // Verify httpServerRequest.pause() is called
+      // (called twice: once at start, once when write queue is full)
+      verify(routingContext.request(), times(2)).pause();
+      // Verify that the buffer is still written to httpClientRequest
+      verify(httpClientRequest).write(buffer);
 
-    // Trigger the captured handler manually
-    requestEndHandlerCaptor.getValue().handle(null);
-    // Verify that end() was called on httpClientRequest
-    verify(httpClientRequest).end();
+      // Trigger the captured handler manually
+      requestEndHandlerCaptor.getValue().handle(null);
+      // Verify that end() was called on httpClientRequest
+      verify(httpClientRequest).end();
 
-    // Trigger the captured handler manually
-    responseDrainHandlerCaptor.getValue().handle(null);
-    // Verify that resume() was called on httpServerRequest
-    verify(httpClientResponse).resume();
+      // Trigger the captured handler manually
+      responseDrainHandlerCaptor.getValue().handle(null);
+      // Verify that resume() was called on httpServerRequest
+      verify(httpClientResponse).resume();
 
-    // Simulate receiving a buffer
-    responseHandlerCaptor.getValue().handle(buffer);
-    // Verify httpServerRequest.pause() is called
-    verify(httpClientResponse).pause();
-    // Verify that the buffer is still written to httpClientRequest
-    verify(routingContext.response()).write(buffer);
+      // Simulate receiving a buffer
+      responseHandlerCaptor.getValue().handle(buffer);
+      // Verify httpServerRequest.pause() is called
+      verify(httpClientResponse).pause();
+      // Verify that the buffer is still written to httpClientRequest
+      verify(routingContext.response()).write(buffer);
 
-    // Trigger the captured handler manually
-    responseEndHandlerCaptor.getValue().handle(null);
-    // Verify that end() was called on httpClientRequest
-    verify(routingContext.response()).end();
+      // Trigger the captured handler manually
+      responseEndHandlerCaptor.getValue().handle(null);
+      // Verify that end() was called on httpClientRequest
+      verify(routingContext.response()).end();
+      assertThat(capture.messages().stream().map(message ->
+        message.replaceFirst(".* phase=([^ ]+).*", "$1")))
+        .containsExactly("start", "request-acquired", "forwarded", "response-headers", "complete");
+      assertThat(capture.messages().get(2)).contains("outbound_id=" + requestIdCaptor.getValue());
+    }
   }
 
   @CsvSource({
@@ -431,56 +438,62 @@ class RequestForwardingServiceTest {
 
   @Test
   void forward_negative_responseError() {
-    var routingContext = routingContext(rc -> {});
-    var error = new RuntimeException("Unknown error");
+    try (var capture = new OutboundLogCapture()) {
+      var routingContext = routingContext(rc -> {});
+      var error = new java.util.concurrent.TimeoutException("Unknown error");
 
-    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
-    routingContext.request().params().forEach(encoder::addParam);
+      QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+      routingContext.request().params().forEach(encoder::addParam);
 
-    when(httpClient.request(argThat(options ->
-      "sc-foo".equals(options.getHost())
-        && 8081 == options.getPort()
-        && encoder.toString().equals(options.getURI())
-        && POST == options.getMethod())))
-      .thenReturn(succeededFuture(httpClientRequest));
-    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
-    when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
-    when(httpClientRequest.headers()).thenReturn(headers);
-    when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
-    when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
-    when(httpClientRequest.response()).thenReturn(failedFuture(error));
+      when(httpClient.request(argThat(options ->
+        "sc-foo".equals(options.getHost())
+          && 8081 == options.getPort()
+          && encoder.toString().equals(options.getURI())
+          && POST == options.getMethod())))
+        .thenReturn(succeededFuture(httpClientRequest));
+      when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
+      when(httpProperties.getTimeout()).thenReturn(TIMEOUT);
+      when(httpClientRequest.headers()).thenReturn(headers);
+      when(headers.setAll(requestHeadersMapCaptor.capture())).thenReturn(headers);
+      when(headers.set(eq(OkapiHeaders.REQUEST_ID), requestIdCaptor.capture())).thenReturn(headers);
+      when(httpClientRequest.response()).thenReturn(failedFuture(error));
 
-    var result = service.forwardIngress(routingContext, absoluteUrl);
+      var result = service.forwardIngress(routingContext, absoluteUrl);
 
-    assertThat(result.failed()).isTrue();
-    assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
-    assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request because of response error:"
-      + " Unknown error");
+      assertThat(result.failed()).isTrue();
+      assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
+      assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request because of response error:"
+        + " Unknown error");
+      assertThat(capture.messages().getLast()).contains("phase=complete", "error_type=TimeoutException");
+    }
   }
 
   @Test
   void forward_negative_requestError() {
-    var routingContext = mock(RoutingContext.class);
-    var request = mock(HttpServerRequest.class);
-    var error = new RuntimeException("Unknown error");
-    QueryStringEncoder encoder = new QueryStringEncoder(PATH);
+    try (var capture = new OutboundLogCapture()) {
+      var routingContext = mock(RoutingContext.class);
+      var request = mock(HttpServerRequest.class);
+      var error = new java.net.ConnectException("Unknown error");
+      QueryStringEncoder encoder = new QueryStringEncoder(PATH);
 
-    when(httpClient.request(argThat(options ->
-      "sc-foo".equals(options.getHost())
-        && 8081 == options.getPort()
-        && encoder.toString().equals(options.getURI())
-        && POST == options.getMethod())))
-      .thenReturn(failedFuture(error));
-    when(routingContext.request()).thenReturn(request);
-    when(request.method()).thenReturn(POST);
-    when(request.params()).thenReturn(requestParams());
+      when(httpClient.request(argThat(options ->
+        "sc-foo".equals(options.getHost())
+          && 8081 == options.getPort()
+          && encoder.toString().equals(options.getURI())
+          && POST == options.getMethod())))
+        .thenReturn(failedFuture(error));
+      when(routingContext.request()).thenReturn(request);
+      when(request.method()).thenReturn(POST);
+      when(request.params()).thenReturn(requestParams());
 
-    routingContext.request().params().forEach(encoder::addParam);
-    var result = service.forwardIngress(routingContext, absoluteUrl);
+      routingContext.request().params().forEach(encoder::addParam);
+      var result = service.forwardIngress(routingContext, absoluteUrl);
 
-    assertThat(result.failed()).isTrue();
-    assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
-    assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request: Unknown error");
+      assertThat(result.failed()).isTrue();
+      assertThat(result.cause()).isInstanceOf(InternalServerErrorException.class);
+      assertThat(result.cause().getMessage()).isEqualTo("Failed to proxy request: Unknown error");
+      assertThat(capture.messages().getLast()).contains("phase=complete", "error_type=ConnectException");
+    }
   }
 
   @CsvSource({

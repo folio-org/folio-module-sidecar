@@ -7,6 +7,7 @@ import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.sidecar.integration.cred.model.ClientCredentials.of;
+import static org.folio.sidecar.integration.okapi.OkapiHeaders.REQUEST_ID;
 import static org.folio.sidecar.support.TestConstants.AUTH_TOKEN;
 import static org.folio.sidecar.support.TestConstants.LOGIN_CLIENT_CREDENTIALS;
 import static org.folio.sidecar.support.TestConstants.TENANT_NAME;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.when;
 
 import io.quarkus.security.UnauthorizedException;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpResponse;
 import jakarta.ws.rs.ServerErrorException;
@@ -105,37 +107,49 @@ class KeycloakServiceTest {
 
     when(httpResponse.bodyAsJson(TokenResponse.class)).thenReturn(TOKEN_RESPONSE);
     when(httpResponse.statusCode()).thenReturn(SC_OK);
-    when(keycloakClient.obtainToken(any(), any())).thenReturn(succeededFuture(httpResponse));
+    when(keycloakClient.obtainToken(any(), any(), eq("parent/mod-inventory")))
+      .thenReturn(succeededFuture(httpResponse));
 
+    var request = org.mockito.Mockito.mock(HttpServerRequest.class);
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(REQUEST_ID)).thenReturn("parent/mod-inventory");
     var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
 
     assertThat(future.succeeded()).isTrue();
     assertThat(future.result()).isEqualTo(TOKEN_RESPONSE);
-    verify(keycloakClient).obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
+    verify(keycloakClient).obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, "parent/mod-inventory");
     verifyNoInteractions(errorHandler);
   }
 
   @Test
   void obtainToken_negative_failed_kcRequest() {
-    when(keycloakClient.obtainToken(any(), any())).thenReturn(
+    when(keycloakClient.obtainToken(any(), any(), eq("parent/mod-inventory"))).thenReturn(
       failedFuture(new ServerErrorException(SC_SERVICE_UNAVAILABLE)));
 
+    var request = org.mockito.Mockito.mock(HttpServerRequest.class);
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(REQUEST_ID)).thenReturn("parent/mod-inventory");
     var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
 
     assertTrue(future.failed());
-    verify(keycloakClient).obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS);
+    verify(keycloakClient).obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, "parent/mod-inventory");
     verify(errorHandler).sendErrorResponse(eq(rc), any(WebApplicationException.class));
   }
 
   @Test
   void obtainToken_negative_unauthorized() {
     when(httpResponse.statusCode()).thenReturn(SC_UNAUTHORIZED);
-    when(keycloakClient.obtainToken(any(), any())).thenReturn(succeededFuture(httpResponse));
+    when(keycloakClient.obtainToken(any(), any(), eq("parent/mod-inventory")))
+      .thenReturn(succeededFuture(httpResponse));
 
+    var request = org.mockito.Mockito.mock(HttpServerRequest.class);
+    when(rc.request()).thenReturn(request);
+    when(request.getHeader(REQUEST_ID)).thenReturn("parent/mod-inventory");
     var future = service.obtainToken(TENANT_NAME, SERVICE_CLIENT_CREDENTIALS, rc);
 
     assertTrue(future.failed());
-    verify(keycloakClient).obtainToken(TENANT_NAME, of(SERVICE_CLIENT_ID, SERVICE_CLIENT_SECRET));
+    verify(keycloakClient).obtainToken(TENANT_NAME, of(SERVICE_CLIENT_ID, SERVICE_CLIENT_SECRET),
+      "parent/mod-inventory");
     verify(errorHandler).sendErrorResponse(eq(rc), any(UnauthorizedException.class));
   }
 }

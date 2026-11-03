@@ -24,6 +24,7 @@ import org.folio.sidecar.exception.ModUsersKeycloakTargetNotResolvedException;
 import org.folio.sidecar.integration.users.model.User;
 import org.folio.sidecar.service.routing.lookup.TenantModuleResolver;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
+import org.folio.sidecar.utils.OutboundRequestLog;
 
 @Log4j2
 @ApplicationScoped
@@ -51,7 +52,7 @@ public class UserService {
       return succeededFuture(userTenant);
     }
     return serviceTokenProvider.getToken(rc)
-      .flatMap(serviceToken -> findUserById(targetTenant, userId, serviceToken))
+      .flatMap(serviceToken -> findUserById(targetTenant, userId, serviceToken, rc))
       .onSuccess(user -> {
         log.debug("User tenants found: user = {}, targetTenant = {}", userId, targetTenant);
         userCache.put(cacheKey, user);
@@ -69,23 +70,27 @@ public class UserService {
     log.debug("Finding user permissions: userId = {}, tenant = {}, permissions = {}", userId, tenant, permissions);
 
     return serviceTokenProvider.getToken(rc)
-      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken));
+      .flatMap(serviceToken -> findPermissionsByQuery(userId, tenant, queryParams, serviceToken, rc));
   }
 
   private Future<List<String>> findPermissionsByQuery(String userId, String tenant,
-    String queryParams, String token) {
-    return sendToTarget(tenant, url -> webClient.getAbs(buildUserPermissionsPath(url, userId) + "?" + queryParams)
+    String queryParams, String token, RoutingContext rc) {
+    return sendToTarget(tenant, url -> OutboundRequestLog.trace("users.permissions", "GET",
+      buildUserPermissionsPath(url, userId), tenant, OutboundRequestLog.parentId(rc),
+      () -> webClient.getAbs(buildUserPermissionsPath(url, userId) + "?" + queryParams)
       .putHeader(TENANT, tenant)
       .putHeader(TOKEN, token)
-      .send())
+      .send()))
       .flatMap(this::processResponsePermissions);
   }
 
-  private Future<User> findUserById(String targetTenant, String userId, String serviceToken) {
-    return sendToTarget(targetTenant, url -> webClient.getAbs(buildUsersUrl(url, userId))
+  private Future<User> findUserById(String targetTenant, String userId, String serviceToken, RoutingContext rc) {
+    return sendToTarget(targetTenant, url -> OutboundRequestLog.trace("users.lookup", "GET",
+      buildUsersUrl(url, userId), targetTenant, OutboundRequestLog.parentId(rc),
+      () -> webClient.getAbs(buildUsersUrl(url, userId))
       .putHeader(TENANT, targetTenant)
       .putHeader(TOKEN, serviceToken)
-      .send())
+      .send()))
       .flatMap(this::processResponse);
   }
 

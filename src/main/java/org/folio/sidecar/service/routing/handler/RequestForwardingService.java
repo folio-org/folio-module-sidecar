@@ -31,6 +31,7 @@ import org.folio.sidecar.configuration.properties.HttpProperties;
 import org.folio.sidecar.configuration.properties.WebClientConfig;
 import org.folio.sidecar.service.SidecarSignatureService;
 import org.folio.sidecar.service.TransactionLogHandler;
+import org.folio.sidecar.utils.OutboundRequestLog;
 
 @Log4j2
 @ApplicationScoped
@@ -65,7 +66,7 @@ public class RequestForwardingService {
    */
   @SneakyThrows
   public Future<Void> forwardIngress(RoutingContext rc, String absUri) {
-    return forwardRequest(rc, absUri, httpClient);
+    return forwardRequest(rc, absUri, httpClient, "forward.module");
   }
 
   /**
@@ -79,7 +80,7 @@ public class RequestForwardingService {
     if (webClientConfig.egress().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    return forwardRequest(rc, absUri, httpClientEgress);
+    return forwardRequest(rc, absUri, httpClientEgress, "forward.egress");
   }
 
   /**
@@ -93,14 +94,17 @@ public class RequestForwardingService {
     if (webClientConfig.gateway().tls().enabled()) {
       absUri = toHttpsUri(absUri);
     }
-    return forwardRequest(rc, absUri, httpClientGateway);
+    return forwardRequest(rc, absUri, httpClientGateway, "forward.gateway");
   }
 
   @SuppressWarnings("checkstyle:MethodLength")
-  private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient) {
+  private Future<Void> forwardRequest(RoutingContext rc, String absUri, HttpClient httpClient, String operation) {
     final var result = Promise.<Void>promise();
     HttpServerRequest httpServerRequest = rc.request();
     URI httpUri = URI.create(absUri);
+    var trace = OutboundRequestLog.start(operation, httpServerRequest.method().name(), absUri,
+      httpServerRequest.getHeader("x-okapi-tenant"), OutboundRequestLog.parentId(rc));
+    result.future().onComplete(ar -> trace.event("complete", 0, ar.cause()));
 
     // Pause the request stream immediately to prevent data loss
     // This ensures no request body chunks arrive before handlers are ready
@@ -117,9 +121,12 @@ public class RequestForwardingService {
     Set<HttpMethod> nonBodyMethods = Set.of(HttpMethod.GET, HttpMethod.HEAD);
 
     request.onSuccess(httpClientRequest -> {
+      trace.event("request-acquired", 0, null);
 
       httpClientRequest.headers().setAll(filterHeaders(httpServerRequest));
-      httpClientRequest.headers().set(REQUEST_ID, getRequestId(rc));
+      var outboundId = getRequestId(rc);
+      httpClientRequest.headers().set(REQUEST_ID, outboundId);
+      trace.forwarded(outboundId);
 
       // Set the maximum write queue size to prevent memory overflow
       httpClientRequest.setWriteQueueMaxSize(128 * 1024); // 128 KB buffer
@@ -161,6 +168,7 @@ public class RequestForwardingService {
       httpClientRequest.response()
         .timeout(httpProperties.getTimeout(), TimeUnit.MILLISECONDS)
         .onSuccess(response -> {
+          trace.event("response-headers", response.statusCode(), null);
           log.trace("Handle the HTTP client response by streaming the output back to the server");
           handleSuccessfulResponse(rc, response, result, httpClientRequest);
         }).onFailure(error -> {

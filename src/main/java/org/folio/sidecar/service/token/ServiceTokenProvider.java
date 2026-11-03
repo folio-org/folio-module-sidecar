@@ -25,6 +25,7 @@ import org.folio.sidecar.integration.cred.CredentialService;
 import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.model.EntitlementsEvent;
+import org.folio.sidecar.utils.OutboundRequestLog;
 import org.folio.sidecar.utils.RoutingUtils;
 
 @Log4j2
@@ -80,7 +81,10 @@ public class ServiceTokenProvider {
     log.debug("Getting service token [method: {}, path: {}, requestId: {}, tenant: {}]",
       rq::method, dumpUri(rc), () -> requestId, () -> tenant);
 
-    return Future.fromCompletionStage(tokenCache.get(tenant)).map(TokenResponse::getAccessToken);
+    var trace = OutboundRequestLog.start("token-cache.service-token", "GET", "cache://service-token/" + tenant,
+      tenant, OutboundRequestLog.parentId(rc));
+    return Future.fromCompletionStage(tokenCache.get(tenant))
+      .onComplete(result -> trace.event("complete", 0, result.cause())).map(TokenResponse::getAccessToken);
   }
 
   private Future<String> getTokenInternal(String tenant) {

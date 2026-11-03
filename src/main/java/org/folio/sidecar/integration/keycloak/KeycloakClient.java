@@ -1,5 +1,6 @@
 package org.folio.sidecar.integration.keycloak;
 
+import static org.folio.sidecar.utils.OutboundRequestLog.trace;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareClientRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareImpersonateRequestBody;
 import static org.folio.sidecar.utils.TokenRequestHelper.prepareIntrospectRequestBody;
@@ -31,41 +32,56 @@ public class KeycloakClient {
   }
 
   public Future<HttpResponse<Buffer>> obtainToken(String realm, ClientCredentials client) {
+    return obtainToken(realm, client, null);
+  }
+
+  public Future<HttpResponse<Buffer>> obtainToken(String realm, ClientCredentials client, String parentId) {
     var requestBody = prepareClientRequestBody(client);
-    return webClient.postAbs(resolveTokenUrl(realm))
-      .sendForm(requestBody);
+    return trace("keycloak.client-token", "POST", resolveTokenUrl(realm), realm, parentId,
+      () -> webClient.postAbs(resolveTokenUrl(realm))
+      .sendForm(requestBody));
   }
 
   public Future<HttpResponse<Buffer>> obtainUserToken(String realm, ClientCredentials client, UserCredentials user) {
     var requestBody = preparePasswordRequestBody(client, user);
-    return webClient.postAbs(resolveTokenUrl(realm))
-      .sendForm(requestBody);
+    return trace("keycloak.password-token", "POST", resolveTokenUrl(realm), realm, null,
+      () -> webClient.postAbs(resolveTokenUrl(realm))
+      .sendForm(requestBody));
   }
 
   public Future<HttpResponse<Buffer>> refreshUserToken(String realm, ClientCredentials client, String refreshToken) {
     var requestBody = prepareRefreshRequestBody(client, refreshToken);
-    return webClient.postAbs(resolveTokenUrl(realm))
-      .sendForm(requestBody);
+    return trace("keycloak.refresh-token", "POST", resolveTokenUrl(realm), realm, null,
+      () -> webClient.postAbs(resolveTokenUrl(realm))
+      .sendForm(requestBody));
   }
 
   public Future<HttpResponse<Buffer>> evaluatePermissions(String tenant, String permission, String accessToken) {
+    return evaluatePermissions(tenant, permission, accessToken, null);
+  }
+
+  public Future<HttpResponse<Buffer>> evaluatePermissions(String tenant, String permission, String accessToken,
+    String parentId) {
     var clientId = tenant + properties.getLoginClientSuffix();
     var requestBody = prepareRptRequestBody(clientId, permission);
-    return webClient.postAbs(resolveTokenUrl(tenant))
+    return trace("keycloak.authorization", "POST", resolveTokenUrl(tenant), tenant, parentId,
+      () -> webClient.postAbs(resolveTokenUrl(tenant))
       .bearerTokenAuthentication(accessToken)
-      .sendForm(requestBody);
+      .sendForm(requestBody));
   }
 
   public Future<HttpResponse<Buffer>> impersonateUserToken(String realm, ClientCredentials client, String username) {
     var requestBody = prepareImpersonateRequestBody(client, username);
-    return webClient.postAbs(resolveTokenUrl(realm))
-      .sendForm(requestBody);
+    return trace("keycloak.impersonation", "POST", resolveTokenUrl(realm), realm, null,
+      () -> webClient.postAbs(resolveTokenUrl(realm))
+      .sendForm(requestBody));
   }
 
   public Future<HttpResponse<Buffer>> introspectToken(String realm, ClientCredentials client, String token) {
     var requestBody = prepareIntrospectRequestBody(client, token);
     var url = String.format("%s/realms/%s/protocol/openid-connect/token/introspect", properties.getUrl(), realm);
-    return webClient.postAbs(url).sendForm(requestBody);
+    return trace("keycloak.introspection", "POST", url, realm, null,
+      () -> webClient.postAbs(url).sendForm(requestBody));
   }
 
   private String resolveTokenUrl(String realm) {

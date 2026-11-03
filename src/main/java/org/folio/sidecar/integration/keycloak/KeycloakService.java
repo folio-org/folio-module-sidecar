@@ -17,6 +17,7 @@ import org.folio.sidecar.integration.cred.model.ClientCredentials;
 import org.folio.sidecar.integration.cred.model.UserCredentials;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.service.ErrorHandler;
+import org.folio.sidecar.utils.OutboundRequestLog;
 
 @Log4j2
 @ApplicationScoped
@@ -39,7 +40,7 @@ public class KeycloakService {
   }
 
   public Future<TokenResponse> obtainToken(String realm, ClientCredentials client, RoutingContext rc) {
-    return obtainToken(() -> keycloakClient.obtainToken(realm, client),
+    return obtainToken(() -> keycloakClient.obtainToken(realm, client, OutboundRequestLog.parentId(rc)),
       authError -> errorHandler.sendErrorResponse(rc, authError),
       clientError -> errorHandler.sendErrorResponse(rc, clientError));
   }

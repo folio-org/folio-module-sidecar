@@ -26,6 +26,7 @@ import org.folio.sidecar.integration.users.UserService.PermissionContainer;
 import org.folio.sidecar.integration.users.model.User;
 import org.folio.sidecar.service.routing.lookup.TenantModuleResolver;
 import org.folio.sidecar.service.token.ServiceTokenProvider;
+import org.folio.sidecar.support.OutboundLogCapture;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,24 +69,30 @@ class UserServiceTest {
 
   @Test
   void findUser_positive_callsTenantResolvedLocation() {
-    final var user = new User();
-    var routingContext = routingContext(TARGET_TENANT);
-    var key = USER_ID + "#" + TARGET_TENANT;
+    try (var capture = new OutboundLogCapture()) {
+      final var user = new User();
+      var routingContext = routingContext(TARGET_TENANT);
+      when(routingContext.request().getHeader("X-Okapi-Request-Id")).thenReturn("parent/mod-rtac");
+      var key = USER_ID + "#" + TARGET_TENANT;
 
-    when(cache.getIfPresent(key)).thenReturn(null);
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
-    mockResolvedTarget(TARGET_TENANT);
-    when(webClient.getAbs(MOD_URL + "/users-keycloak/users/" + USER_ID)).thenReturn(httpRequest);
-    when(httpRequest.putHeader(TOKEN, TOKEN_VALUE)).thenReturn(httpRequest);
-    when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
-    when(httpRequest.send()).thenReturn(succeededFuture(response));
-    when(response.statusCode()).thenReturn(200);
-    when(response.bodyAsJson(User.class)).thenReturn(user);
+      when(cache.getIfPresent(key)).thenReturn(null);
+      when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+      mockResolvedTarget(TARGET_TENANT);
+      when(webClient.getAbs(MOD_URL + "/users-keycloak/users/" + USER_ID)).thenReturn(httpRequest);
+      when(httpRequest.putHeader(TOKEN, TOKEN_VALUE)).thenReturn(httpRequest);
+      when(httpRequest.putHeader(TENANT, TARGET_TENANT)).thenReturn(httpRequest);
+      when(httpRequest.send()).thenReturn(succeededFuture(response));
+      when(response.statusCode()).thenReturn(200);
+      when(response.bodyAsJson(User.class)).thenReturn(user);
 
-    var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
+      var future = userService.findUser(TARGET_TENANT, USER_ID, routingContext);
 
-    assertThat(future.result()).isSameAs(user);
-    verify(cache).put(key, user);
+      assertThat(future.result()).isSameAs(user);
+      verify(cache).put(key, user);
+      assertThat(capture.messages()).hasSize(2).allSatisfy(message ->
+        assertThat(message).contains("parent_id=parent/mod-rtac", "operation=users.lookup")
+          .doesNotContain(TOKEN_VALUE, "desiredPermissions="));
+    }
   }
 
   @Test
@@ -140,23 +147,29 @@ class UserServiceTest {
 
   @Test
   void findUserPermissions_positive() {
-    final var permissions = List.of("perm1", "perm2");
-    var routingContext = routingContext(TENANT_NAME);
-    var url = permissionsUrl();
+    try (var capture = new OutboundLogCapture()) {
+      final var permissions = List.of("perm1", "perm2");
+      var routingContext = routingContext(TENANT_NAME);
+      when(routingContext.request().getHeader("X-Okapi-Request-Id")).thenReturn("parent/mod-rtac");
+      var url = permissionsUrl();
 
-    when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
-    mockResolvedTarget(TENANT);
-    when(webClient.getAbs(url)).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
-    when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
-    when(httpRequest.send()).thenReturn(succeededFuture(response));
-    when(response.statusCode()).thenReturn(200);
-    when(response.bodyAsJson(PermissionContainer.class)).thenReturn(new PermissionContainer(permissions));
+      when(serviceTokenProvider.getToken(routingContext)).thenReturn(succeededFuture(TOKEN_VALUE));
+      mockResolvedTarget(TENANT);
+      when(webClient.getAbs(url)).thenReturn(httpRequest);
+      when(httpRequest.putHeader(eq(TENANT), anyString())).thenReturn(httpRequest);
+      when(httpRequest.putHeader(eq(TOKEN), anyString())).thenReturn(httpRequest);
+      when(httpRequest.send()).thenReturn(succeededFuture(response));
+      when(response.statusCode()).thenReturn(200);
+      when(response.bodyAsJson(PermissionContainer.class)).thenReturn(new PermissionContainer(permissions));
 
-    var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
+      var userPermissions = userService.findUserPermissions(routingContext, permissions, USER_ID, TENANT);
 
-    assertThat(userPermissions.result()).isEqualTo(permissions);
-    verify(webClient).getAbs(url);
+      assertThat(userPermissions.result()).isEqualTo(permissions);
+      verify(webClient).getAbs(url);
+      assertThat(capture.messages()).hasSize(2).allSatisfy(message ->
+        assertThat(message).contains("parent_id=parent/mod-rtac", "operation=users.permissions")
+          .doesNotContain(TOKEN_VALUE, "desiredPermissions="));
+    }
   }
 
   @Test

@@ -36,6 +36,7 @@ import org.folio.sidecar.integration.keycloak.KeycloakService;
 import org.folio.sidecar.integration.keycloak.model.TokenResponse;
 import org.folio.sidecar.integration.okapi.OkapiHeaders;
 import org.folio.sidecar.model.EntitlementsEvent;
+import org.folio.sidecar.support.OutboundLogCapture;
 import org.folio.support.types.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,13 +120,17 @@ class ServiceTokenProviderTest {
 
   @Test
   void getToken_positive() {
-    mockRequest();
-    when(tokenCache.get(TENANT_NAME)).thenReturn(completedFuture(TOKEN_RESPONSE));
+    try (var capture = new OutboundLogCapture()) {
+      mockRequest();
+      when(tokenCache.get(TENANT_NAME)).thenReturn(completedFuture(TOKEN_RESPONSE));
 
-    var tf = service.getToken(rc);
+      var tf = service.getToken(rc);
 
-    assertThat(tf.succeeded()).isTrue();
-    assertThat(tf.result()).isEqualTo(TOKEN_RESPONSE.getAccessToken());
+      assertThat(tf.succeeded()).isTrue();
+      assertThat(tf.result()).isEqualTo(TOKEN_RESPONSE.getAccessToken());
+      assertThat(capture.messages()).hasSize(2).allSatisfy(message ->
+        assertThat(message).contains("parent_id=" + REQUEST_ID, "operation=token-cache."));
+    }
   }
 
   @Test
