@@ -101,12 +101,12 @@ public class KeycloakJwtFilter implements IngressRequestFilter {
   }
 
   private Future<RoutingContext> tryParseAccessToken(String accessToken, RoutingContext rc) {
-    return asyncJsonWebTokenParser.parseAsync(accessToken)
+    return asyncJsonWebTokenParser.parseAsync(accessToken, rc, "access")
       .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken));
   }
 
   private Future<RoutingContext> findAccessTokenWhenSystemJwtPresent(String accessToken, RoutingContext rc) {
-    return asyncJsonWebTokenParser.parseAsync(accessToken)
+    return asyncJsonWebTokenParser.parseAsync(accessToken, rc, "access")
       .map(jsonWebToken -> populateContextAndHeaders(rc, jsonWebToken))
       .recover(error -> handleParseExceptionForPresentSystemJwt(rc, error));
   }

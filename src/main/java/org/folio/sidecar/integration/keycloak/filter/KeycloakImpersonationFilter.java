@@ -83,7 +83,7 @@ public class KeycloakImpersonationFilter implements IngressRequestFilter {
 
   private Future<RoutingContext> populateRoutingContextByAccessToken(RoutingContext rc, String impersonatedUserToken) {
     rc.request().headers().set(TOKEN, impersonatedUserToken);
-    return asyncJwtParser.parseAsync(impersonatedUserToken)
+    return asyncJwtParser.parseAsync(impersonatedUserToken, rc, "impersonated")
       .map(jsonWebToken -> {
         putParsedToken(rc, jsonWebToken);
         return rc;

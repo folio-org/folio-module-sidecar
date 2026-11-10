@@ -40,7 +40,7 @@ public class KeycloakSystemJwtFilter implements IngressRequestFilter {
       return failedFuture(new UnauthorizedException("Failed to process system JWT"));
     }
 
-    return asyncTokenParser.parseAsync(token)
+    return asyncTokenParser.parseAsync(token, rc, "system")
       .map(parsedToken -> putParsedSystemToken(rc, parsedToken));
   }
 

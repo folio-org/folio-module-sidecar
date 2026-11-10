@@ -42,7 +42,7 @@ class AsyncJsonWebTokenParserTest {
     when(syncParser.parse(token)).thenReturn(mockToken);
     mockExecuteBlockingCallsCallable();
 
-    var result = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture().get();
+    var result = asyncParser.parseAsync(token, null, "access").toCompletionStage().toCompletableFuture().get();
 
     assertThat(result).isSameAs(mockToken);
   }
@@ -53,7 +53,7 @@ class AsyncJsonWebTokenParserTest {
     when(syncParser.parse(token)).thenThrow(new ParseException("Invalid JWT"));
     mockExecuteBlockingCallsCallable();
 
-    var future = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture();
+    var future = asyncParser.parseAsync(token, null, "access").toCompletionStage().toCompletableFuture();
 
     assertThat(future)
       .failsWithin(Duration.ofSeconds(1))
@@ -69,7 +69,7 @@ class AsyncJsonWebTokenParserTest {
     when(syncParser.parse(token)).thenThrow(new IllegalStateException("Boom"));
     mockExecuteBlockingCallsCallable();
 
-    var future = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture();
+    var future = asyncParser.parseAsync(token, null, "access").toCompletionStage().toCompletableFuture();
 
     assertThat(future)
       .failsWithin(Duration.ofSeconds(1))
@@ -85,7 +85,7 @@ class AsyncJsonWebTokenParserTest {
     when(vertx.<JsonWebToken>executeBlocking(any(Callable.class), eq(false)))
       .thenReturn(Future.failedFuture(new IllegalStateException("Worker pool unavailable")));
 
-    var future = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture();
+    var future = asyncParser.parseAsync(token, null, "access").toCompletionStage().toCompletableFuture();
 
     assertThat(future)
       .failsWithin(Duration.ofSeconds(1))
@@ -101,7 +101,7 @@ class AsyncJsonWebTokenParserTest {
     when(vertx.<JsonWebToken>executeBlocking(any(Callable.class), eq(false)))
       .thenReturn(Future.failedFuture(new RejectedExecutionException("Worker pool exhausted")));
 
-    var future = asyncParser.parseAsync(token).toCompletionStage().toCompletableFuture();
+    var future = asyncParser.parseAsync(token, null, "access").toCompletionStage().toCompletableFuture();
 
     assertThat(future)
       .failsWithin(Duration.ofSeconds(1))

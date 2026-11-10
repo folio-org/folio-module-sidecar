@@ -548,6 +548,24 @@ have the proxy's acquisition/header milestones. Cache hits do not make an HTTP c
 and therefore emit no Keycloak outbound record. Absence of a record alone does not
 prove a cache hit.
 
+JWT validation uses the same diagnostic logger and request-local `parent_id`, with
+`operation=jwt.parse` and `token_type=access`, `system` or `impersonated`. It emits `queued`,
+`worker-start`, `worker-complete`, and `complete` records. `queue_ms` measures time
+from just after the `queued` log write to worker entry, excluding metadata creation
+and that initial write; `execution_ms` measures the worker
+task, including synchronous JWT parsing/key resolution and diagnostic overhead;
+`delivery_ms` measures time from worker completion to the future's completion
+callback. `elapsed_ms` is cumulative from submission. Independent millisecond
+rounding can make these components differ from the total by a few milliseconds.
+Unavailable timings are `-1`, including execution/delivery when submission fails
+before the worker runs. Errors include only their root exception type. No JWT
+contents, claims, signing keys or exception messages are added to these records.
+These timings locate a validation delay; they do not separately measure JWKS HTTP
+requests. Filter-skipped validation emits no parse record.
+An `error_type` describes this parse attempt, not necessarily a failed HTTP request:
+later filters may recover from a parse failure. Four synchronous records per parse
+can add diagnostic overhead under load, including writes on worker threads.
+
 For CloudWatch Logs Insights:
 
 ```text

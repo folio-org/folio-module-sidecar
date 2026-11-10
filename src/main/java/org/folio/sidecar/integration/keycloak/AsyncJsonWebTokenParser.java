@@ -4,6 +4,7 @@ import io.quarkus.security.UnauthorizedException;
 import io.smallrye.jwt.auth.principal.ParseException;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -26,10 +27,34 @@ public class AsyncJsonWebTokenParser {
    * Parses JWT token asynchronously on a worker thread.
    *
    * @param token the JWT token string to parse
+   * @param context ingress context used only for diagnostic correlation
+   * @param tokenType access, system or impersonated token
    * @return Future that completes with the parsed JsonWebToken on success
    */
-  public Future<JsonWebToken> parseAsync(String token) {
-    return vertx.executeBlocking(() -> parseToken(token), false);
+  public Future<JsonWebToken> parseAsync(String token, RoutingContext context, String tokenType) {
+    if (!JwtParseLog.isEnabled()) {
+      return vertx.executeBlocking(() -> parseToken(token), false);
+    }
+    var trace = new JwtParseLog(context, tokenType);
+    try {
+      return vertx.executeBlocking(() -> parseToken(token, trace), false)
+        .onComplete(result -> trace.complete(result.cause()));
+    } catch (RuntimeException | Error error) {
+      trace.complete(error);
+      throw error;
+    }
+  }
+
+  private JsonWebToken parseToken(String token, JwtParseLog trace) {
+    trace.workerStarted();
+    try {
+      var parsedToken = parseToken(token);
+      trace.workerCompleted(null);
+      return parsedToken;
+    } catch (RuntimeException | Error error) {
+      trace.workerCompleted(error);
+      throw error;
+    }
   }
 
   /**

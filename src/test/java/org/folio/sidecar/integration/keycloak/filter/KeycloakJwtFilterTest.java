@@ -71,7 +71,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access"))
+      .thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -97,7 +98,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access"))
+      .thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -122,7 +124,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access"))
+      .thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -150,7 +153,8 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
     });
 
     var jsonWebToken = mock(JsonWebToken.class);
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.succeededFuture(jsonWebToken));
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access"))
+      .thenReturn(Future.succeededFuture(jsonWebToken));
     when(jsonWebToken.getClaim(USER_ID_CLAIM)).thenReturn(TEST_USER_ID);
     when(jsonWebToken.getIssuer()).thenReturn("http://localhost:8080/auth/realms/" + TENANT_NAME);
 
@@ -179,7 +183,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(request.headers()).thenReturn(requestHeaders);
     });
 
-    when(asyncJsonWebTokenParser.parseAsync(dummyToken)).thenReturn(Future.failedFuture(
+    when(asyncJsonWebTokenParser.parseAsync(dummyToken, routingContext, "access")).thenReturn(Future.failedFuture(
       new UnauthorizedException("Failed to parse JWT", new ParseException(INVALID_SEGMENTS_JWT_ERROR_MSG))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -227,7 +231,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(rc.get(SELF_REQUEST_KEY)).thenReturn(false);
     });
 
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access")).thenReturn(Future.failedFuture(
       new UnauthorizedException("Failed to parse JWT", new ParseException("Invalid JWT"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -280,7 +284,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(request.headers()).thenReturn(requestHeaders);
     });
 
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access")).thenReturn(Future.failedFuture(
       new UnauthorizedException("Failed to parse JWT", new ParseException("Failed to parse JWT, invalid offset"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
@@ -320,7 +324,7 @@ class KeycloakJwtFilterTest extends AbstractFilterTest {
       when(rc.get(SELF_REQUEST_KEY)).thenReturn(true);
     });
 
-    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN)).thenReturn(Future.failedFuture(
+    when(asyncJsonWebTokenParser.parseAsync(AUTH_TOKEN, routingContext, "access")).thenReturn(Future.failedFuture(
       new UnauthorizedException("Failed to parse JWT", new ParseException("Invalid JWT"))));
 
     var result = keycloakJwtFilter.applyFilter(routingContext);
