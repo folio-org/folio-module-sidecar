@@ -5,12 +5,12 @@ import static org.folio.sidecar.utils.CollectionUtils.isEmpty;
 import static org.folio.sidecar.utils.RoutingUtils.dumpHeaders;
 import static org.folio.sidecar.utils.RoutingUtils.dumpUri;
 
-import io.vertx.codegen.annotations.Nullable;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.jspecify.annotations.Nullable;
 
 @Log4j2
 @RequiredArgsConstructor
