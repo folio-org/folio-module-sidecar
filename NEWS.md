@@ -1,3 +1,7 @@
+## Version `v4.0.9` (20.11.2026)
+### Changes:
+* Bump quarkus platform version to 3.40.1.1 [MODSIDECAR-239](https://folio-org.atlassian.net/browse/MODSIDECAR-239)
+
 ## Version `v4.0.8` (30.10.2026)
 ### Changes:
 * Key authorization cache by token principal (issuing realm and `azp`) instead of token expiration, and raise the default `TOKEN_CACHE_MAX_CAPACITY` to `500` to stop cache thrashing in clusters with many tenants ([MODSIDECAR-185](https://folio-org.atlassian.net/browse/MODSIDECAR-185)) / MODSIDECAR-232
