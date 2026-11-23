@@ -1,3 +1,7 @@
+## Version `v3.0.23` (23.11.2026)
+### Changes:
+* Bump quarkus platform version to 3.40.1.1 ([MODSIDECAR-240](https://folio-org.atlassian.net/browse/MODSIDECAR-240))
+
 ## Version `v3.0.22` (29.10.2026)
 ### Changes:
 * Self-heal after failed startup entitlement load instead of requiring a sidecar restart ([MODSIDECAR-218](https://folio-org.atlassian.net/browse/MODSIDECAR-218))
