@@ -28,6 +28,7 @@
     <quarkus.platform.version>3.40.1.2</quarkus.platform.version>
     <applications-poc-tools.version>4.1.0-SNAPSHOT</applications-poc-tools.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
+    <folio-module-descriptor-validator.version>1.0.2-SNAPSHOT</folio-module-descriptor-validator.version>
     <cloudwatch.version>6.6.0</cloudwatch.version>
     <bcpkix-fips.version>2.1.13</bcpkix-fips.version>
 
@@ -376,6 +377,19 @@
                 </fileSet>
               </fileSets>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>folio-module-descriptor-validator</artifactId>
+        <version>${folio-module-descriptor-validator.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>validate</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
