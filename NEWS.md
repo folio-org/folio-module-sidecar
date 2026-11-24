@@ -21,6 +21,7 @@
   - New readiness check `Routing health check` is `DOWN` until routes are loaded; `/admin/health` and `/admin/health/ready` return `503` meanwhile, so liveness checks must use `/admin/health/live`
   - When the bootstrap cannot be loaded after `RETRY_*` attempts, including a failed discovery-triggered route refresh, the sidecar exits with code `1` instead of `0`
 * Optimize tenant-scoped egress bootstrap: shared route tables, in-place discovery updates, limited concurrency, paged entitlements ([MGRAPPS-127](https://folio-org.atlassian.net/browse/MGRAPPS-127))
+* Publish a sidecar module descriptor and app-sidecar application descriptor ([MODSIDECAR-230](https://folio-org.atlassian.net/browse/MODSIDECAR-230))
 
 ## Version `v4.0.0` (16.04.2026)
 ### Changes:
