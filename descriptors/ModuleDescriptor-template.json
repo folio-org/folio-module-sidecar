@@ -28,7 +28,7 @@
       "event": "mgr-tenant-entitlements.entitlement.v1"
     },
     {
-      "event": "mod-login-keycloak.logout",
+      "event": "mod-login-keycloak.logout.v1",
       "optional": true
     }
   ]
