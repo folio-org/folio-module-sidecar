@@ -16,7 +16,7 @@ jobs:
     secrets: inherit
     with:
       java-version: '21'
-      publish-module-descriptor: false
+      publish-module-descriptor: true
       allow-snapshots-release: false
       do-sonar-scan: true
       do-docker: true
