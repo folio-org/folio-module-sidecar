@@ -1,0 +1,35 @@
+{
+  "id": "@artifactId@-@version@",
+  "name": "FOLIO Module Sidecar",
+  "description": "Transparent HTTP proxy and tenant lifecycle consumer deployed alongside FOLIO modules",
+  "requires": [
+    {
+      "id": "module-bootstraps",
+      "version": "1.3"
+    },
+    {
+      "id": "discoveries",
+      "version": "2.1"
+    },
+    {
+      "id": "entitlements",
+      "version": "1.2"
+    },
+    {
+      "id": "tenants",
+      "version": "1.0"
+    }
+  ],
+  "consumesEvents": [
+    {
+      "event": "mgr-applications.module.discovery.v1"
+    },
+    {
+      "event": "mgr-tenant-entitlements.entitlement.v1"
+    },
+    {
+      "event": "mod-login-keycloak.logout",
+      "optional": true
+    }
+  ]
+}
